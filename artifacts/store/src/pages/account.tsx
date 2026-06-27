@@ -32,19 +32,13 @@ function AccountDashboard() {
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
 
   const { data: orderData, isLoading: ordersLoading } = useQuery<{ orders: Order[] }>({
-    queryKey: ["my-orders", email],
+    queryKey: ["my-orders"],
     queryFn: async () => {
-      if (!email) return { orders: [] };
-      const res = await fetch(`/api/orders?limit=20`);
+      const res = await fetch(`/api/orders/my`);
       if (!res.ok) throw new Error("Failed to fetch orders");
-      const all = (await res.json()) as { orders: Order[] };
-      const myOrders = all.orders.filter(
-        (o: Order & { customerEmail?: string }) =>
-          (o as Order & { customerEmail?: string }).customerEmail?.toLowerCase() === email.toLowerCase()
-      );
-      return { orders: myOrders };
+      return res.json() as Promise<{ orders: Order[] }>;
     },
-    enabled: !!email,
+    enabled: !!user,
   });
 
   const statusColor: Record<string, string> = {

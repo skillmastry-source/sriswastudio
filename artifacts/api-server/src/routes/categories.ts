@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { categoriesTable, productsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -16,13 +17,6 @@ router.get("/categories", async (req, res) => {
   return res.json(cats.map((c) => ({ ...c, productCount: countMap[c.id] ?? 0 })));
 });
 
-router.post("/categories", async (req, res) => {
-  const { name, slug, description, imageUrl } = req.body;
-  if (!name || !slug) return res.status(400).json({ error: "name and slug required" });
-  const [cat] = await db.insert(categoriesTable).values({ name, slug, description, imageUrl }).returning();
-  return res.status(201).json({ ...cat, productCount: 0 });
-});
-
 router.get("/categories/:id", async (req, res) => {
   const id = Number(req.params.id);
   const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, id));
@@ -30,7 +24,14 @@ router.get("/categories/:id", async (req, res) => {
   return res.json({ ...cat, productCount: 0 });
 });
 
-router.patch("/categories/:id", async (req, res) => {
+router.post("/categories", requireAdmin, async (req, res) => {
+  const { name, slug, description, imageUrl } = req.body;
+  if (!name || !slug) return res.status(400).json({ error: "name and slug required" });
+  const [cat] = await db.insert(categoriesTable).values({ name, slug, description, imageUrl }).returning();
+  return res.status(201).json({ ...cat, productCount: 0 });
+});
+
+router.patch("/categories/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { name, slug, description, imageUrl } = req.body;
   const [cat] = await db
@@ -42,7 +43,7 @@ router.patch("/categories/:id", async (req, res) => {
   return res.json({ ...cat, productCount: 0 });
 });
 
-router.delete("/categories/:id", async (req, res) => {
+router.delete("/categories/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(categoriesTable).where(eq(categoriesTable.id, id));
   return res.status(204).send();

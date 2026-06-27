@@ -7,6 +7,7 @@ import {
   categoriesTable,
 } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, asc, sql } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -40,20 +41,14 @@ async function buildProductResponse(product: typeof productsTable.$inferSelect) 
 
 router.get("/products", async (req, res) => {
   const { categoryId, search, minPrice, maxPrice, sortBy, featured, limit = 20, offset = 0 } = req.query;
+
   const conditions: ReturnType<typeof eq>[] = [eq(productsTable.isActive, true)];
   const catId = categoryId ? Number(categoryId) : null;
   if (catId && !isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
   if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
   if (minPrice) conditions.push(gte(productsTable.price, String(minPrice)));
   if (maxPrice) conditions.push(lte(productsTable.price, String(maxPrice)));
-
-  let query = db.select().from(productsTable).where(and(...conditions));
-  if (search) {
-    query = db
-      .select()
-      .from(productsTable)
-      .where(and(eq(productsTable.isActive, true), ilike(productsTable.name, `%${search}%`)));
-  }
+  if (search) conditions.push(ilike(productsTable.name, `%${String(search)}%`));
 
   const orderMap: Record<string, ReturnType<typeof asc>> = {
     price_asc: asc(productsTable.price),
@@ -63,15 +58,17 @@ router.get("/products", async (req, res) => {
   };
   const order = sortBy ? orderMap[String(sortBy)] : desc(productsTable.createdAt);
 
+  const whereClause = and(...conditions);
+
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(productsTable)
-    .where(and(...conditions));
+    .where(whereClause);
 
   const products = await db
     .select()
     .from(productsTable)
-    .where(and(...conditions))
+    .where(whereClause)
     .orderBy(order ?? desc(productsTable.createdAt))
     .limit(Number(limit))
     .offset(Number(offset));
@@ -106,7 +103,7 @@ router.get("/products/:id", async (req, res) => {
   return res.json(await buildProductResponse(product));
 });
 
-router.post("/products", async (req, res) => {
+router.post("/products", requireAdmin, async (req, res) => {
   const {
     name, slug, description, price, compareAtPrice, categoryId,
     isFeatured = false, isActive = true, stockQuantity = 0, lowStockThreshold = 5,
@@ -114,12 +111,16 @@ router.post("/products", async (req, res) => {
   if (!name || !slug || price == null) return res.status(400).json({ error: "name, slug, price required" });
   const [product] = await db
     .insert(productsTable)
-    .values({ name, slug, description: description ?? "", price: String(price), compareAtPrice: compareAtPrice ? String(compareAtPrice) : null, categoryId: categoryId ?? null, isFeatured, isActive, stockQuantity, lowStockThreshold })
+    .values({
+      name, slug, description: description ?? "", price: String(price),
+      compareAtPrice: compareAtPrice ? String(compareAtPrice) : null,
+      categoryId: categoryId ?? null, isFeatured, isActive, stockQuantity, lowStockThreshold,
+    })
     .returning();
   return res.status(201).json(await buildProductResponse(product));
 });
 
-router.patch("/products/:id", async (req, res) => {
+router.patch("/products/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { name, slug, description, price, compareAtPrice, categoryId, isFeatured, isActive, stockQuantity, lowStockThreshold } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -138,13 +139,13 @@ router.patch("/products/:id", async (req, res) => {
   return res.json(await buildProductResponse(product));
 });
 
-router.delete("/products/:id", async (req, res) => {
+router.delete("/products/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(productsTable).where(eq(productsTable.id, id));
   return res.status(204).send();
 });
 
-router.post("/products/:id/images", async (req, res) => {
+router.post("/products/:id/images", requireAdmin, async (req, res) => {
   const productId = Number(req.params.id);
   const { url, isPrimary = false, displayOrder = 0 } = req.body;
   if (!url) return res.status(400).json({ error: "url required" });
@@ -155,14 +156,17 @@ router.post("/products/:id/images", async (req, res) => {
   return res.status(201).json(img);
 });
 
-router.get("/products/:id/inventory", async (req, res) => {
+router.get("/products/:id/inventory", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const [product] = await db.select({ stockQuantity: productsTable.stockQuantity, lowStockThreshold: productsTable.lowStockThreshold }).from(productsTable).where(eq(productsTable.id, id));
+  const [product] = await db
+    .select({ stockQuantity: productsTable.stockQuantity, lowStockThreshold: productsTable.lowStockThreshold })
+    .from(productsTable)
+    .where(eq(productsTable.id, id));
   if (!product) return res.status(404).json({ error: "Not found" });
   return res.json({ productId: id, ...product });
 });
 
-router.patch("/products/:id/inventory", async (req, res) => {
+router.patch("/products/:id/inventory", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { stockQuantity, lowStockThreshold } = req.body;
   const updates: Record<string, unknown> = {};

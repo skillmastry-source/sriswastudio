@@ -6,6 +6,8 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
+import { requireAdmin } from "../middlewares/requireAdmin";
+import { clerkClient } from "@clerk/express";
 
 const router = Router();
 
@@ -94,22 +96,65 @@ router.post("/orders", async (req, res) => {
   return res.status(201).json(await buildOrderResponse(order));
 });
 
-router.get("/orders", async (req, res) => {
+router.get("/orders/my", async (req, res) => {
+  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
+  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+
+  let email: string;
+  try {
+    const user = await clerkClient.users.getUser(auth.userId);
+    const primary = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId);
+    email = primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
+    if (!email) return res.status(400).json({ error: "No email on account" });
+  } catch {
+    return res.status(500).json({ error: "Failed to resolve user" });
+  }
+
+  const orders = await db
+    .select()
+    .from(ordersTable)
+    .where(ilike(ordersTable.customerEmail, email))
+    .orderBy(desc(ordersTable.createdAt))
+    .limit(50);
+
+  const full = await Promise.all(orders.map(buildOrderResponse));
+  return res.json({ orders: full, total: full.length });
+});
+
+router.get("/orders/track", async (req, res) => {
+  const { orderNumber, email } = req.query;
+  if (!orderNumber || !email) return res.status(400).json({ error: "orderNumber and email required" });
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(
+      and(
+        eq(ordersTable.orderNumber, String(orderNumber)),
+        ilike(ordersTable.customerEmail, String(email))
+      )
+    );
+  if (!order) return res.status(404).json({ error: "Order not found" });
+  return res.json(await buildOrderResponse(order));
+});
+
+router.get("/orders", requireAdmin, async (req, res) => {
   const { status, dateFrom, dateTo, limit = 20, offset = 0 } = req.query;
   const conditions: ReturnType<typeof eq>[] = [];
   if (status) conditions.push(eq(ordersTable.status, String(status)));
   if (dateFrom) conditions.push(gte(ordersTable.createdAt, new Date(String(dateFrom))));
   if (dateTo) conditions.push(lte(ordersTable.createdAt, new Date(String(dateTo))));
 
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(ordersTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+    .where(whereClause);
 
   const orders = await db
     .select()
     .from(ordersTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(whereClause)
     .orderBy(desc(ordersTable.createdAt))
     .limit(Number(limit))
     .offset(Number(offset));
@@ -118,25 +163,14 @@ router.get("/orders", async (req, res) => {
   return res.json({ orders: full, total: count });
 });
 
-router.get("/orders/track", async (req, res) => {
-  const { orderNumber, email } = req.query;
-  if (!orderNumber && !email) return res.status(400).json({ error: "orderNumber or email required" });
-  const conditions: ReturnType<typeof eq>[] = [];
-  if (orderNumber) conditions.push(eq(ordersTable.orderNumber, String(orderNumber)));
-  if (email) conditions.push(ilike(ordersTable.customerEmail, String(email)));
-  const [order] = await db.select().from(ordersTable).where(and(...conditions));
-  if (!order) return res.status(404).json({ error: "Order not found" });
-  return res.json(await buildOrderResponse(order));
-});
-
-router.get("/orders/:id", async (req, res) => {
+router.get("/orders/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
   if (!order) return res.status(404).json({ error: "Not found" });
   return res.json(await buildOrderResponse(order));
 });
 
-router.patch("/orders/:id/status", async (req, res) => {
+router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { status } = req.body;
   const valid = ["pending", "processing", "shipped", "delivered", "cancelled"];

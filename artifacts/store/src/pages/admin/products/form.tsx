@@ -15,7 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,6 +63,8 @@ export default function AdminProductForm() {
   const [images, setImages] = useState<ImageEntry[]>([]);
   const [variants, setVariants] = useState<VariantEntry[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initRef = useRef(false);
   useEffect(() => {
@@ -123,19 +125,41 @@ export default function AdminProductForm() {
   };
 
   async function syncImagesAndVariants(productId: number) {
-    for (const [i, img] of images.entries()) {
-      await fetch(`/api/products/${productId}/images`, {
+    await fetch(`/api/products/${productId}/images/sync`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: images.map((img, i) => ({ url: img.url, isPrimary: i === 0, displayOrder: i })) }),
+    });
+    await fetch(`/api/products/${productId}/variants/sync`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variants }),
+    });
+  }
+
+  async function handleFileUpload(file: File) {
+    setUploadingImage(true);
+    try {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: img.url, isPrimary: i === 0, displayOrder: i }),
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
-    }
-    for (const variant of variants) {
-      await fetch(`/api/products/${productId}/variants`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(variant),
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
       });
+      if (!uploadRes.ok) throw new Error("Failed to upload file");
+      const rawPath = objectPath.replace(/^\/objects\//, "");
+      const publicUrl = `/api/storage/product-images/${rawPath}`;
+      setImages((prev) => [...prev, { url: publicUrl, isPrimary: prev.length === 0, displayOrder: prev.length }]);
+    } catch {
+      toast({ title: "Image upload failed", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
     }
   }
 
@@ -264,6 +288,17 @@ export default function AdminProductForm() {
               <ImageIcon className="h-5 w-5 text-muted-foreground" />
               <h2 className="font-semibold text-base">Product Images</h2>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+                e.target.value = "";
+              }}
+            />
             <div className="flex gap-3">
               <Input
                 value={newImageUrl}
@@ -273,7 +308,16 @@ export default function AdminProductForm() {
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImage(); } }}
               />
               <Button type="button" variant="outline" onClick={addImage} disabled={!newImageUrl.trim()}>
-                <Plus className="h-4 w-4 mr-1" /> Add
+                <Plus className="h-4 w-4 mr-1" /> Add URL
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                {uploadingImage ? "Uploading…" : "Upload File"}
               </Button>
             </div>
             {images.length > 0 ? (

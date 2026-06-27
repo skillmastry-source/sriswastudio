@@ -39,16 +39,25 @@ async function buildProductResponse(product: typeof productsTable.$inferSelect) 
   };
 }
 
+function qval(v: unknown): string | null {
+  if (v === undefined || v === null || v === "null" || v === "") return null;
+  return String(v);
+}
+
 router.get("/products", async (req, res) => {
-  const { categoryId, search, minPrice, maxPrice, sortBy, featured, limit = 20, offset = 0 } = req.query;
+  const { categoryId, search: rawSearch, minPrice: rawMin, maxPrice: rawMax, sortBy, featured, limit = 20, offset = 0 } = req.query;
+
+  const search = qval(rawSearch);
+  const minPrice = qval(rawMin);
+  const maxPrice = qval(rawMax);
 
   const conditions: ReturnType<typeof eq>[] = [eq(productsTable.isActive, true)];
   const catId = categoryId ? Number(categoryId) : null;
   if (catId && !isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
   if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
-  if (minPrice) conditions.push(gte(productsTable.price, String(minPrice)));
-  if (maxPrice) conditions.push(lte(productsTable.price, String(maxPrice)));
-  if (search) conditions.push(ilike(productsTable.name, `%${String(search)}%`));
+  if (minPrice) conditions.push(gte(productsTable.price, minPrice));
+  if (maxPrice) conditions.push(lte(productsTable.price, maxPrice));
+  if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
 
   const orderMap: Record<string, ReturnType<typeof asc>> = {
     price_asc: asc(productsTable.price),
@@ -165,6 +174,30 @@ router.post("/products/:id/images", requireAdmin, async (req, res) => {
   }
   const [img] = await db.insert(productImagesTable).values({ productId, url, isPrimary, displayOrder }).returning();
   return res.status(201).json(img);
+});
+
+router.put("/products/:id/images/sync", requireAdmin, async (req, res) => {
+  const productId = Number(req.params.id);
+  const images: { url: string }[] = Array.isArray(req.body.images) ? req.body.images : [];
+  await db.delete(productImagesTable).where(eq(productImagesTable.productId, productId));
+  if (images.length > 0) {
+    await db.insert(productImagesTable).values(
+      images.map((img, i) => ({ productId, url: img.url, isPrimary: i === 0, displayOrder: i }))
+    );
+  }
+  return res.json({ success: true });
+});
+
+router.put("/products/:id/variants/sync", requireAdmin, async (req, res) => {
+  const productId = Number(req.params.id);
+  const variants: { name: string; value: string; priceModifier: number }[] = Array.isArray(req.body.variants) ? req.body.variants : [];
+  await db.delete(productVariantsTable).where(eq(productVariantsTable.productId, productId));
+  if (variants.length > 0) {
+    await db.insert(productVariantsTable).values(
+      variants.map((v) => ({ productId, name: v.name, value: v.value, priceModifier: String(v.priceModifier ?? 0) }))
+    );
+  }
+  return res.json({ success: true });
 });
 
 router.get("/products/:id/inventory", requireAdmin, async (req, res) => {

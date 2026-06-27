@@ -14,6 +14,8 @@ export default function Shop() {
   
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<any>("newest");
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
   
   const { data: categories } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() }
@@ -25,14 +27,19 @@ export default function Shop() {
     return cat ? cat.id : null;
   }, [categoryParam, categories]);
 
+  const minPriceNum = minPrice !== "" ? Number(minPrice) : null;
+  const maxPriceNum = maxPrice !== "" ? Number(maxPrice) : null;
+
   const { data: productData, isLoading } = useListProducts(
     { 
       categoryId: categoryId,
       search: search || null,
       sortBy: sortBy,
+      minPrice: minPriceNum,
+      maxPrice: maxPriceNum,
       limit: 50
     },
-    { query: { queryKey: getListProductsQueryKey({ categoryId, search, sortBy, limit: 50 }) } }
+    { query: { queryKey: getListProductsQueryKey({ categoryId, search, sortBy, minPrice: minPriceNum, maxPrice: maxPriceNum, limit: 50 }) } }
   );
 
   return (
@@ -61,6 +68,29 @@ export default function Shop() {
                 />
               </div>
               
+              <div>
+                <h3 className="font-serif font-bold text-lg mb-4 border-b pb-2">Price Range (₹)</h3>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="bg-card w-full"
+                    min={0}
+                  />
+                  <span className="text-muted-foreground shrink-0">—</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="bg-card w-full"
+                    min={0}
+                  />
+                </div>
+              </div>
+
               <div>
                 <h3 className="font-serif font-bold text-lg mb-4 border-b pb-2">Categories</h3>
                 <ul className="space-y-2">

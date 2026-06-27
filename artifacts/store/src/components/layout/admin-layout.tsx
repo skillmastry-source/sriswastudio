@@ -8,11 +8,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
+  const isAdmin =
+    (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "admin";
+
   useEffect(() => {
-    if (authLoaded && !isSignedIn) {
-      setLocation("/sign-in");
+    if (authLoaded && userLoaded) {
+      if (!isSignedIn) {
+        setLocation("/sign-in");
+      } else if (!isAdmin) {
+        setLocation("/");
+      }
     }
-  }, [authLoaded, isSignedIn, setLocation]);
+  }, [authLoaded, userLoaded, isSignedIn, isAdmin, setLocation]);
 
   if (!authLoaded || !userLoaded) {
     return (
@@ -22,7 +29,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isSignedIn) {
+  if (!isSignedIn || !isAdmin) {
     return null;
   }
 

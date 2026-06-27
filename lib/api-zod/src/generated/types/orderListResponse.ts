@@ -5,7 +5,9 @@
  * Sriswa Studio e-commerce API
  * OpenAPI spec version: 0.1.0
  */
+import type { Order } from './order';
 
-export interface HealthStatus {
-  status: string;
+export interface OrderListResponse {
+  orders: Order[];
+  total: number;
 }

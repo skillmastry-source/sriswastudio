@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface ProductImage {
+  id: number;
+  productId: number;
+  url: string;
+  isPrimary: boolean;
+  displayOrder: number;
 }

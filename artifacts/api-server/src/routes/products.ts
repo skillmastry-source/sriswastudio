@@ -118,10 +118,25 @@ router.get("/admin/products", requireAdmin, async (req, res) => {
   return res.json({ products: full, total: count });
 });
 
+async function checkIsAdmin(userId: string): Promise<boolean> {
+  const adminIds = (process.env.ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (adminIds.length > 0) return adminIds.includes(userId);
+  try {
+    const { clerkClient } = await import("@clerk/express");
+    const user = await clerkClient.users.getUser(userId);
+    return (user.publicMetadata as { role?: string })?.role === "admin";
+  } catch {
+    return false;
+  }
+}
+
 router.get("/products/slug/:slug", async (req, res) => {
   const slug = req.params.slug;
   const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  const isAdmin = !!auth?.userId;
+  const isAdmin = auth?.userId ? await checkIsAdmin(auth.userId) : false;
   const whereClause = isAdmin
     ? eq(productsTable.slug, slug)
     : and(eq(productsTable.slug, slug), eq(productsTable.isActive, true));
@@ -133,7 +148,7 @@ router.get("/products/slug/:slug", async (req, res) => {
 router.get("/products/:id", async (req, res) => {
   const id = Number(req.params.id);
   const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  const isAdmin = !!auth?.userId;
+  const isAdmin = auth?.userId ? await checkIsAdmin(auth.userId) : false;
   const whereClause = isAdmin
     ? eq(productsTable.id, id)
     : and(eq(productsTable.id, id), eq(productsTable.isActive, true));

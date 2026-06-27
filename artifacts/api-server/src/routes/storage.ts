@@ -140,6 +140,12 @@ router.get("/storage/product-images/*path", async (req: Request, res: Response) 
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
+    // Constrain to the uploads/ prefix — product images are written there by
+    // getObjectEntityUploadURL(). Reject path traversal and non-upload paths.
+    if (!wildcardPath.startsWith("uploads/") || wildcardPath.includes("..")) {
+      res.status(404).json({ error: "Image not found" });
+      return;
+    }
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
     const response = await objectStorageService.downloadObject(objectFile);

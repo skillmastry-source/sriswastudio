@@ -21,19 +21,17 @@ export default function Cart() {
 
   const handleUpdateQuantity = (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
-    updateItem.mutate({
-      sessionId,
-      itemId,
-      data: { quantity: newQuantity }
-    }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) })
-    });
+    updateItem.mutate(
+      { itemId, data: { quantity: newQuantity } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
+    );
   };
 
   const handleRemove = (itemId: number) => {
-    removeItem.mutate({ sessionId, itemId }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) })
-    });
+    removeItem.mutate(
+      { itemId },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
+    );
   };
 
   if (isLoading) {
@@ -88,7 +86,7 @@ export default function Cart() {
                       )}
                     </div>
                     <div className="flex flex-col justify-center">
-                      <Link href={`/shop/product`} className="font-medium hover:text-primary transition-colors line-clamp-2">
+                      <Link href={`/shop/${(item as { slug?: string }).slug ?? ""}`} className="font-medium hover:text-primary transition-colors line-clamp-2">
                         {item.productName}
                       </Link>
                       <div className="text-sm text-muted-foreground mt-1">₹{item.price}</div>

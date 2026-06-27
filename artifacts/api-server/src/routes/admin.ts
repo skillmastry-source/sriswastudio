@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { ordersTable, productsTable, storeSettingsTable } from "@workspace/db";
+import { ordersTable, orderItemsTable, productsTable, storeSettingsTable } from "@workspace/db";
 import { eq, gte, sql, lte, and } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router = Router();
+
+router.use(requireAdmin);
 
 router.get("/admin/dashboard", async (req, res) => {
   const today = new Date();
@@ -42,7 +45,6 @@ router.get("/admin/dashboard", async (req, res) => {
     .from(ordersTable)
     .groupBy(ordersTable.status);
 
-  const { orderItemsTable } = await import("@workspace/db");
   const recentFull = await Promise.all(
     recentOrders.map(async (order) => {
       const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
@@ -58,7 +60,7 @@ router.get("/admin/dashboard", async (req, res) => {
     })
   );
 
-  res.json({
+  return res.json({
     todayOrders: todayStats.todayOrders,
     todayRevenue: todayStats.todayRevenue,
     totalOrders: allStats.totalOrders,
@@ -79,7 +81,7 @@ router.get("/admin/inventory/low-stock", async (req, res) => {
     })
     .from(productsTable)
     .where(sql`stock_quantity <= low_stock_threshold AND is_active = true`);
-  res.json(items);
+  return res.json(items);
 });
 
 router.get("/admin/inventory", async (req, res) => {
@@ -92,7 +94,7 @@ router.get("/admin/inventory", async (req, res) => {
     })
     .from(productsTable)
     .where(eq(productsTable.isActive, true));
-  res.json(
+  return res.json(
     items.map((i) => ({ ...i, isLowStock: i.stockQuantity <= i.lowStockThreshold }))
   );
 });
@@ -102,7 +104,7 @@ router.get("/admin/settings", async (req, res) => {
   if (!settings) {
     [settings] = await db.insert(storeSettingsTable).values({}).returning();
   }
-  res.json(settings);
+  return res.json(settings);
 });
 
 router.patch("/admin/settings", async (req, res) => {
@@ -117,7 +119,7 @@ router.patch("/admin/settings", async (req, res) => {
   if (newOrderTemplate !== undefined) updates.newOrderTemplate = newOrderTemplate;
   if (statusUpdateTemplate !== undefined) updates.statusUpdateTemplate = statusUpdateTemplate;
   const [updated] = await db.update(storeSettingsTable).set(updates).where(eq(storeSettingsTable.id, settings.id)).returning();
-  res.json(updated);
+  return res.json(updated);
 });
 
 export default router;

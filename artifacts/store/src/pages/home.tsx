@@ -36,44 +36,41 @@ export default function Home() {
 
   return (
     <StoreLayout>
-      {/* ── HERO ── Palmonas-style full-width with left-aligned overlay */}
-      <section className="relative w-full overflow-hidden" style={{ minHeight: "90vh" }}>
-        {/* Clean lifestyle background — no baked-in text */}
-        <img
-          src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=1800&q=90&auto=format&fit=crop"
-          alt="Sriswa Studio Jewellery"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        {/* Left-to-right dark gradient — text sits on dark left side */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10" />
-
-        {/* Text — left side like Palmonas */}
-        <div className="relative z-10 flex items-center" style={{ minHeight: "90vh" }}>
-          <div className="container mx-auto px-8 md:px-20">
-            <div className="max-w-lg text-white">
-              <p className="font-serif italic text-xl md:text-2xl text-[#D4AF37] mb-5 tracking-wide">
-                Shine Every Day,
-              </p>
-              <h1 className="font-serif font-bold text-5xl md:text-[72px] leading-[1.0] mb-6 tracking-tight uppercase">
-                Anti<br />Tarnish<br />Jewellery
-              </h1>
-              <p className="text-xs tracking-[0.35em] text-white/70 uppercase mb-3">
-                Premium Collection
-              </p>
-              <p className="text-4xl md:text-5xl font-bold mb-1 tracking-tight">
-                Starting ₹399
-              </p>
-              <p className="text-white/60 text-sm mb-10 tracking-wide">
-                Waterproof &nbsp;·&nbsp; Skin-Friendly &nbsp;·&nbsp; Everyday Shine
-              </p>
-              <Link
-                href="/shop"
-                className="inline-block text-sm md:text-base font-bold tracking-[0.3em] uppercase text-white border-b-2 border-white pb-1 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-all duration-200"
-              >
-                Shop Now
-              </Link>
-            </div>
+      {/* ── HERO ── Split panel: dark text left + brand image right */}
+      <section className="w-full flex flex-col md:flex-row" style={{ minHeight: "88vh" }}>
+        {/* Left: dark text panel */}
+        <div className="flex-1 bg-[#1a0a0f] flex items-center px-10 md:px-16 py-16 md:py-0" style={{ minWidth: 0 }}>
+          <div className="text-white max-w-sm">
+            <p className="font-serif italic text-xl md:text-2xl text-[#D4AF37] mb-5 tracking-wide">
+              Shine Every Day,
+            </p>
+            <h1 className="font-serif font-bold text-5xl md:text-[64px] leading-[1.0] mb-6 tracking-tight uppercase">
+              Anti<br />Tarnish<br />Jewellery
+            </h1>
+            <p className="text-xs tracking-[0.35em] text-white/60 uppercase mb-3">
+              Premium Collection
+            </p>
+            <p className="text-4xl md:text-5xl font-bold mb-1 tracking-tight">
+              Starting ₹399
+            </p>
+            <p className="text-white/50 text-sm mb-10 tracking-wide">
+              Waterproof &nbsp;·&nbsp; Skin-Friendly &nbsp;·&nbsp; Everyday Shine
+            </p>
+            <Link
+              href="/shop"
+              className="inline-block text-sm md:text-base font-bold tracking-[0.3em] uppercase text-white border-b-2 border-white pb-1 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-all duration-200"
+            >
+              Shop Now
+            </Link>
           </div>
+        </div>
+        {/* Right: brand hero image */}
+        <div className="flex-none w-full md:w-[58%] relative overflow-hidden" style={{ minHeight: "50vw", maxHeight: "88vh" }}>
+          <img
+            src="/brand/hero-banner.png"
+            alt="Sriswa Studio Jewellery"
+            className="absolute inset-0 w-full h-full object-cover object-right"
+          />
         </div>
       </section>
 

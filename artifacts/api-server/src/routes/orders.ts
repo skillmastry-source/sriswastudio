@@ -4,7 +4,7 @@ import {
   ordersTable, orderItemsTable, cartItemsTable,
   productsTable, productImagesTable, storeSettingsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql, or, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
 
 const router = Router();
@@ -38,11 +38,9 @@ router.post("/orders", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Get cart items
   const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
   if (cartItems.length === 0) return res.status(400).json({ error: "Cart is empty" });
 
-  // Build order items with product details
   const itemsToInsert = await Promise.all(
     cartItems.map(async (ci) => {
       const [product] = await db.select().from(productsTable).where(eq(productsTable.id, ci.productId));
@@ -61,8 +59,7 @@ router.post("/orders", async (req, res) => {
 
   const validItems = itemsToInsert.filter(Boolean) as NonNullable<typeof itemsToInsert[0]>[];
   const subtotal = validItems.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
-  const total = subtotal; // free shipping for now
-
+  const total = subtotal;
   const orderNumber = generateOrderNumber();
 
   const [order] = await db
@@ -76,7 +73,6 @@ router.post("/orders", async (req, res) => {
 
   await db.insert(orderItemsTable).values(validItems.map((i) => ({ orderId: order.id, ...i })));
 
-  // Decrement stock
   await Promise.all(
     validItems.map((i) =>
       db.execute(
@@ -85,10 +81,8 @@ router.post("/orders", async (req, res) => {
     )
   );
 
-  // Clear cart
   await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
 
-  // WhatsApp notification to admin
   const [settings] = await db.select().from(storeSettingsTable);
   if (settings?.adminWhatsapp) {
     const msg = renderTemplate(settings.newOrderTemplate, {
@@ -97,7 +91,7 @@ router.post("/orders", async (req, res) => {
     await sendWhatsApp(settings.adminWhatsapp, msg);
   }
 
-  res.status(201).json(await buildOrderResponse(order));
+  return res.status(201).json(await buildOrderResponse(order));
 });
 
 router.get("/orders", async (req, res) => {
@@ -121,7 +115,7 @@ router.get("/orders", async (req, res) => {
     .offset(Number(offset));
 
   const full = await Promise.all(orders.map(buildOrderResponse));
-  res.json({ orders: full, total: count });
+  return res.json({ orders: full, total: count });
 });
 
 router.get("/orders/track", async (req, res) => {
@@ -132,14 +126,14 @@ router.get("/orders/track", async (req, res) => {
   if (email) conditions.push(ilike(ordersTable.customerEmail, String(email)));
   const [order] = await db.select().from(ordersTable).where(and(...conditions));
   if (!order) return res.status(404).json({ error: "Order not found" });
-  res.json(await buildOrderResponse(order));
+  return res.json(await buildOrderResponse(order));
 });
 
 router.get("/orders/:id", async (req, res) => {
   const id = Number(req.params.id);
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
   if (!order) return res.status(404).json({ error: "Not found" });
-  res.json(await buildOrderResponse(order));
+  return res.json(await buildOrderResponse(order));
 });
 
 router.patch("/orders/:id/status", async (req, res) => {
@@ -156,7 +150,6 @@ router.patch("/orders/:id/status", async (req, res) => {
 
   if (!order) return res.status(404).json({ error: "Not found" });
 
-  // WhatsApp notification to customer
   const [settings] = await db.select().from(storeSettingsTable);
   if (settings?.statusUpdateTemplate) {
     const msg = renderTemplate(settings.statusUpdateTemplate, {
@@ -167,7 +160,7 @@ router.patch("/orders/:id/status", async (req, res) => {
     await sendWhatsApp(order.customerPhone, msg);
   }
 
-  res.json(await buildOrderResponse(order));
+  return res.json(await buildOrderResponse(order));
 });
 
 export default router;

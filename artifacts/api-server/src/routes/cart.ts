@@ -28,14 +28,13 @@ async function buildCart(sessionId: string) {
           priceModifier = Number(variant.priceModifier);
         }
       }
-      const price = Number(product.price) + priceModifier;
       return {
         id: item.id,
-        sessionId: item.sessionId,
         productId: item.productId,
-        productName: product.name,
-        price,
         quantity: item.quantity,
+        price: Number(product.price) + priceModifier,
+        name: product.name,
+        slug: product.slug,
         imageUrl: img?.url ?? null,
         variantId: item.variantId ?? null,
         variantLabel,
@@ -52,7 +51,7 @@ async function buildCart(sessionId: string) {
 router.get("/cart", async (req, res) => {
   const { sessionId } = req.query;
   if (!sessionId) return res.status(400).json({ error: "sessionId required" });
-  res.json(await buildCart(String(sessionId)));
+  return res.json(await buildCart(String(sessionId)));
 });
 
 router.post("/cart/items", async (req, res) => {
@@ -73,7 +72,7 @@ router.post("/cart/items", async (req, res) => {
     await db.insert(cartItemsTable).values({ sessionId, productId, quantity, variantId: variantId ?? null });
   }
 
-  res.json(await buildCart(sessionId));
+  return res.json(await buildCart(sessionId));
 });
 
 router.patch("/cart/items/:itemId", async (req, res) => {
@@ -87,7 +86,7 @@ router.patch("/cart/items/:itemId", async (req, res) => {
   const [item] = await db.select().from(cartItemsTable).where(eq(cartItemsTable.id, itemId));
   const sessionId = item?.sessionId;
   if (!sessionId) return res.json({ sessionId: "", items: [], total: 0, itemCount: 0 });
-  res.json(await buildCart(sessionId));
+  return res.json(await buildCart(sessionId));
 });
 
 router.delete("/cart/items/:itemId", async (req, res) => {
@@ -95,14 +94,7 @@ router.delete("/cart/items/:itemId", async (req, res) => {
   const [item] = await db.select().from(cartItemsTable).where(eq(cartItemsTable.id, itemId));
   const sessionId = item?.sessionId ?? "";
   await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
-  res.json(await buildCart(sessionId));
-});
-
-router.delete("/cart/clear", async (req, res) => {
-  const { sessionId } = req.query;
-  if (!sessionId) return res.status(400).json({ error: "sessionId required" });
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, String(sessionId)));
-  res.json({ cleared: true });
+  return res.json(await buildCart(sessionId));
 });
 
 export default router;

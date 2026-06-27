@@ -77,7 +77,7 @@ router.get("/products", async (req, res) => {
     .offset(Number(offset));
 
   const full = await Promise.all(products.map(buildProductResponse));
-  res.json({ products: full, total: count });
+  return res.json({ products: full, total: count });
 });
 
 router.get("/products/featured", async (req, res) => {
@@ -89,14 +89,21 @@ router.get("/products/featured", async (req, res) => {
     .orderBy(desc(productsTable.createdAt))
     .limit(limit);
   const full = await Promise.all(products.map(buildProductResponse));
-  res.json(full);
+  return res.json(full);
+});
+
+router.get("/products/slug/:slug", async (req, res) => {
+  const slug = req.params.slug;
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.slug, slug));
+  if (!product) return res.status(404).json({ error: "Not found" });
+  return res.json(await buildProductResponse(product));
 });
 
 router.get("/products/:id", async (req, res) => {
   const id = Number(req.params.id);
   const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
   if (!product) return res.status(404).json({ error: "Not found" });
-  res.json(await buildProductResponse(product));
+  return res.json(await buildProductResponse(product));
 });
 
 router.post("/products", async (req, res) => {
@@ -109,7 +116,7 @@ router.post("/products", async (req, res) => {
     .insert(productsTable)
     .values({ name, slug, description: description ?? "", price: String(price), compareAtPrice: compareAtPrice ? String(compareAtPrice) : null, categoryId: categoryId ?? null, isFeatured, isActive, stockQuantity, lowStockThreshold })
     .returning();
-  res.status(201).json(await buildProductResponse(product));
+  return res.status(201).json(await buildProductResponse(product));
 });
 
 router.patch("/products/:id", async (req, res) => {
@@ -128,13 +135,13 @@ router.patch("/products/:id", async (req, res) => {
   if (lowStockThreshold !== undefined) updates.lowStockThreshold = lowStockThreshold;
   const [product] = await db.update(productsTable).set(updates).where(eq(productsTable.id, id)).returning();
   if (!product) return res.status(404).json({ error: "Not found" });
-  res.json(await buildProductResponse(product));
+  return res.json(await buildProductResponse(product));
 });
 
 router.delete("/products/:id", async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(productsTable).where(eq(productsTable.id, id));
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 router.post("/products/:id/images", async (req, res) => {
@@ -145,14 +152,14 @@ router.post("/products/:id/images", async (req, res) => {
     await db.update(productImagesTable).set({ isPrimary: false }).where(eq(productImagesTable.productId, productId));
   }
   const [img] = await db.insert(productImagesTable).values({ productId, url, isPrimary, displayOrder }).returning();
-  res.status(201).json(img);
+  return res.status(201).json(img);
 });
 
 router.get("/products/:id/inventory", async (req, res) => {
   const id = Number(req.params.id);
   const [product] = await db.select({ stockQuantity: productsTable.stockQuantity, lowStockThreshold: productsTable.lowStockThreshold }).from(productsTable).where(eq(productsTable.id, id));
   if (!product) return res.status(404).json({ error: "Not found" });
-  res.json({ productId: id, ...product });
+  return res.json({ productId: id, ...product });
 });
 
 router.patch("/products/:id/inventory", async (req, res) => {
@@ -163,7 +170,7 @@ router.patch("/products/:id/inventory", async (req, res) => {
   if (lowStockThreshold !== undefined) updates.lowStockThreshold = lowStockThreshold;
   const [product] = await db.update(productsTable).set(updates).where(eq(productsTable.id, id)).returning();
   if (!product) return res.status(404).json({ error: "Not found" });
-  res.json({ productId: id, stockQuantity: product.stockQuantity, lowStockThreshold: product.lowStockThreshold });
+  return res.json({ productId: id, stockQuantity: product.stockQuantity, lowStockThreshold: product.lowStockThreshold });
 });
 
 export default router;

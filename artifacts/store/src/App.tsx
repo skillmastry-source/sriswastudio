@@ -23,6 +23,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminProductForm from "@/pages/admin/products/form";
 import AdminCategories from "@/pages/admin/categories";
 import AdminOrders from "@/pages/admin/orders";
+import AdminOrderDetail from "@/pages/admin/orders/detail";
 import AdminInventory from "@/pages/admin/inventory";
 import AdminSettings from "@/pages/admin/settings";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -92,7 +93,7 @@ function Router() {
         {() => <AdminRoute component={AdminOrders} />}
       </Route>
       <Route path="/admin/orders/:id">
-        {() => <AdminRoute component={() => <div>Order Detail</div>} />}
+        {() => <AdminRoute component={AdminOrderDetail} />}
       </Route>
       <Route path="/admin/inventory">
         {() => <AdminRoute component={AdminInventory} />}

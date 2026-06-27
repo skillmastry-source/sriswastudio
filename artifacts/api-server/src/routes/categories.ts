@@ -13,21 +13,21 @@ router.get("/categories", async (req, res) => {
     .where(eq(productsTable.isActive, true))
     .groupBy(productsTable.categoryId);
   const countMap = Object.fromEntries(counts.map((c) => [c.categoryId, c.count]));
-  res.json(cats.map((c) => ({ ...c, productCount: countMap[c.id] ?? 0 })));
+  return res.json(cats.map((c) => ({ ...c, productCount: countMap[c.id] ?? 0 })));
 });
 
 router.post("/categories", async (req, res) => {
   const { name, slug, description, imageUrl } = req.body;
   if (!name || !slug) return res.status(400).json({ error: "name and slug required" });
   const [cat] = await db.insert(categoriesTable).values({ name, slug, description, imageUrl }).returning();
-  res.status(201).json({ ...cat, productCount: 0 });
+  return res.status(201).json({ ...cat, productCount: 0 });
 });
 
 router.get("/categories/:id", async (req, res) => {
   const id = Number(req.params.id);
   const [cat] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, id));
   if (!cat) return res.status(404).json({ error: "Not found" });
-  res.json({ ...cat, productCount: 0 });
+  return res.json({ ...cat, productCount: 0 });
 });
 
 router.patch("/categories/:id", async (req, res) => {
@@ -39,13 +39,13 @@ router.patch("/categories/:id", async (req, res) => {
     .where(eq(categoriesTable.id, id))
     .returning();
   if (!cat) return res.status(404).json({ error: "Not found" });
-  res.json({ ...cat, productCount: 0 });
+  return res.json({ ...cat, productCount: 0 });
 });
 
 router.delete("/categories/:id", async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(categoriesTable).where(eq(categoriesTable.id, id));
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 export default router;

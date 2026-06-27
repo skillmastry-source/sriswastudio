@@ -1,4 +1,4 @@
-import { useListProducts, getListProductsQueryKey, useDeleteProduct } from "@workspace/api-client-react";
+import { useDeleteProduct } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,16 +6,31 @@ import { Plus, Edit, Trash2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+
+interface AdminProduct {
+  id: number; name: string; slug: string; price: number; compareAtPrice: number | null;
+  categoryName: string | null; isActive: boolean; isFeatured: boolean;
+  stockQuantity: number; lowStockThreshold: number;
+  images: { url: string; isPrimary: boolean }[];
+}
+
+async function fetchAdminProducts(search: string): Promise<{ products: AdminProduct[]; total: number }> {
+  const params = new URLSearchParams({ limit: "100" });
+  if (search) params.set("search", search);
+  const res = await fetch(`/api/admin/products?${params}`);
+  if (!res.ok) throw new Error("Failed to fetch products");
+  return res.json();
+}
 
 export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
-  
-  const { data: productData, isLoading } = useListProducts(
-    { search: search || null, limit: 100 },
-    { query: { queryKey: getListProductsQueryKey({ search, limit: 100 }) } }
-  );
+
+  const { data: productData, isLoading } = useQuery({
+    queryKey: ["admin-products", search],
+    queryFn: () => fetchAdminProducts(search),
+  });
 
   const deleteProduct = useDeleteProduct();
 
@@ -23,7 +38,7 @@ export default function AdminProducts() {
     if (window.confirm("Are you sure you want to delete this product?")) {
       deleteProduct.mutate({ id }, {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({ search, limit: 100 }) });
+          queryClient.invalidateQueries({ queryKey: ["admin-products"] });
         }
       });
     }

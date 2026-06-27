@@ -98,16 +98,46 @@ router.get("/products/featured", async (req, res) => {
   return res.json(full);
 });
 
+router.get("/admin/products", requireAdmin, async (req, res) => {
+  const { search: rawSearch, limit = 100, offset = 0 } = req.query;
+  const search = qval(rawSearch);
+  const conditions = search ? [ilike(productsTable.name, `%${search}%`)] : [];
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const products = await db
+    .select()
+    .from(productsTable)
+    .where(whereClause)
+    .orderBy(desc(productsTable.createdAt))
+    .limit(Number(limit))
+    .offset(Number(offset));
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(productsTable)
+    .where(whereClause);
+  const full = await Promise.all(products.map(buildProductResponse));
+  return res.json({ products: full, total: count });
+});
+
 router.get("/products/slug/:slug", async (req, res) => {
   const slug = req.params.slug;
-  const [product] = await db.select().from(productsTable).where(eq(productsTable.slug, slug));
+  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
+  const isAdmin = !!auth?.userId;
+  const whereClause = isAdmin
+    ? eq(productsTable.slug, slug)
+    : and(eq(productsTable.slug, slug), eq(productsTable.isActive, true));
+  const [product] = await db.select().from(productsTable).where(whereClause);
   if (!product) return res.status(404).json({ error: "Not found" });
   return res.json(await buildProductResponse(product));
 });
 
 router.get("/products/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
+  const isAdmin = !!auth?.userId;
+  const whereClause = isAdmin
+    ? eq(productsTable.id, id)
+    : and(eq(productsTable.id, id), eq(productsTable.isActive, true));
+  const [product] = await db.select().from(productsTable).where(whereClause);
   if (!product) return res.status(404).json({ error: "Not found" });
   return res.json(await buildProductResponse(product));
 });

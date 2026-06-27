@@ -58,6 +58,10 @@ router.post("/cart/items", async (req, res) => {
   const { sessionId, productId, quantity = 1, variantId } = req.body;
   if (!sessionId || !productId) return res.status(400).json({ error: "sessionId and productId required" });
 
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+  if (!product || !product.isActive) return res.status(400).json({ error: "Product is not available" });
+  if (product.stockQuantity <= 0) return res.status(400).json({ error: "Product is out of stock" });
+
   const matchCondition = variantId != null
     ? and(
         eq(cartItemsTable.sessionId, sessionId),

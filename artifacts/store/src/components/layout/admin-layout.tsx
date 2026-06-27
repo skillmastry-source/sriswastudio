@@ -1,10 +1,30 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, ShoppingBag, Package, ListTree, Settings, Users, LogOut, Tags } from "lucide-react";
-import { useUser } from "@/lib/clerk-stub";
+import { useUser, useAuth } from "@/lib/clerk-stub";
+import { useEffect } from "react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
-  const { user } = useUser();
+  const [location, setLocation] = useLocation();
+  const { user, isLoaded: userLoaded } = useUser();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+
+  useEffect(() => {
+    if (authLoaded && !isSignedIn) {
+      setLocation("/sign-in");
+    }
+  }, [authLoaded, isSignedIn, setLocation]);
+
+  if (!authLoaded || !userLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return null;
+  }
 
   const navItems = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,12 +47,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
             return (
-              <Link 
-                key={item.href} 
+              <Link
+                key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                  isActive 
-                    ? "bg-primary text-primary-foreground font-medium" 
+                  isActive
+                    ? "bg-primary text-primary-foreground font-medium"
                     : "hover:bg-muted text-foreground/80"
                 }`}
               >

@@ -46,6 +46,7 @@ export default function ProductDetail() {
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
 
   const { data: product, isLoading, isError } = useQuery<Product>({
     queryKey: ["product-by-slug", slug],
@@ -59,29 +60,35 @@ export default function ProductDetail() {
 
   const addToCartMutation = useAddToCart();
 
+  const selectedVariant = product?.variants.find((v) => v.id === selectedVariantId) ?? null;
+  const effectivePrice = product ? product.price + (selectedVariant?.priceModifier ?? 0) : 0;
+
+  const variantsByName = product?.variants.reduce<Record<string, ProductVariant[]>>((acc, v) => {
+    acc[v.name] = [...(acc[v.name] ?? []), v];
+    return acc;
+  }, {}) ?? {};
+
   const handleAddToCart = () => {
     if (!product) return;
+    if (product.variants.length > 0 && !selectedVariantId) {
+      toast({ title: "Please select a variant", description: "Choose your preferred option before adding to cart.", variant: "destructive" });
+      return;
+    }
     addToCartMutation.mutate(
       {
         data: {
           sessionId,
           productId: product.id,
           quantity,
+          variantId: selectedVariantId ?? undefined,
         },
       },
       {
         onSuccess: () => {
-          toast({
-            title: "Added to cart",
-            description: `${quantity}x ${product.name} added to your cart.`,
-          });
+          toast({ title: "Added to cart", description: `${quantity}× ${product.name} added to your cart.` });
         },
         onError: () => {
-          toast({
-            title: "Error",
-            description: "Could not add item to cart. Please try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Could not add item to cart.", variant: "destructive" });
         },
       }
     );
@@ -131,10 +138,7 @@ export default function ProductDetail() {
           {product.categoryName && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <Link
-                href={`/shop?category=${product.categoryName.toLowerCase()}`}
-                className="hover:text-primary transition-colors"
-              >
+              <Link href={`/shop?category=${encodeURIComponent(product.categoryName.toLowerCase())}`} className="hover:text-primary transition-colors">
                 {product.categoryName}
               </Link>
             </>
@@ -152,19 +156,15 @@ export default function ProductDetail() {
               {currentImage ? (
                 <img src={currentImage} alt={product.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  No Image
-                </div>
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
               )}
             </div>
-            {product.images && product.images.length > 1 && (
+            {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.images.map((img) => (
                   <button
                     key={img.id}
-                    className={`aspect-square rounded-md overflow-hidden border-2 transition-colors ${
-                      currentImage === img.url ? "border-primary" : "border-transparent"
-                    }`}
+                    className={`aspect-square rounded-md overflow-hidden border-2 transition-colors ${currentImage === img.url ? "border-primary" : "border-transparent"}`}
                     onClick={() => setSelectedImage(img.url)}
                   >
                     <img src={img.url} alt="Thumbnail" className="w-full h-full object-cover" />
@@ -179,7 +179,7 @@ export default function ProductDetail() {
             <h1 className="text-4xl font-serif font-bold text-foreground mb-2">{product.name}</h1>
 
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-2xl font-medium text-[#9B0F5F]">₹{product.price}</span>
+              <span className="text-2xl font-medium text-[#9B0F5F]">₹{effectivePrice}</span>
               {product.compareAtPrice && (
                 <span className="text-muted-foreground line-through text-lg">₹{product.compareAtPrice}</span>
               )}
@@ -191,6 +191,40 @@ export default function ProductDetail() {
             </div>
 
             <p className="text-foreground/80 mb-8 leading-relaxed">{product.description}</p>
+
+            {/* Variant selection */}
+            {Object.entries(variantsByName).map(([variantName, options]) => (
+              <div key={variantName} className="mb-6">
+                <h3 className="font-medium mb-3 text-sm uppercase tracking-wide text-muted-foreground">
+                  {variantName}
+                  {selectedVariantId && options.some((o) => o.id === selectedVariantId) && (
+                    <span className="ml-2 normal-case font-normal text-foreground">
+                      — {options.find((o) => o.id === selectedVariantId)?.value}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {options.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariantId(v.id === selectedVariantId ? null : v.id)}
+                      className={`px-4 py-2 text-sm rounded-md border-2 transition-all font-medium ${
+                        selectedVariantId === v.id
+                          ? "border-[#9B0F5F] bg-[#9B0F5F]/10 text-[#9B0F5F]"
+                          : "border-border hover:border-[#9B0F5F]/50"
+                      }`}
+                    >
+                      {v.value}
+                      {v.priceModifier !== 0 && (
+                        <span className="ml-1 text-xs opacity-70">
+                          {v.priceModifier > 0 ? `+₹${v.priceModifier}` : `-₹${Math.abs(v.priceModifier)}`}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
 
             <div className="space-y-6 mb-8 flex-1">
               <div>
@@ -225,13 +259,15 @@ export default function ProductDetail() {
               disabled={product.stockQuantity <= 0 || addToCartMutation.isPending}
             >
               {addToCartMutation.isPending
-                ? "Adding..."
+                ? "Adding…"
                 : product.stockQuantity > 0
-                  ? "Add to Cart"
+                  ? product.variants.length > 0 && !selectedVariantId
+                    ? "Select an option"
+                    : "Add to Cart"
                   : "Out of Stock"}
             </Button>
 
-            {/* USPs inline */}
+            {/* USPs */}
             <div className="mt-8 pt-8 border-t grid grid-cols-3 gap-4 text-center">
               <div className="flex flex-col items-center gap-2 text-[#9B0F5F]">
                 <ShieldCheck className="h-6 w-6" />

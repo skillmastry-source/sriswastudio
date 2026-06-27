@@ -1,6 +1,6 @@
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useCartContext } from "@/hooks/use-cart-context";
-import { useGetCart, getGetCartQueryKey, useUpdateCartItem, useRemoveCartItem } from "@workspace/api-client-react";
+import { useGetCart, getGetCartQueryKey, useUpdateCartItem } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ArrowRight } from "lucide-react";
@@ -17,21 +17,18 @@ export default function Cart() {
   );
 
   const updateItem = useUpdateCartItem();
-  const removeItem = useRemoveCartItem();
 
   const handleUpdateQuantity = (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
     updateItem.mutate(
-      { itemId, data: { quantity: newQuantity } },
+      { itemId, data: { quantity: newQuantity, sessionId } as { quantity: number; sessionId: string } },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
     );
   };
 
-  const handleRemove = (itemId: number) => {
-    removeItem.mutate(
-      { itemId },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
-    );
+  const handleRemove = async (itemId: number) => {
+    await fetch(`/api/cart/items/${itemId}?sessionId=${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+    queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
   };
 
   if (isLoading) {

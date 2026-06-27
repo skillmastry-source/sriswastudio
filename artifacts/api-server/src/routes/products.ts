@@ -145,6 +145,17 @@ router.delete("/products/:id", requireAdmin, async (req, res) => {
   return res.status(204).send();
 });
 
+router.post("/products/:id/variants", requireAdmin, async (req, res) => {
+  const productId = Number(req.params.id);
+  const { name, value, priceModifier = 0 } = req.body;
+  if (!name || !value) return res.status(400).json({ error: "name and value required" });
+  const [variant] = await db
+    .insert(productVariantsTable)
+    .values({ productId, name, value, priceModifier: String(priceModifier) })
+    .returning();
+  return res.status(201).json({ ...variant, priceModifier: Number(variant.priceModifier) });
+});
+
 router.post("/products/:id/images", requireAdmin, async (req, res) => {
   const productId = Number(req.params.id);
   const { url, isPrimary = false, displayOrder = 0 } = req.body;

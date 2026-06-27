@@ -3,6 +3,7 @@ import { useCartContext } from "@/hooks/use-cart-context";
 import { ShoppingBag, Menu, X, User, Instagram, Facebook, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CartDrawer } from "@/components/cart-drawer";
 
 export function AnnouncementBar() {
   return (
@@ -14,7 +15,7 @@ export function AnnouncementBar() {
 
 export function Navbar() {
   const [location] = useLocation();
-  const { itemCount } = useCartContext();
+  const { itemCount, openCart } = useCartContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -77,15 +78,18 @@ export function Navbar() {
               <User className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" className="relative text-gray-700 hover:text-[#9B0F5F]" asChild>
-            <Link href="/cart">
-              <ShoppingBag className="h-5 w-5" />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#9B0F5F] text-[10px] font-bold text-white flex items-center justify-center">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative text-gray-700 hover:text-[#9B0F5F]"
+            onClick={openCart}
+          >
+            <ShoppingBag className="h-5 w-5" />
+            {itemCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#9B0F5F] text-[10px] font-bold text-white flex items-center justify-center">
+                {itemCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>
@@ -195,6 +199,7 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <CartDrawer />
     </div>
   );
 }

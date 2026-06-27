@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   ordersTable, orderItemsTable, cartItemsTable,
-  productsTable, productImagesTable, storeSettingsTable,
+  productsTable, productImagesTable, productVariantsTable, storeSettingsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
@@ -48,13 +48,22 @@ router.post("/orders", async (req, res) => {
       const [product] = await db.select().from(productsTable).where(eq(productsTable.id, ci.productId));
       if (!product) return null;
       const [img] = await db.select().from(productImagesTable).where(and(eq(productImagesTable.productId, ci.productId), eq(productImagesTable.isPrimary, true)));
+      let variantLabel: string | null = null;
+      let unitPrice = Number(product.price);
+      if (ci.variantId) {
+        const [variant] = await db.select().from(productVariantsTable).where(eq(productVariantsTable.id, ci.variantId));
+        if (variant) {
+          variantLabel = `${variant.name}: ${variant.value}`;
+          unitPrice = Number(product.price) + Number(variant.priceModifier);
+        }
+      }
       return {
         productId: ci.productId,
         productName: product.name,
         quantity: ci.quantity,
-        price: String(product.price),
+        price: String(unitPrice),
         imageUrl: img?.url ?? null,
-        variantLabel: null as string | null,
+        variantLabel,
       };
     })
   );

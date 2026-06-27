@@ -100,7 +100,14 @@ router.patch("/cart/items/:itemId", async (req, res) => {
   if (quantity <= 0) {
     await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
   } else {
-    await db.update(cartItemsTable).set({ quantity, updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
+    // Cap quantity at current stock to prevent oversell
+    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
+    const maxQty = product ? product.stockQuantity : quantity;
+    const safeQty = Math.min(quantity, maxQty);
+    if (safeQty <= 0) {
+      return res.status(400).json({ error: "Product is out of stock" });
+    }
+    await db.update(cartItemsTable).set({ quantity: safeQty, updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
   }
   return res.json(await buildCart(sessionId));
 });
@@ -122,7 +129,7 @@ router.delete("/cart/clear", async (req, res) => {
   const { sessionId } = req.query;
   if (!sessionId) return res.status(400).json({ error: "sessionId required" });
   await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, String(sessionId)));
-  return res.status(204).send();
+  return res.json({ success: true });
 });
 
 export default router;

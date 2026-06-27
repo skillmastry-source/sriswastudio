@@ -43,10 +43,11 @@ router.post("/orders", async (req, res) => {
   const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
   if (cartItems.length === 0) return res.status(400).json({ error: "Cart is empty" });
 
+  // Resolve all order items and validate stock before touching anything
   const itemsToInsert = await Promise.all(
     cartItems.map(async (ci) => {
       const [product] = await db.select().from(productsTable).where(eq(productsTable.id, ci.productId));
-      if (!product) return null;
+      if (!product || !product.isActive) return null;
       const [img] = await db.select().from(productImagesTable).where(and(eq(productImagesTable.productId, ci.productId), eq(productImagesTable.isPrimary, true)));
       let variantLabel: string | null = null;
       let unitPrice = Number(product.price);
@@ -60,6 +61,7 @@ router.post("/orders", async (req, res) => {
       return {
         productId: ci.productId,
         productName: product.name,
+        stockQuantity: product.stockQuantity,
         quantity: ci.quantity,
         price: String(unitPrice),
         imageUrl: img?.url ?? null,
@@ -69,30 +71,64 @@ router.post("/orders", async (req, res) => {
   );
 
   const validItems = itemsToInsert.filter(Boolean) as NonNullable<typeof itemsToInsert[0]>[];
+  if (validItems.length === 0) return res.status(400).json({ error: "No active products in cart" });
+
+  // Server-side stock check before committing the order
+  const insufficientStock = validItems.filter((i) => i.quantity > i.stockQuantity);
+  if (insufficientStock.length > 0) {
+    return res.status(400).json({
+      error: "Insufficient stock",
+      items: insufficientStock.map((i) => ({
+        productId: i.productId,
+        productName: i.productName,
+        requested: i.quantity,
+        available: i.stockQuantity,
+      })),
+    });
+  }
+
   const subtotal = validItems.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
   const total = subtotal;
   const orderNumber = generateOrderNumber();
 
-  const [order] = await db
-    .insert(ordersTable)
-    .values({
-      orderNumber, status: "pending", customerName, customerPhone, customerEmail,
-      shippingAddress, city, state, pincode, notes: notes ?? null,
-      subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
-    })
-    .returning();
+  // Execute order creation, stock decrement, and cart clear in a single transaction
+  // with row-level locks to prevent race-condition oversell
+  const order = await db.transaction(async (tx) => {
+    // Lock the product rows for update to serialise concurrent orders
+    for (const i of validItems) {
+      const result = await tx.execute(
+        sql`SELECT stock_quantity FROM products WHERE id = ${i.productId} FOR UPDATE`
+      );
+      const locked = result.rows[0] as { stock_quantity: number } | undefined;
+      const available = locked?.stock_quantity ?? 0;
+      if (i.quantity > available) {
+        throw new Error(`INSUFFICIENT_STOCK:${i.productName}`);
+      }
+    }
 
-  await db.insert(orderItemsTable).values(validItems.map((i) => ({ orderId: order.id, ...i })));
+    const [newOrder] = await tx
+      .insert(ordersTable)
+      .values({
+        orderNumber, status: "pending", customerName, customerPhone, customerEmail,
+        shippingAddress, city, state, pincode, notes: notes ?? null,
+        subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
+      })
+      .returning();
 
-  await Promise.all(
-    validItems.map((i) =>
-      db.execute(
-        sql`UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ${i.quantity}) WHERE id = ${i.productId}`
-      )
-    )
-  );
+    await tx.insert(orderItemsTable).values(
+      validItems.map(({ stockQuantity: _s, ...i }) => ({ orderId: newOrder.id, ...i }))
+    );
 
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+    for (const i of validItems) {
+      await tx.execute(
+        sql`UPDATE products SET stock_quantity = stock_quantity - ${i.quantity} WHERE id = ${i.productId}`
+      );
+    }
+
+    await tx.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+
+    return newOrder;
+  });
 
   const [settings] = await db.select().from(storeSettingsTable);
   if (settings?.adminWhatsapp) {

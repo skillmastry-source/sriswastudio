@@ -22,6 +22,18 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 - PATCH `/api/orders/:id/status` (triggers WhatsApp to customer)
 - GET `/api/admin/dashboard`, `/api/admin/inventory`, `/api/admin/settings`
 - POST `/api/storage/uploads/request-url` (object storage)
+- GET `/api/site-design` (public), PATCH `/api/admin/site-design` (admin)
+
+## Route Registration Order Matters
+adminRouter uses `router.use(requireAdmin)` WITHOUT a path prefix — it intercepts ALL unauthenticated requests before they reach later routers. Any public routes MUST be registered before adminRouter in `routes/index.ts`.
+
+**Why:** Express evaluates sub-routers in registration order. adminRouter's global requireAdmin guard fires on every request, returning 401 before Express ever checks if a route matches. siteDesignRouter (with public GET) must come first.
+
+## Site Design Settings
+- `store_settings.site_design` jsonb column — auto-added on server start via `ALTER TABLE IF NOT EXISTS`
+- `useSiteSettings()` hook in storefront, `useUpdateSiteSettings()` for admin saves
+- Admin page at `/admin/design` — tabbed UI: Colors, Header, Hero, USP Strip, Collection, New Arrivals, Testimonials, Footer
+- All storefront colors/text driven by settings; defaults in `DEFAULT_SITE_DESIGN` exported from both hook and API route
 
 ## WhatsApp (Twilio)
 - Env secrets needed: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`

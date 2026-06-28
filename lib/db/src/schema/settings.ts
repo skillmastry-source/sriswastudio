@@ -1,4 +1,4 @@
-import { pgTable, serial, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -8,6 +8,7 @@ export const storeSettingsTable = pgTable("store_settings", {
   adminWhatsapp: text("admin_whatsapp").notNull().default(""),
   newOrderTemplate: text("new_order_template").notNull().default("New order {{orderNumber}} from {{customerName}} for ₹{{total}}. Phone: {{phone}}"),
   statusUpdateTemplate: text("status_update_template").notNull().default("Hi {{customerName}}, your Sriswa Studio order {{orderNumber}} is now {{status}}. Thank you!"),
+  siteDesign: jsonb("site_design").default({}),
 });
 
 export const insertStoreSettingsSchema = createInsertSchema(storeSettingsTable).omit({ id: true });

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, ListTree, Settings, Users, LogOut, Tags } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, ListTree, Settings, Users, LogOut, Tags, Palette } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
 import { useEffect } from "react";
 
@@ -39,6 +39,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/categories", icon: Tags, label: "Categories" },
     { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
     { href: "/admin/inventory", icon: ListTree, label: "Inventory" },
+    { href: "/admin/design", icon: Palette, label: "Design" },
     { href: "/admin/settings", icon: Settings, label: "Settings" },
   ];
 

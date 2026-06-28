@@ -8,12 +8,11 @@ import {
 } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 import { ShieldCheck, Droplets, Sparkles, Truck, ShoppingBag, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 
-const BRAND = "#9B0F5F";
-const GOLD = "#D4AF37";
-const DARK = "#1a0a0f";
+const USP_ICONS = [ShieldCheck, Droplets, Sparkles, Truck];
 
 /* ─── Ticker ─── */
 const TICKER_ITEMS = [
@@ -25,13 +24,13 @@ const TICKER_ITEMS = [
   "✦ Handcrafted with Love",
 ];
 
-function Ticker() {
+function Ticker({ dark, gold }: { dark: string; gold: string }) {
   const repeated = [...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS];
   return (
-    <div className="w-full overflow-hidden py-2.5" style={{ background: DARK }}>
+    <div className="w-full overflow-hidden py-2.5" style={{ background: dark }}>
       <div className="flex gap-14 whitespace-nowrap" style={{ animation: "ticker 28s linear infinite" }}>
         {repeated.map((item, i) => (
-          <span key={i} className="text-[11px] tracking-[0.22em] font-medium uppercase flex-shrink-0" style={{ color: GOLD }}>
+          <span key={i} className="text-[11px] tracking-[0.22em] font-medium uppercase flex-shrink-0" style={{ color: gold }}>
             {item}
           </span>
         ))}
@@ -48,7 +47,7 @@ type CardProduct = {
   images?: { url: string }[]; stockQuantity: number;
 };
 
-function ProductCard({ product, sessionId }: { product: CardProduct; sessionId: string }) {
+function ProductCard({ product, sessionId, brand, dark }: { product: CardProduct; sessionId: string; brand: string; dark: string }) {
   const addToCart = useAddToCart();
   const { openCart } = useCartContext();
   const { toast } = useToast();
@@ -82,11 +81,11 @@ function ProductCard({ product, sessionId }: { product: CardProduct; sessionId: 
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Sparkles className="h-10 w-10" style={{ color: BRAND, opacity: 0.2 }} />
+            <Sparkles className="h-10 w-10" style={{ color: brand, opacity: 0.2 }} />
           </div>
         )}
         {product.compareAtPrice && !outOfStock && (
-          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: BRAND, borderRadius: "2px" }}>Sale</span>
+          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: brand, borderRadius: "2px" }}>Sale</span>
         )}
         {outOfStock && (
           <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: "#888", borderRadius: "2px" }}>Sold Out</span>
@@ -95,37 +94,29 @@ function ProductCard({ product, sessionId }: { product: CardProduct; sessionId: 
           <button
             onClick={handleAdd} disabled={outOfStock || adding}
             className="w-full flex items-center justify-center gap-2 py-3 text-white text-[11px] tracking-[0.18em] uppercase font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: outOfStock ? "#888" : BRAND }}
+            style={{ background: outOfStock ? "#888" : brand }}
           >
             <ShoppingBag className="h-3.5 w-3.5" />
             {adding ? "Adding…" : outOfStock ? "Sold Out" : "Add to Cart"}
           </button>
         </div>
       </div>
-      <h3 className="font-serif font-semibold text-sm leading-snug mb-1 transition-colors group-hover:text-[#9B0F5F]" style={{ color: DARK }}>
+      <h3 className="font-serif font-semibold text-sm leading-snug mb-1 transition-colors" style={{ color: dark }}>
         {product.name}
       </h3>
       <div className="flex items-center gap-2">
-        <span className="font-bold text-sm" style={{ color: BRAND }}>₹{product.price}</span>
+        <span className="font-bold text-sm" style={{ color: brand }}>₹{product.price}</span>
         {product.compareAtPrice && <span className="text-gray-400 line-through text-xs">₹{product.compareAtPrice}</span>}
       </div>
     </Link>
   );
 }
 
-/* ─── Testimonials ─── */
-const TESTIMONIALS = [
-  { name: "Priya S.", city: "Mumbai", rating: 5, text: "I've been wearing my anklet for 3 months, even in the shower — not a single tarnish! Absolutely love it. Will definitely order more." },
-  { name: "Riya M.", city: "Bangalore", rating: 5, text: "The necklace looks so premium and it's so affordable. I got so many compliments at my friend's wedding. Sriswa Studio is my go-to now!" },
-  { name: "Ananya K.", city: "Chennai", rating: 5, text: "Super fast delivery and beautiful packaging. The earrings are lightweight and don't cause any irritation. Perfect for sensitive ears!" },
-  { name: "Divya R.", city: "Hyderabad", rating: 5, text: "Was skeptical at first but the quality is amazing. Wore it swimming and it's still shining. 100% worth every rupee!" },
-];
-
-function StarRating({ n }: { n: number }) {
+function StarRating({ n, gold }: { n: number; gold: string }) {
   return (
     <div className="flex gap-0.5 mb-2">
       {Array.from({ length: n }).map((_, i) => (
-        <Star key={i} className="h-3.5 w-3.5 fill-current" style={{ color: GOLD }} />
+        <Star key={i} className="h-3.5 w-3.5 fill-current" style={{ color: gold }} />
       ))}
     </div>
   );
@@ -137,6 +128,10 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"new" | "best">("new");
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  const s = useSiteSettings();
+  const { colors, hero, usp, collection, tabs, testimonials } = s;
+  const { brand, gold, dark } = colors;
 
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
 
@@ -169,7 +164,7 @@ export default function Home() {
     <StoreLayout>
 
       {/* ── Ticker ── */}
-      <Ticker />
+      <Ticker dark={dark} gold={gold} />
 
       {/* ── COMPACT HERO ── */}
       <section className="relative w-full overflow-hidden" style={{ height: "52vh", minHeight: 320, maxHeight: 520 }}>
@@ -178,26 +173,26 @@ export default function Home() {
           className="absolute inset-0 w-full h-full object-cover"
           style={{ objectPosition: "right center" }}
         />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #1a0a0f 0%, #1a0a0f 44%, rgba(26,10,15,0.35) 68%, rgba(26,10,15,0) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${dark} 0%, ${dark} 44%, ${dark}59 68%, ${dark}00 100%)` }} />
         <div className="relative h-full flex items-center">
           <div className="container mx-auto px-6 md:px-12">
             <div className="max-w-md">
-              <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: GOLD }}>New Arrivals · 2025</p>
+              <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: gold }}>{hero.badge}</p>
               <h1 className="font-serif font-bold text-white leading-[1.05] mb-4" style={{ fontSize: "clamp(28px, 4vw, 52px)" }}>
-                Jewellery That<br /><span style={{ color: GOLD }}>Lasts Forever</span>
+                {hero.title}<br /><span style={{ color: gold }}>{hero.titleGold}</span>
               </h1>
-              <p className="text-white/60 text-sm mb-6">Anti-tarnish · Waterproof · Skin-friendly · Starting ₹399</p>
+              <p className="text-white/60 text-sm mb-6">{hero.subtitle}</p>
               <div className="flex items-center gap-4 flex-wrap">
                 <button
                   onClick={() => document.getElementById("products-section")?.scrollIntoView({ behavior: "smooth" })}
                   className="inline-flex items-center gap-2 px-7 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85"
-                  style={{ background: BRAND }}
+                  style={{ background: brand }}
                 >
-                  <ShoppingBag className="h-3.5 w-3.5" /> Shop Now
+                  <ShoppingBag className="h-3.5 w-3.5" /> {hero.shopButtonText}
                 </button>
                 <Link href="/shop" className="text-[11px] font-medium tracking-[0.15em] uppercase pb-0.5 transition-opacity hover:opacity-60"
                   style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.3)" }}>
-                  View All →
+                  {hero.viewAllText}
                 </Link>
               </div>
             </div>
@@ -206,21 +201,19 @@ export default function Home() {
       </section>
 
       {/* ── USP STRIP ── */}
-      <div className="border-b" style={{ background: "#fdf6f9", borderColor: `${BRAND}18` }}>
+      <div className="border-b" style={{ background: "#fdf6f9", borderColor: `${brand}18` }}>
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4">
-            {[
-              { icon: ShieldCheck, label: "Anti-Tarnish" },
-              { icon: Droplets, label: "Waterproof" },
-              { icon: Sparkles, label: "Skin-Friendly" },
-              { icon: Truck, label: "Free Shipping ₹999+" },
-            ].map(({ icon: Icon, label }, i) => (
-              <div key={label} className="flex items-center justify-center gap-2.5 py-3.5 px-4"
-                style={{ borderRight: i < 3 ? `1px solid ${BRAND}18` : "none" }}>
-                <Icon className="h-4 w-4 flex-shrink-0" style={{ color: BRAND }} />
-                <span className="text-[11px] tracking-[0.12em] uppercase font-semibold text-gray-700">{label}</span>
-              </div>
-            ))}
+            {usp.map(({ text }, i) => {
+              const Icon = USP_ICONS[i] ?? ShieldCheck;
+              return (
+                <div key={i} className="flex items-center justify-center gap-2.5 py-3.5 px-4"
+                  style={{ borderRight: i < 3 ? `1px solid ${brand}18` : "none" }}>
+                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color: brand }} />
+                  <span className="text-[11px] tracking-[0.12em] uppercase font-semibold text-gray-700">{text}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -231,9 +224,9 @@ export default function Home() {
 
           {/* Header */}
           <div className="text-center mb-6">
-            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: BRAND }}>Shop All Jewellery</p>
-            <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">Our Collection</h2>
-            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: GOLD }} />
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: brand }}>{collection.label}</p>
+            <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">{collection.title}</h2>
+            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
           </div>
 
           {/* Category pills */}
@@ -241,14 +234,14 @@ export default function Home() {
             <button
               onClick={() => setActiveCategory(null)}
               className="px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-full border transition-all"
-              style={{ background: !activeCategory ? BRAND : "transparent", color: !activeCategory ? "white" : "#555", borderColor: !activeCategory ? BRAND : "#ddd" }}
+              style={{ background: !activeCategory ? brand : "transparent", color: !activeCategory ? "white" : "#555", borderColor: !activeCategory ? brand : "#ddd" }}
             >All</button>
             {categories?.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(activeCategory === cat.slug ? null : cat.slug ?? null)}
                 className="px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-full border transition-all"
-                style={{ background: activeCategory === cat.slug ? BRAND : "transparent", color: activeCategory === cat.slug ? "white" : "#555", borderColor: activeCategory === cat.slug ? BRAND : "#ddd" }}
+                style={{ background: activeCategory === cat.slug ? brand : "transparent", color: activeCategory === cat.slug ? "white" : "#555", borderColor: activeCategory === cat.slug ? brand : "#ddd" }}
               >
                 {cat.name}
               </button>
@@ -271,20 +264,22 @@ export default function Home() {
           {/* Grid */}
           {!isLoading && products.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
-              {products.map(product => <ProductCard key={product.id} product={product} sessionId={sessionId} />)}
+              {products.map(product => (
+                <ProductCard key={product.id} product={product} sessionId={sessionId} brand={brand} dark={dark} />
+              ))}
             </div>
           )}
 
           {!isLoading && products.length === 0 && (
             <div className="flex flex-col items-center py-20 text-center">
-              <Sparkles className="h-10 w-10 mb-4" style={{ color: BRAND, opacity: 0.25 }} />
+              <Sparkles className="h-10 w-10 mb-4" style={{ color: brand, opacity: 0.25 }} />
               <p className="text-gray-400 text-sm">No products found.</p>
             </div>
           )}
 
           {!isLoading && products.length >= 30 && (
             <div className="text-center mt-12">
-              <Link href="/shop" className="inline-flex items-center gap-2 px-8 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85" style={{ background: BRAND }}>
+              <Link href="/shop" className="inline-flex items-center gap-2 px-8 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85" style={{ background: brand }}>
                 Browse Full Collection →
               </Link>
             </div>
@@ -305,44 +300,41 @@ export default function Home() {
                   onClick={() => setActiveTab(tab)}
                   className="font-serif font-bold text-2xl md:text-3xl px-2 pb-1 transition-all duration-200"
                   style={{
-                    color: activeTab === tab ? DARK : "#ccc",
-                    borderBottom: activeTab === tab ? `2px solid ${GOLD}` : "2px solid transparent",
+                    color: activeTab === tab ? dark : "#ccc",
+                    borderBottom: activeTab === tab ? `2px solid ${gold}` : "2px solid transparent",
                   }}
                 >
-                  {tab === "new" ? "New Arrivals" : "Best Sellers"}
+                  {tab === "new" ? tabs.newArrivalsLabel : tabs.bestSellersLabel}
                 </button>
               ))}
             </div>
             <div className="mt-3">
               <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 hover:opacity-70 transition-opacity"
-                style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
-                Shop All →
+                style={{ color: brand, borderBottom: `1.5px solid ${brand}` }}>
+                {tabs.shopAllText}
               </Link>
             </div>
           </div>
 
           {/* Horizontal scroll slider */}
           <div className="relative">
-            {/* Prev arrow */}
             <button
               onClick={() => sliderRef.current?.scrollBy({ left: -320, behavior: "smooth" })}
-              className="absolute -left-4 top-1/3 -translate-y-1/2 z-10 h-9 w-9 rounded-full flex items-center justify-center shadow-md bg-white border transition-colors hover:border-[#9B0F5F]"
+              className="absolute -left-4 top-1/3 -translate-y-1/2 z-10 h-9 w-9 rounded-full flex items-center justify-center shadow-md bg-white border transition-colors"
               style={{ borderColor: "#e5e7eb" }}
               aria-label="Scroll left"
             >
-              <ChevronLeft className="h-4 w-4" style={{ color: BRAND }} />
+              <ChevronLeft className="h-4 w-4" style={{ color: brand }} />
             </button>
-            {/* Next arrow */}
             <button
               onClick={() => sliderRef.current?.scrollBy({ left: 320, behavior: "smooth" })}
-              className="absolute -right-4 top-1/3 -translate-y-1/2 z-10 h-9 w-9 rounded-full flex items-center justify-center shadow-md bg-white border transition-colors hover:border-[#9B0F5F]"
+              className="absolute -right-4 top-1/3 -translate-y-1/2 z-10 h-9 w-9 rounded-full flex items-center justify-center shadow-md bg-white border transition-colors"
               style={{ borderColor: "#e5e7eb" }}
               aria-label="Scroll right"
             >
-              <ChevronRight className="h-4 w-4" style={{ color: BRAND }} />
+              <ChevronRight className="h-4 w-4" style={{ color: brand }} />
             </button>
 
-            {/* Scrollable track */}
             <div
               ref={sliderRef}
               className="flex gap-4 overflow-x-auto pb-2"
@@ -359,6 +351,8 @@ export default function Home() {
                       <ProductCard
                         product={{ ...product, stockQuantity: (product as { stockQuantity?: number }).stockQuantity ?? 1 }}
                         sessionId={sessionId}
+                        brand={brand}
+                        dark={dark}
                       />
                     </div>
                   ))
@@ -379,28 +373,28 @@ export default function Home() {
         <div className="container mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-10">
-            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: BRAND }}>
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: brand }}>
               Happy Customers
             </p>
-            <h2 className="font-serif font-bold text-2xl md:text-3xl" style={{ color: DARK }}>
+            <h2 className="font-serif font-bold text-2xl md:text-3xl" style={{ color: dark }}>
               What Our Customers Say
             </h2>
-            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: GOLD }} />
+            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
           </div>
 
           {/* Cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {TESTIMONIALS.map(({ name, city, rating, text }) => (
+            {testimonials.map(({ name, city, rating, text }) => (
               <div
                 key={name}
                 className="flex flex-col p-5 rounded-sm"
-                style={{ background: "#fdf6f9", border: `1px solid ${BRAND}18` }}
+                style={{ background: "#fdf6f9", border: `1px solid ${brand}18` }}
               >
-                <StarRating n={rating} />
+                <StarRating n={rating} gold={gold} />
                 <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-4 italic">"{text}"</p>
                 <div>
-                  <p className="font-serif font-bold text-sm" style={{ color: DARK }}>{name}</p>
-                  <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: BRAND }}>{city}</p>
+                  <p className="font-serif font-bold text-sm" style={{ color: dark }}>{name}</p>
+                  <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: brand }}>{city}</p>
                 </div>
               </div>
             ))}
@@ -415,7 +409,7 @@ export default function Home() {
               { num: "24hr", label: "Dispatch" },
             ].map(({ num, label }) => (
               <div key={label}>
-                <p className="font-serif font-bold text-2xl" style={{ color: BRAND }}>{num}</p>
+                <p className="font-serif font-bold text-2xl" style={{ color: brand }}>{num}</p>
                 <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5 text-gray-400">{label}</p>
               </div>
             ))}

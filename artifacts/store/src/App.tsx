@@ -26,6 +26,7 @@ import AdminOrders from "@/pages/admin/orders";
 import AdminOrderDetail from "@/pages/admin/orders/detail";
 import AdminInventory from "@/pages/admin/inventory";
 import AdminSettings from "@/pages/admin/settings";
+import AdminDesign from "@/pages/admin/design";
 import { AdminLayout } from "@/components/layout/admin-layout";
 
 const queryClient = new QueryClient();
@@ -100,6 +101,9 @@ function Router() {
       </Route>
       <Route path="/admin/settings">
         {() => <AdminRoute component={AdminSettings} />}
+      </Route>
+      <Route path="/admin/design">
+        {() => <AdminRoute component={AdminDesign} />}
       </Route>
 
       <Route component={NotFound} />

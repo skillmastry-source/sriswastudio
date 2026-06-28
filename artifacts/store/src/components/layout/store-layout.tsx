@@ -45,7 +45,7 @@ export function Navbar() {
           <img
             src="/brand/logo-color.png"
             alt="Sriswa Studio"
-            style={{ height: 96, width: "auto", objectFit: "contain", display: "block" }}
+            style={{ height: 120, width: "auto", objectFit: "contain", display: "block" }}
           />
         </Link>
 
@@ -125,7 +125,7 @@ export function Footer() {
           <img
             src="/brand/logo-white.png"
             alt="Sriswa Studio"
-            style={{ height: 90, width: "auto", objectFit: "contain", objectPosition: "left" }}
+            style={{ height: 120, width: "auto", objectFit: "contain", objectPosition: "left" }}
           />
           <p className="text-white/60 text-sm leading-relaxed">
             Timeless Beauty, Everyday Shine.<br />

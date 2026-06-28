@@ -230,15 +230,10 @@ export default function Home() {
         <div className="container mx-auto px-6">
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-3">
-            <div>
-              <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: BRAND }}>Shop All Jewellery</p>
-              <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">Our Collection</h2>
-            </div>
-            <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 self-start sm:self-auto hover:opacity-70 transition-opacity"
-              style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
-              View All →
-            </Link>
+          <div className="text-center mb-6">
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: BRAND }}>Shop All Jewellery</p>
+            <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">Our Collection</h2>
+            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: GOLD }} />
           </div>
 
           {/* Category pills */}
@@ -302,13 +297,13 @@ export default function Home() {
         <div className="container mx-auto px-6">
 
           {/* Tab header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-            <div className="flex items-end gap-1">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-end gap-1 justify-center">
               {(["new", "best"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className="font-serif font-bold text-2xl md:text-3xl px-1 pb-1 transition-all duration-200"
+                  className="font-serif font-bold text-2xl md:text-3xl px-2 pb-1 transition-all duration-200"
                   style={{
                     color: activeTab === tab ? DARK : "#ccc",
                     borderBottom: activeTab === tab ? `2px solid ${GOLD}` : "2px solid transparent",
@@ -318,10 +313,12 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 self-start sm:self-auto hover:opacity-70 transition-opacity"
-              style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
-              Shop All →
-            </Link>
+            <div className="mt-3">
+              <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 hover:opacity-70 transition-opacity"
+                style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
+                Shop All →
+              </Link>
+            </div>
           </div>
 
           {/* Horizontal scroll slider */}
@@ -378,14 +375,14 @@ export default function Home() {
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section className="py-14" style={{ background: DARK }}>
+      <section className="py-14" style={{ background: "#fff" }}>
         <div className="container mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-10">
-            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: GOLD }}>
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: BRAND }}>
               Happy Customers
             </p>
-            <h2 className="font-serif font-bold text-2xl md:text-3xl text-white">
+            <h2 className="font-serif font-bold text-2xl md:text-3xl" style={{ color: DARK }}>
               What Our Customers Say
             </h2>
             <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: GOLD }} />
@@ -397,13 +394,13 @@ export default function Home() {
               <div
                 key={name}
                 className="flex flex-col p-5 rounded-sm"
-                style={{ background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.08)` }}
+                style={{ background: "#fdf6f9", border: `1px solid ${BRAND}18` }}
               >
                 <StarRating n={rating} />
-                <p className="text-white/75 text-sm leading-relaxed flex-1 mb-4 italic">"{text}"</p>
+                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-4 italic">"{text}"</p>
                 <div>
-                  <p className="font-serif font-bold text-sm text-white">{name}</p>
-                  <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: GOLD }}>{city}</p>
+                  <p className="font-serif font-bold text-sm" style={{ color: DARK }}>{name}</p>
+                  <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: BRAND }}>{city}</p>
                 </div>
               </div>
             ))}
@@ -418,8 +415,8 @@ export default function Home() {
               { num: "24hr", label: "Dispatch" },
             ].map(({ num, label }) => (
               <div key={label}>
-                <p className="font-serif font-bold text-2xl" style={{ color: GOLD }}>{num}</p>
-                <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
+                <p className="font-serif font-bold text-2xl" style={{ color: BRAND }}>{num}</p>
+                <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5 text-gray-400">{label}</p>
               </div>
             ))}
           </div>

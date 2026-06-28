@@ -4,6 +4,14 @@ import crypto from "crypto";
 
 const router = Router();
 
+// Payment gateway status (safe — no keys exposed)
+router.get("/payments/status", (_req, res) => {
+  res.json({
+    razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+    phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY),
+  });
+});
+
 function getRazorpay() {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;

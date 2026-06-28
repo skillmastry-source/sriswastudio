@@ -141,7 +141,7 @@ export function Footer() {
           <img
             src="/brand/logo-white.png"
             alt="Sriswa Studio"
-            style={{ height: footer.logoSize, width: "auto", display: "block" }}
+            style={{ height: footer.logoSize, width: "auto", display: "block", alignSelf: "flex-start" }}
           />
           <p className="text-white/60 text-sm leading-relaxed">
             {footer.tagline.split("\n").map((line, i) => (

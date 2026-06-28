@@ -227,7 +227,7 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
     /* Boxed layout: site is contained and centred, margins visible on desktop */
     <div className="bg-gray-100 min-h-[100dvh]">
-      <div className="max-w-[1200px] mx-auto min-h-[100dvh] flex flex-col font-sans bg-white shadow-[0_0_40px_rgba(0,0,0,0.10)]">
+      <div className="max-w-[1440px] mx-auto min-h-[100dvh] flex flex-col font-sans bg-white shadow-[0_0_60px_rgba(0,0,0,0.08)]">
         <AnnouncementBar />
         <Navbar />
         <main className="flex-1">{children}</main>

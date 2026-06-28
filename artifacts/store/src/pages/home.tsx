@@ -1,16 +1,21 @@
 import { Link, useLocation } from "wouter";
 import { StoreLayout } from "@/components/layout/store-layout";
-import { useListProducts, getListProductsQueryKey, useListCategories, getListCategoriesQueryKey, useAddToCart } from "@workspace/api-client-react";
+import {
+  useListProducts, getListProductsQueryKey,
+  useListCategories, getListCategoriesQueryKey,
+  useGetFeaturedProducts, getGetFeaturedProductsQueryKey,
+  useAddToCart,
+} from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, Droplets, Sparkles, Truck, ShoppingBag } from "lucide-react";
+import { ShieldCheck, Droplets, Sparkles, Truck, ShoppingBag, Search, Star } from "lucide-react";
 import { useState, useMemo } from "react";
 
 const BRAND = "#9B0F5F";
 const GOLD = "#D4AF37";
 const DARK = "#1a0a0f";
 
-/* ─── Scrolling ticker ─── */
+/* ─── Ticker ─── */
 const TICKER_ITEMS = [
   "✦ Anti-Tarnish Jewellery",
   "✦ Ships in 24 Hours",
@@ -36,41 +41,40 @@ function Ticker() {
   );
 }
 
-/* ─── Product Card with Add to Cart ─── */
-function ProductCard({ product, sessionId }: { product: { id: number; name: string; slug: string; price: number; compareAtPrice?: number | null; images?: { url: string }[]; stockQuantity: number }; sessionId: string }) {
+/* ─── Product Card ─── */
+type CardProduct = {
+  id: number; name: string; slug: string;
+  price: number; compareAtPrice?: number | null;
+  images?: { url: string }[]; stockQuantity: number;
+};
+
+function ProductCard({ product, sessionId }: { product: CardProduct; sessionId: string }) {
   const addToCart = useAddToCart();
   const { openCart } = useCartContext();
   const { toast } = useToast();
   const [adding, setAdding] = useState(false);
+  const outOfStock = product.stockQuantity <= 0;
 
-  const handleAdd = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (product.stockQuantity <= 0) return;
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (outOfStock) return;
     setAdding(true);
     addToCart.mutate(
       { data: { sessionId, productId: product.id, quantity: 1 } },
       {
-        onSuccess: () => {
-          toast({ title: "Added to cart!", description: `${product.name} added.` });
-          openCart();
-        },
+        onSuccess: () => { toast({ title: "Added to cart!", description: `${product.name} added.` }); openCart(); },
         onError: () => toast({ title: "Error", description: "Could not add to cart.", variant: "destructive" }),
         onSettled: () => setAdding(false),
       }
     );
   };
 
-  const outOfStock = product.stockQuantity <= 0;
-
   return (
     <Link href={`/shop/${product.slug}`} className="group block">
-      {/* Image */}
       <div className="relative overflow-hidden mb-3 rounded-sm" style={{ aspectRatio: "3/4", background: "#fdf6f9" }}>
         {product.images?.[0] ? (
           <img
-            src={product.images[0].url}
-            alt={product.name}
+            src={product.images[0].url} alt={product.name}
             className="w-full h-full object-cover"
             style={{ transition: "transform 0.65s cubic-bezier(0.25,0.46,0.45,0.94)" }}
             onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}
@@ -81,25 +85,16 @@ function ProductCard({ product, sessionId }: { product: { id: number; name: stri
             <Sparkles className="h-10 w-10" style={{ color: BRAND, opacity: 0.2 }} />
           </div>
         )}
-
-        {/* Badges */}
         {product.compareAtPrice && !outOfStock && (
-          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: BRAND, borderRadius: "2px" }}>
-            Sale
-          </span>
+          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: BRAND, borderRadius: "2px" }}>Sale</span>
         )}
         {outOfStock && (
-          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: "#888", borderRadius: "2px" }}>
-            Sold Out
-          </span>
+          <span className="absolute top-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase" style={{ background: "#888", borderRadius: "2px" }}>Sold Out</span>
         )}
-
-        {/* Add to cart overlay */}
         <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
           <button
-            onClick={handleAdd}
-            disabled={outOfStock || adding}
-            className="w-full flex items-center justify-center gap-2 py-3 text-white text-[11px] tracking-[0.18em] uppercase font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+            onClick={handleAdd} disabled={outOfStock || adding}
+            className="w-full flex items-center justify-center gap-2 py-3 text-white text-[11px] tracking-[0.18em] uppercase font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: outOfStock ? "#888" : BRAND }}
           >
             <ShoppingBag className="h-3.5 w-3.5" />
@@ -107,18 +102,32 @@ function ProductCard({ product, sessionId }: { product: { id: number; name: stri
           </button>
         </div>
       </div>
-
-      {/* Info */}
       <h3 className="font-serif font-semibold text-sm leading-snug mb-1 transition-colors group-hover:text-[#9B0F5F]" style={{ color: DARK }}>
         {product.name}
       </h3>
       <div className="flex items-center gap-2">
         <span className="font-bold text-sm" style={{ color: BRAND }}>₹{product.price}</span>
-        {product.compareAtPrice && (
-          <span className="text-gray-400 line-through text-xs">₹{product.compareAtPrice}</span>
-        )}
+        {product.compareAtPrice && <span className="text-gray-400 line-through text-xs">₹{product.compareAtPrice}</span>}
       </div>
     </Link>
+  );
+}
+
+/* ─── Testimonials ─── */
+const TESTIMONIALS = [
+  { name: "Priya S.", city: "Mumbai", rating: 5, text: "I've been wearing my anklet for 3 months, even in the shower — not a single tarnish! Absolutely love it. Will definitely order more." },
+  { name: "Riya M.", city: "Bangalore", rating: 5, text: "The necklace looks so premium and it's so affordable. I got so many compliments at my friend's wedding. Sriswa Studio is my go-to now!" },
+  { name: "Ananya K.", city: "Chennai", rating: 5, text: "Super fast delivery and beautiful packaging. The earrings are lightweight and don't cause any irritation. Perfect for sensitive ears!" },
+  { name: "Divya R.", city: "Hyderabad", rating: 5, text: "Was skeptical at first but the quality is amazing. Wore it swimming and it's still shining. 100% worth every rupee!" },
+];
+
+function StarRating({ n }: { n: number }) {
+  return (
+    <div className="flex gap-0.5 mb-2">
+      {Array.from({ length: n }).map((_, i) => (
+        <Star key={i} className="h-3.5 w-3.5 fill-current" style={{ color: GOLD }} />
+      ))}
+    </div>
   );
 }
 
@@ -126,10 +135,10 @@ export default function Home() {
   const [_loc] = useLocation();
   const { sessionId } = useCartContext();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"new" | "best">("new");
 
-  const { data: categories } = useListCategories({
-    query: { queryKey: getListCategoriesQueryKey() },
-  });
+  const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
 
   const categoryId = useMemo(() => {
     if (!activeCategory || !categories) return null;
@@ -137,58 +146,57 @@ export default function Home() {
   }, [activeCategory, categories]);
 
   const { data: productData, isLoading } = useListProducts(
-    { categoryId, sortBy: "newest" as const, limit: 30 },
-    { query: { queryKey: getListProductsQueryKey({ categoryId, sortBy: "newest", limit: 30 }) } }
+    { categoryId, search: search || null, sortBy: "newest" as const, limit: 30 },
+    { query: { queryKey: getListProductsQueryKey({ categoryId, search, sortBy: "newest", limit: 30 }) } }
+  );
+
+  const { data: newArrivals } = useListProducts(
+    { sortBy: "newest" as const, limit: 6 },
+    { query: { queryKey: getListProductsQueryKey({ sortBy: "newest", limit: 6 }) } }
+  );
+
+  const { data: bestSellers } = useGetFeaturedProducts(
+    { limit: 6 },
+    { query: { queryKey: getGetFeaturedProductsQueryKey({ limit: 6 }) } }
   );
 
   const products = productData?.products ?? [];
+  const spotlightProducts = activeTab === "new"
+    ? (newArrivals?.products ?? [])
+    : (bestSellers ?? []);
 
   return (
     <StoreLayout>
 
-      {/* ── Dark ticker at very top ── */}
+      {/* ── Ticker ── */}
       <Ticker />
 
-      {/* ── COMPACT HERO BANNER ── */}
+      {/* ── COMPACT HERO ── */}
       <section className="relative w-full overflow-hidden" style={{ height: "52vh", minHeight: 320, maxHeight: 520 }}>
-        {/* Background image */}
         <img
-          src="/brand/hero-banner.png"
-          alt="Sriswa Studio Jewellery"
+          src="/brand/hero-banner.png" alt="Sriswa Studio Jewellery"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ objectPosition: "right center" }}
         />
-        {/* Dark overlay on left */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #1a0a0f 0%, #1a0a0f 44%, rgba(26,10,15,0.35) 68%, rgba(26,10,15,0) 100%)" }} />
-
-        {/* Text content */}
         <div className="relative h-full flex items-center">
           <div className="container mx-auto px-6 md:px-12">
             <div className="max-w-md">
-              <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: GOLD }}>
-                New Arrivals · 2025
-              </p>
+              <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: GOLD }}>New Arrivals · 2025</p>
               <h1 className="font-serif font-bold text-white leading-[1.05] mb-4" style={{ fontSize: "clamp(28px, 4vw, 52px)" }}>
-                Jewellery That<br />
-                <span style={{ color: GOLD }}>Lasts Forever</span>
+                Jewellery That<br /><span style={{ color: GOLD }}>Lasts Forever</span>
               </h1>
-              <p className="text-white/60 text-sm mb-6">
-                Anti-tarnish · Waterproof · Skin-friendly · Starting ₹399
-              </p>
+              <p className="text-white/60 text-sm mb-6">Anti-tarnish · Waterproof · Skin-friendly · Starting ₹399</p>
               <div className="flex items-center gap-4 flex-wrap">
                 <button
                   onClick={() => document.getElementById("products-section")?.scrollIntoView({ behavior: "smooth" })}
                   className="inline-flex items-center gap-2 px-7 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85"
                   style={{ background: BRAND }}
                 >
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  Shop Now
+                  <ShoppingBag className="h-3.5 w-3.5" /> Shop Now
                 </button>
-                <Link
-                  href="/shop"
-                  className="text-[11px] font-medium tracking-[0.15em] uppercase pb-0.5 transition-opacity hover:opacity-60"
-                  style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.3)" }}
-                >
+                <Link href="/shop" className="text-[11px] font-medium tracking-[0.15em] uppercase pb-0.5 transition-opacity hover:opacity-60"
+                  style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.3)" }}>
                   View All →
                 </Link>
               </div>
@@ -207,7 +215,8 @@ export default function Home() {
               { icon: Sparkles, label: "Skin-Friendly" },
               { icon: Truck, label: "Free Shipping ₹999+" },
             ].map(({ icon: Icon, label }, i) => (
-              <div key={label} className="flex items-center justify-center gap-2.5 py-3.5 px-4" style={{ borderRight: i < 3 ? `1px solid ${BRAND}18` : "none" }}>
+              <div key={label} className="flex items-center justify-center gap-2.5 py-3.5 px-4"
+                style={{ borderRight: i < 3 ? `1px solid ${BRAND}18` : "none" }}>
                 <Icon className="h-4 w-4 flex-shrink-0" style={{ color: BRAND }} />
                 <span className="text-[11px] tracking-[0.12em] uppercase font-semibold text-gray-700">{label}</span>
               </div>
@@ -216,59 +225,72 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── PRODUCT SECTION ── */}
+      {/* ── SEARCH BAR ── */}
+      <div className="bg-white border-b" style={{ borderColor: `${BRAND}14` }}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center gap-3 max-w-xl mx-auto">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: BRAND }} />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search rings, necklaces, earrings…"
+                className="w-full pl-10 pr-4 py-2.5 text-sm border outline-none transition-colors bg-white"
+                style={{ borderColor: search ? BRAND : "#e5e7eb", color: "#1a0a0f" }}
+                onFocus={e => (e.currentTarget.style.borderColor = BRAND)}
+                onBlur={e => (e.currentTarget.style.borderColor = search ? BRAND : "#e5e7eb")}
+              />
+            </div>
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="text-[11px] tracking-[0.12em] uppercase font-medium transition-opacity hover:opacity-70 flex-shrink-0"
+                style={{ color: BRAND }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── OUR COLLECTION ── */}
       <section id="products-section" className="py-10 bg-white">
         <div className="container mx-auto px-6">
 
-          {/* Section header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-7 gap-4">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-3">
             <div>
-              <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: BRAND }}>
-                Shop All Jewellery
-              </p>
-              <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">
-                Our Collection
-              </h2>
+              <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: BRAND }}>Shop All Jewellery</p>
+              <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">Our Collection</h2>
             </div>
-            <Link
-              href="/shop"
-              className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 self-start sm:self-auto hover:opacity-70 transition-opacity"
-              style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}
-            >
+            <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 self-start sm:self-auto hover:opacity-70 transition-opacity"
+              style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
               View All →
             </Link>
           </div>
 
-          {/* Category pill filters */}
-          <div className="flex gap-2 flex-wrap mb-8">
+          {/* Category pills */}
+          <div className="flex gap-2 flex-wrap mb-7">
             <button
               onClick={() => setActiveCategory(null)}
               className="px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-full border transition-all"
-              style={{
-                background: !activeCategory ? BRAND : "transparent",
-                color: !activeCategory ? "white" : "#555",
-                borderColor: !activeCategory ? BRAND : "#ddd",
-              }}
-            >
-              All
-            </button>
+              style={{ background: !activeCategory ? BRAND : "transparent", color: !activeCategory ? "white" : "#555", borderColor: !activeCategory ? BRAND : "#ddd" }}
+            >All</button>
             {categories?.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(activeCategory === cat.slug ? null : cat.slug ?? null)}
                 className="px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-full border transition-all"
-                style={{
-                  background: activeCategory === cat.slug ? BRAND : "transparent",
-                  color: activeCategory === cat.slug ? "white" : "#555",
-                  borderColor: activeCategory === cat.slug ? BRAND : "#ddd",
-                }}
+                style={{ background: activeCategory === cat.slug ? BRAND : "transparent", color: activeCategory === cat.slug ? "white" : "#555", borderColor: activeCategory === cat.slug ? BRAND : "#ddd" }}
               >
                 {cat.name}
               </button>
             ))}
           </div>
 
-          {/* Loading skeleton */}
+          {/* Skeletons */}
           {isLoading && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {[1,2,3,4,5,6,7,8].map(i => (
@@ -281,34 +303,128 @@ export default function Home() {
             </div>
           )}
 
-          {/* Product grid */}
+          {/* Grid */}
           {!isLoading && products.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
-              {products.map(product => (
-                <ProductCard key={product.id} product={product} sessionId={sessionId} />
-              ))}
+              {products.map(product => <ProductCard key={product.id} product={product} sessionId={sessionId} />)}
             </div>
           )}
 
           {!isLoading && products.length === 0 && (
             <div className="flex flex-col items-center py-20 text-center">
               <Sparkles className="h-10 w-10 mb-4" style={{ color: BRAND, opacity: 0.25 }} />
-              <p className="text-gray-400 text-sm">No products found.</p>
+              <p className="text-gray-400 text-sm">No products found{search ? ` for "${search}"` : ""}.</p>
+              {search && <button onClick={() => setSearch("")} className="mt-3 text-sm font-medium hover:opacity-70" style={{ color: BRAND }}>Clear search</button>}
             </div>
           )}
 
-          {/* Load more link */}
           {!isLoading && products.length >= 30 && (
             <div className="text-center mt-12">
-              <Link
-                href="/shop"
-                className="inline-flex items-center gap-2 px-8 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85"
-                style={{ background: BRAND }}
-              >
+              <Link href="/shop" className="inline-flex items-center gap-2 px-8 py-3 text-[12px] font-bold tracking-[0.2em] uppercase text-white transition-opacity hover:opacity-85" style={{ background: BRAND }}>
                 Browse Full Collection →
               </Link>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── NEW ARRIVALS / BEST SELLERS ── */}
+      <section className="py-12" style={{ background: "#fdf6f9" }}>
+        <div className="container mx-auto px-6">
+
+          {/* Tab header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+            <div className="flex items-end gap-1">
+              {(["new", "best"] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="font-serif font-bold text-2xl md:text-3xl px-1 pb-1 transition-all duration-200"
+                  style={{
+                    color: activeTab === tab ? DARK : "#ccc",
+                    borderBottom: activeTab === tab ? `2px solid ${GOLD}` : "2px solid transparent",
+                  }}
+                >
+                  {tab === "new" ? "New Arrivals" : "Best Sellers"}
+                </button>
+              ))}
+            </div>
+            <Link href="/shop" className="text-[11px] tracking-[0.18em] uppercase font-medium pb-0.5 self-start sm:self-auto hover:opacity-70 transition-opacity"
+              style={{ color: BRAND, borderBottom: `1.5px solid ${BRAND}` }}>
+              Shop All →
+            </Link>
+          </div>
+
+          {/* Spotlight grid */}
+          {spotlightProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
+              {spotlightProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={{ ...product, stockQuantity: (product as { stockQuantity?: number }).stockQuantity ?? 1 }}
+                  sessionId={sessionId}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="animate-pulse space-y-3">
+                  <div className="w-full rounded-sm" style={{ aspectRatio: "3/4", background: "#f0e6ec" }} />
+                  <div className="h-3 rounded w-3/4" style={{ background: "#f0e6ec" }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="py-14" style={{ background: DARK }}>
+        <div className="container mx-auto px-6">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: GOLD }}>
+              Happy Customers
+            </p>
+            <h2 className="font-serif font-bold text-2xl md:text-3xl text-white">
+              What Our Customers Say
+            </h2>
+            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: GOLD }} />
+          </div>
+
+          {/* Cards grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {TESTIMONIALS.map(({ name, city, rating, text }) => (
+              <div
+                key={name}
+                className="flex flex-col p-5 rounded-sm"
+                style={{ background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.08)` }}
+              >
+                <StarRating n={rating} />
+                <p className="text-white/75 text-sm leading-relaxed flex-1 mb-4 italic">"{text}"</p>
+                <div>
+                  <p className="font-serif font-bold text-sm text-white">{name}</p>
+                  <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: GOLD }}>{city}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust badge row */}
+          <div className="mt-10 flex flex-wrap justify-center gap-8 text-center">
+            {[
+              { num: "10,000+", label: "Happy Customers" },
+              { num: "4.9★", label: "Avg. Rating" },
+              { num: "500+", label: "Designs" },
+              { num: "24hr", label: "Dispatch" },
+            ].map(({ num, label }) => (
+              <div key={label}>
+                <p className="font-serif font-bold text-2xl" style={{ color: GOLD }}>{num}</p>
+                <p className="text-[10px] tracking-[0.15em] uppercase mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

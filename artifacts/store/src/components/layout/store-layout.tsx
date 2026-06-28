@@ -141,78 +141,69 @@ export function Footer() {
       <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10">
-          {/* Brand column */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+
+          {/* ── Brand column ── */}
           <div className="flex flex-col gap-4 items-start text-left">
-            <img
-              src="/brand/logo-white.png"
-              alt="Sriswa Studio"
-              className="footer-logo w-auto block"
-              style={{ height: 40 }}
-            />
+            <img src="/brand/logo-white.png" alt="Sriswa Studio"
+              className="footer-logo w-auto block" style={{ height: 40 }} />
             <p className="text-white/60 text-sm leading-relaxed">
               {footer.tagline.split("\n").map((line, i) => (
                 <span key={i}>{line}{i < footer.tagline.split("\n").length - 1 && <br />}</span>
               ))}
             </p>
             <div className="flex items-center gap-3">
-              <a
-                href={footer.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <a href={footer.instagramUrl} target="_blank" rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-                style={{ border: `1px solid ${colors.gold}66` }}
-                aria-label="Instagram"
-              >
+                style={{ border: `1px solid ${colors.gold}66` }} aria-label="Instagram">
                 <Instagram className="h-4 w-4" style={{ color: colors.gold }} />
               </a>
-              <a
-                href={footer.facebookUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <a href={footer.facebookUrl} target="_blank" rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-                style={{ border: `1px solid ${colors.gold}66` }}
-                aria-label="Facebook"
-              >
+                style={{ border: `1px solid ${colors.gold}66` }} aria-label="Facebook">
                 <Facebook className="h-4 w-4" style={{ color: colors.gold }} />
               </a>
             </div>
           </div>
 
-          {/* Shop */}
+          {/* ── Block 1: Shop Categories ── */}
           <div className="text-left">
             <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Shop</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               {[
-                ["/shop", "All Jewellery"],
-                ["/shop?category=necklaces", "Necklaces"],
+                ["/shop", "New Arrivals"],
+                ["/shop?category=watches", "Watches"],
+                ["/shop?category=bracelets", "Bracelets"],
                 ["/shop?category=rings", "Rings"],
                 ["/shop?category=earrings", "Earrings"],
-                ["/shop?category=bracelets", "Bracelets"],
-                ["/shop?category=anklets", "Anklets"],
+                ["/shop?category=mangalsutra", "Mangalsutra"],
+                ["/shop?category=chain-sets", "Chain Sets"],
               ].map(([href, label]) => (
-                <li key={href}><Link href={href} className="hover:text-white transition-colors">{label}</Link></li>
+                <li key={href}>
+                  <Link href={href} className="hover:text-white transition-colors">{label}</Link>
+                </li>
               ))}
             </ul>
           </div>
 
-          {/* Support */}
+          {/* ── Block 2: Company ── */}
           <div className="text-left">
-            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Support</h4>
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Company</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               <li><Link href="/track-order" className="hover:text-white transition-colors">Track My Order</Link></li>
               <li><Link href="/account" className="hover:text-white transition-colors">My Account</Link></li>
+              <li>
+                <a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">
+                  hello@sriswastudio.com
+                </a>
+              </li>
+              <li>
+                <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer"
+                  className="hover:text-white transition-colors">WhatsApp Us</a>
+              </li>
             </ul>
           </div>
 
-          {/* Contact */}
-          <div className="text-left">
-            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
-            <ul className="flex flex-col gap-3 text-sm text-white/60">
-              <li><a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">hello@sriswastudio.com</a></li>
-              <li><a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp Us</a></li>
-            </ul>
-          </div>
         </div>
       </div>
 

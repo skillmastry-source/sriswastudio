@@ -34,7 +34,7 @@ export default function Cart() {
   if (isLoading) {
     return (
       <StoreLayout>
-        <div className="container mx-auto px-4 py-12 max-w-4xl">
+        <div className="container mx-auto px-[30px] py-12 max-w-4xl">
           <h1 className="text-3xl font-serif font-bold mb-8">Shopping Cart</h1>
           <div className="space-y-4">
             <Skeleton className="h-32 w-full" />
@@ -49,7 +49,7 @@ export default function Cart() {
 
   return (
     <StoreLayout>
-      <div className="container mx-auto px-4 py-12 max-w-5xl">
+      <div className="container mx-auto px-[30px] py-12 max-w-5xl">
         <h1 className="text-3xl font-serif font-bold mb-8">Your Cart</h1>
         
         {isEmpty ? (

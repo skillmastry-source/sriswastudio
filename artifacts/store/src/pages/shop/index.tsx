@@ -55,7 +55,7 @@ export default function Shop() {
     <StoreLayout>
       {/* ── Page Header ── */}
       <section className="py-14" style={{ background: "#1a0a0f" }}>
-        <div className="container mx-auto px-6 text-center">
+        <div className="container mx-auto px-[30px] text-center">
           <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: GOLD }}>
             {activeCategory ? activeCategory.name : "All Collections"}
           </p>
@@ -69,7 +69,7 @@ export default function Shop() {
         </div>
       </section>
 
-      <div className="container mx-auto px-6 py-12">
+      <div className="container mx-auto px-[30px] py-12">
         <div className="flex flex-col md:flex-row gap-10">
 
           {/* ── Sidebar ── */}

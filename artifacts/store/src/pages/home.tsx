@@ -175,7 +175,7 @@ export default function Home() {
         />
         <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${dark} 0%, ${dark} 44%, ${dark}59 68%, ${dark}00 100%)` }} />
         <div className="relative h-full flex items-center">
-          <div className="container mx-auto px-6 md:px-12">
+          <div className="container mx-auto px-[30px] md:px-[60px]">
             <div className="max-w-md">
               <p className="text-[11px] tracking-[0.35em] uppercase font-medium mb-3" style={{ color: gold }}>{hero.badge}</p>
               <h1 className="font-serif font-bold text-white leading-[1.05] mb-4" style={{ fontSize: "clamp(28px, 4vw, 52px)" }}>
@@ -202,7 +202,7 @@ export default function Home() {
 
       {/* ── USP STRIP ── */}
       <div className="border-b" style={{ background: "#fdf6f9", borderColor: `${brand}18` }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-[30px]">
           <div className="grid grid-cols-2 md:grid-cols-4">
             {usp.map(({ text }, i) => {
               const Icon = USP_ICONS[i] ?? ShieldCheck;
@@ -220,7 +220,7 @@ export default function Home() {
 
       {/* ── OUR COLLECTION ── */}
       <section id="products-section" className="py-10 bg-white">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-[30px]">
 
           {/* Header */}
           <div className="text-center mb-6">
@@ -289,7 +289,7 @@ export default function Home() {
 
       {/* ── NEW ARRIVALS / BEST SELLERS ── */}
       <section className="py-12" style={{ background: "#fdf6f9" }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-[30px]">
 
           {/* Tab header */}
           <div className="text-center mb-8">
@@ -370,7 +370,7 @@ export default function Home() {
 
       {/* ── TESTIMONIALS ── */}
       <section className="py-14" style={{ background: "#fff" }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-[30px]">
           {/* Header */}
           <div className="text-center mb-10">
             <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: brand }}>

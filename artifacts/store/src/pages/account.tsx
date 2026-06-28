@@ -179,7 +179,7 @@ export default function Account() {
 
   return (
     <StoreLayout>
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <div className="container mx-auto px-[30px] py-12 max-w-4xl">
         <SignedIn>
           <AccountDashboard />
         </SignedIn>

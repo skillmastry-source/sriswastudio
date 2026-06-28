@@ -97,7 +97,7 @@ export default function ProductDetail() {
   if (isLoading) {
     return (
       <StoreLayout>
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-[30px] py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <Skeleton className="aspect-square w-full rounded-lg" />
             <div className="space-y-6">
@@ -115,7 +115,7 @@ export default function ProductDetail() {
   if (isError || !product) {
     return (
       <StoreLayout>
-        <div className="container mx-auto px-4 py-24 text-center">
+        <div className="container mx-auto px-[30px] py-24 text-center">
           <h1 className="text-3xl font-serif font-bold mb-4">Product Not Found</h1>
           <Button asChild>
             <Link href="/shop">Back to Shop</Link>
@@ -131,7 +131,7 @@ export default function ProductDetail() {
     <StoreLayout>
       {/* Breadcrumbs */}
       <div className="bg-card border-b py-4">
-        <div className="container mx-auto px-4 flex items-center text-sm text-muted-foreground gap-2">
+        <div className="container mx-auto px-[30px] flex items-center text-sm text-muted-foreground gap-2">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <ChevronRight className="h-4 w-4" />
           <Link href="/shop" className="hover:text-primary transition-colors">Shop</Link>
@@ -148,7 +148,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-[30px] py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
           {/* Images */}
           <div className="space-y-4">

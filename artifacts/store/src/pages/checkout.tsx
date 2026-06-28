@@ -73,7 +73,7 @@ export default function Checkout() {
   if (!cart || cart.items.length === 0) {
     return (
       <StoreLayout>
-        <div className="container mx-auto px-4 py-24 text-center">
+        <div className="container mx-auto px-[30px] py-24 text-center">
           <h1 className="text-3xl font-serif font-bold mb-4">Checkout</h1>
           <p className="text-muted-foreground mb-8">Your cart is empty. You cannot proceed to checkout.</p>
           <Button asChild><Link href="/shop">Back to Shop</Link></Button>
@@ -84,7 +84,7 @@ export default function Checkout() {
 
   return (
     <StoreLayout>
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
+      <div className="container mx-auto px-[30px] py-12 max-w-6xl">
         <h1 className="text-3xl font-serif font-bold mb-8">Checkout</h1>
         
         <div className="flex flex-col lg:flex-row gap-12 lg:items-start">

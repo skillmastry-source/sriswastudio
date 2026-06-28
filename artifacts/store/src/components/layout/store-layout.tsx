@@ -31,12 +31,12 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/shop", label: "New Arrivals" },
-    { href: "/shop?category=necklaces", label: "Necklaces" },
+    { href: "/shop?category=watches", label: "Watches" },
+    { href: "/shop?category=bracelets", label: "Bracelets" },
     { href: "/shop?category=rings", label: "Rings" },
     { href: "/shop?category=earrings", label: "Earrings" },
-    { href: "/shop?category=bracelets", label: "Bracelets" },
-    { href: "/shop?category=anklets", label: "Anklets" },
-    { href: "/track-order", label: "Track Order" },
+    { href: "/shop?category=mangalsutra", label: "Mangalsutra" },
+    { href: "/shop?category=chain-sets", label: "Chain Sets" },
   ];
 
   return (
@@ -44,7 +44,7 @@ export function Navbar() {
       {/* Responsive logo size: cap at 28px on mobile */}
       <style>{`.navbar-logo { height: 28px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      <div className="container mx-auto px-4 md:px-6 flex items-center justify-between" style={{ height: 72 }}>
+      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 72 }}>
         {/* Mobile menu toggle */}
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
@@ -140,7 +140,7 @@ export function Footer() {
     <footer style={{ background: colors.dark, color: "white" }}>
       <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
-      <div className="container mx-auto px-4 md:px-6 pt-12 md:pt-16 pb-10">
+      <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10">
           {/* Brand column */}
           <div className="flex flex-col gap-4 items-start text-left">

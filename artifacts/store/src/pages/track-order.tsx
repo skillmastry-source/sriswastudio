@@ -85,7 +85,7 @@ export default function TrackOrder() {
   return (
     <StoreLayout>
       <div className="bg-muted py-12">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
+        <div className="container mx-auto px-[30px] text-center max-w-2xl">
           <h1 className="text-4xl font-serif font-bold mb-4">Track Your Order</h1>
           <p className="text-muted-foreground">
             Enter your order number and email address to check the current status of your shipment.
@@ -93,7 +93,7 @@ export default function TrackOrder() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 max-w-xl">
+      <div className="container mx-auto px-[30px] py-12 max-w-xl">
         <div className="bg-card border rounded-lg p-8 shadow-sm">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

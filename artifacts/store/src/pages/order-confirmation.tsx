@@ -9,7 +9,7 @@ export default function OrderConfirmation() {
 
   return (
     <StoreLayout>
-      <div className="container mx-auto px-4 py-24 max-w-2xl text-center">
+      <div className="container mx-auto px-[30px] py-24 max-w-2xl text-center">
         <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8">
           <CheckCircle2 className="h-12 w-12 text-green-600" />
         </div>

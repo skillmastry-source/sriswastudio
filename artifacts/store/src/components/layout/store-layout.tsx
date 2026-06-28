@@ -31,7 +31,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: "2px solid #D4AF37" }}>
-      <div className="container mx-auto px-6 flex items-center justify-between h-[76px]">
+      <div className="container mx-auto px-6 flex items-center justify-between h-[88px]">
         {/* Mobile menu toggle */}
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
@@ -45,7 +45,7 @@ export function Navbar() {
           <img
             src="/brand/logo-color.png"
             alt="Sriswa Studio"
-            style={{ height: 120, width: "auto", objectFit: "contain", display: "block" }}
+            style={{ height: 72, width: "auto", objectFit: "contain", display: "block" }}
           />
         </Link>
 
@@ -121,12 +121,14 @@ export function Footer() {
     <footer className="bg-[#1a0a0f] text-white">
       <div className="container mx-auto px-6 pt-16 pb-10 grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Brand column */}
-        <div className="flex flex-col gap-5">
-          <img
-            src="/brand/logo-white.png"
-            alt="Sriswa Studio"
-            style={{ maxHeight: 120, height: "auto", width: "auto", display: "block", objectFit: "contain", objectPosition: "top left" }}
-          />
+        <div className="flex flex-col gap-4">
+          <div style={{ height: 58, overflow: "hidden", lineHeight: 0 }}>
+            <img
+              src="/brand/logo-white.png"
+              alt="Sriswa Studio"
+              style={{ height: 120, width: "auto", display: "block", marginTop: "-28px" }}
+            />
+          </div>
           <p className="text-white/60 text-sm leading-relaxed">
             Timeless Beauty, Everyday Shine.<br />
             Premium anti-tarnish jewellery<br />

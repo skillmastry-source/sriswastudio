@@ -41,7 +41,10 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
-      <div className="container mx-auto px-6 flex items-center justify-between" style={{ height: 88 }}>
+      {/* Responsive logo size: cap at 28px on mobile */}
+      <style>{`.navbar-logo { height: 28px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
+
+      <div className="container mx-auto px-4 md:px-6 flex items-center justify-between" style={{ height: 72 }}>
         {/* Mobile menu toggle */}
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
@@ -51,11 +54,11 @@ export function Navbar() {
         </button>
 
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+        <Link href="/" className="flex items-center flex-shrink-0">
           <img
             src="/brand/logo-color.png"
             alt="Sriswa Studio"
-            style={{ height: header.logoSize, width: "auto", display: "block" }}
+            className="navbar-logo w-auto block"
           />
         </Link>
 
@@ -71,7 +74,7 @@ export function Navbar() {
                 paddingBottom: "2px",
                 transition: "color 0.15s, border-color 0.15s",
               }}
-              className={`hover:text-[${colors.brand}] transition-colors`}
+              className="transition-colors"
             >
               {link.label}
             </Link>
@@ -80,7 +83,7 @@ export function Navbar() {
 
         {/* Right icons */}
         <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" className="text-gray-600" style={{ ["--hover-color" as string]: colors.brand }}>
+          <Button variant="ghost" size="icon" className="text-gray-600">
             <Search className="h-[18px] w-[18px]" />
           </Button>
           <Button variant="ghost" size="icon" className="text-gray-600" asChild>
@@ -109,7 +112,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-white px-6 py-5">
+        <div className="md:hidden border-t bg-white px-4 py-5">
           <nav className="flex flex-col gap-5 text-sm font-medium uppercase tracking-widest text-gray-700">
             {navLinks.map((link) => (
               <Link
@@ -135,76 +138,81 @@ export function Footer() {
 
   return (
     <footer style={{ background: colors.dark, color: "white" }}>
-      <div className="container mx-auto px-6 pt-16 pb-10 grid grid-cols-1 md:grid-cols-4 gap-10">
-        {/* Brand column */}
-        <div className="flex flex-col gap-4">
-          <img
-            src="/brand/logo-white.png"
-            alt="Sriswa Studio"
-            style={{ height: footer.logoSize, width: "auto", display: "block", alignSelf: "flex-start" }}
-          />
-          <p className="text-white/60 text-sm leading-relaxed">
-            {footer.tagline.split("\n").map((line, i) => (
-              <span key={i}>{line}{i < footer.tagline.split("\n").length - 1 && <br />}</span>
-            ))}
-          </p>
-          <div className="flex items-center gap-3 mt-1">
-            <a
-              href={footer.instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-              style={{ border: `1px solid ${colors.gold}66` }}
-              aria-label="Instagram"
-            >
-              <Instagram className="h-4 w-4" style={{ color: colors.gold }} />
-            </a>
-            <a
-              href={footer.facebookUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-              style={{ border: `1px solid ${colors.gold}66` }}
-              aria-label="Facebook"
-            >
-              <Facebook className="h-4 w-4" style={{ color: colors.gold }} />
-            </a>
+      <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
+
+      <div className="container mx-auto px-4 md:px-6 pt-12 md:pt-16 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10">
+          {/* Brand column */}
+          <div className="flex flex-col gap-4 items-start text-left">
+            <img
+              src="/brand/logo-white.png"
+              alt="Sriswa Studio"
+              className="footer-logo w-auto block"
+              style={{ height: 40 }}
+            />
+            <p className="text-white/60 text-sm leading-relaxed">
+              {footer.tagline.split("\n").map((line, i) => (
+                <span key={i}>{line}{i < footer.tagline.split("\n").length - 1 && <br />}</span>
+              ))}
+            </p>
+            <div className="flex items-center gap-3">
+              <a
+                href={footer.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+                style={{ border: `1px solid ${colors.gold}66` }}
+                aria-label="Instagram"
+              >
+                <Instagram className="h-4 w-4" style={{ color: colors.gold }} />
+              </a>
+              <a
+                href={footer.facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+                style={{ border: `1px solid ${colors.gold}66` }}
+                aria-label="Facebook"
+              >
+                <Facebook className="h-4 w-4" style={{ color: colors.gold }} />
+              </a>
+            </div>
           </div>
-        </div>
 
-        {/* Shop */}
-        <div>
-          <h4 className="text-xs tracking-[0.25em] uppercase mb-5 font-medium" style={{ color: colors.gold }}>Shop</h4>
-          <ul className="flex flex-col gap-3 text-sm text-white/60">
-            {[
-              ["/shop", "All Jewellery"],
-              ["/shop?category=necklaces", "Necklaces"],
-              ["/shop?category=rings", "Rings"],
-              ["/shop?category=earrings", "Earrings"],
-              ["/shop?category=bracelets", "Bracelets"],
-              ["/shop?category=anklets", "Anklets"],
-            ].map(([href, label]) => (
-              <li key={href}><Link href={href} className="hover:text-white transition-colors">{label}</Link></li>
-            ))}
-          </ul>
-        </div>
+          {/* Shop */}
+          <div className="text-left">
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Shop</h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/60">
+              {[
+                ["/shop", "All Jewellery"],
+                ["/shop?category=necklaces", "Necklaces"],
+                ["/shop?category=rings", "Rings"],
+                ["/shop?category=earrings", "Earrings"],
+                ["/shop?category=bracelets", "Bracelets"],
+                ["/shop?category=anklets", "Anklets"],
+              ].map(([href, label]) => (
+                <li key={href}><Link href={href} className="hover:text-white transition-colors">{label}</Link></li>
+              ))}
+            </ul>
+          </div>
 
-        {/* Support */}
-        <div>
-          <h4 className="text-xs tracking-[0.25em] uppercase mb-5 font-medium" style={{ color: colors.gold }}>Support</h4>
-          <ul className="flex flex-col gap-3 text-sm text-white/60">
-            <li><Link href="/track-order" className="hover:text-white transition-colors">Track My Order</Link></li>
-            <li><Link href="/account" className="hover:text-white transition-colors">My Account</Link></li>
-          </ul>
-        </div>
+          {/* Support */}
+          <div className="text-left">
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Support</h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/60">
+              <li><Link href="/track-order" className="hover:text-white transition-colors">Track My Order</Link></li>
+              <li><Link href="/account" className="hover:text-white transition-colors">My Account</Link></li>
+            </ul>
+          </div>
 
-        {/* Contact */}
-        <div>
-          <h4 className="text-xs tracking-[0.25em] uppercase mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
-          <ul className="flex flex-col gap-3 text-sm text-white/60">
-            <li><a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">hello@sriswastudio.com</a></li>
-            <li><a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp Us</a></li>
-          </ul>
+          {/* Contact */}
+          <div className="text-left">
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/60">
+              <li><a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">hello@sriswastudio.com</a></li>
+              <li><a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp Us</a></li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -217,12 +225,15 @@ export function Footer() {
 
 export function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-[100dvh] flex flex-col font-sans">
-      <AnnouncementBar />
-      <Navbar />
-      <main className="flex-1">{children}</main>
-      <Footer />
-      <CartDrawer />
+    /* Boxed layout: on very wide screens the site is contained and centred */
+    <div className="bg-gray-100 min-h-[100dvh]">
+      <div className="max-w-[1440px] mx-auto min-h-[100dvh] flex flex-col font-sans bg-white shadow-[0_0_60px_rgba(0,0,0,0.08)]">
+        <AnnouncementBar />
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <CartDrawer />
+      </div>
     </div>
   );
 }

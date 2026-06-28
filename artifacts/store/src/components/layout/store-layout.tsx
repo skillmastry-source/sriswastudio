@@ -45,7 +45,7 @@ export function Navbar() {
           <img
             src="/brand/logo-color.png"
             alt="Sriswa Studio"
-            style={{ height: 72, width: "auto", objectFit: "contain", display: "block" }}
+            style={{ height: 56, width: "auto", display: "block" }}
           />
         </Link>
 
@@ -122,13 +122,11 @@ export function Footer() {
       <div className="container mx-auto px-6 pt-16 pb-10 grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Brand column */}
         <div className="flex flex-col gap-4">
-          <div style={{ height: 58, overflow: "hidden", lineHeight: 0 }}>
-            <img
-              src="/brand/logo-white.png"
-              alt="Sriswa Studio"
-              style={{ height: 120, width: "auto", display: "block", marginTop: "-28px" }}
-            />
-          </div>
+          <img
+            src="/brand/logo-white.png"
+            alt="Sriswa Studio"
+            style={{ height: 60, width: "auto", display: "block" }}
+          />
           <p className="text-white/60 text-sm leading-relaxed">
             Timeless Beauty, Everyday Shine.<br />
             Premium anti-tarnish jewellery<br />

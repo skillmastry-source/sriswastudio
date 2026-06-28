@@ -45,7 +45,7 @@ export function Navbar() {
           <img
             src="/brand/logo-color.png"
             alt="Sriswa Studio"
-            style={{ height: 56, width: "auto", display: "block" }}
+            style={{ height: 72, width: "auto", display: "block" }}
           />
         </Link>
 

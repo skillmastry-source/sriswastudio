@@ -208,38 +208,64 @@ export default function Home() {
       </section>
 
       {/* ── 3. SHOP BY CATEGORY ── */}
-      <section className="py-12 bg-white">
+      <section className="py-14 bg-white">
         <div className="container mx-auto px-[30px]">
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: brand }}>Browse</p>
             <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">Shop by Category</h2>
             <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {SHOP_CATEGORIES.map(({ label, slug, Icon, bg }, i) => (
+
+          {/* Horizontal circle row */}
+          <div className="flex items-start gap-5 md:gap-8 overflow-x-auto pb-3 slider-scroll md:justify-center">
+            {SHOP_CATEGORIES.map(({ label, slug, Icon }, i) => (
               <Link
                 key={i}
                 href={slug ? `/shop?category=${slug}` : "/shop"}
-                className="group relative overflow-hidden rounded-sm"
-                style={{ background: bg, aspectRatio: "1/1" }}
+                className="group flex flex-col items-center gap-3 flex-shrink-0"
               >
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                  <Icon className="h-8 w-8 mb-3 text-white/70 group-hover:text-white transition-colors" />
-                  <span className="text-white font-serif font-bold text-sm md:text-base leading-tight">{label}</span>
-                  <span className="mt-2 text-[10px] tracking-[0.2em] uppercase text-white/60 group-hover:text-white/90 transition-colors flex items-center gap-1">
-                    Shop <ArrowRight className="h-2.5 w-2.5" />
-                  </span>
+                {/* Gradient ring → white inner circle → icon */}
+                <div
+                  className="h-[90px] w-[90px] rounded-full p-[3px] transition-all duration-300"
+                  style={{ background: `linear-gradient(135deg, ${gold} 0%, ${brand} 100%)` }}
+                >
+                  <div
+                    className="h-full w-full rounded-full flex items-center justify-center transition-all duration-300"
+                    style={{ background: "white" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = brand)}
+                    onMouseLeave={e => (e.currentTarget.style.background = "white")}
+                  >
+                    <Icon
+                      className="h-7 w-7 transition-all duration-300"
+                      style={{ color: brand }}
+                      onMouseEnter={e => ((e.currentTarget as SVGElement).style.color = "white")}
+                    />
+                  </div>
                 </div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-white" />
+                <span
+                  className="text-[11px] font-semibold tracking-[0.08em] text-center leading-tight transition-colors duration-200 max-w-[76px]"
+                  style={{ color: "#4b2038", fontFamily: "inherit" }}
+                >
+                  {label}
+                </span>
               </Link>
             ))}
-            {/* 8th card — View All */}
-            <Link href="/shop" className="group relative overflow-hidden rounded-sm border-2 flex flex-col items-center justify-center text-center p-4"
-              style={{ aspectRatio: "1/1", borderColor: brand }}>
-              <Sparkles className="h-8 w-8 mb-3 transition-colors" style={{ color: brand }} />
-              <span className="font-serif font-bold text-sm md:text-base" style={{ color: dark }}>View All</span>
-              <span className="mt-2 text-[10px] tracking-[0.2em] uppercase flex items-center gap-1" style={{ color: brand }}>
-                Shop Now <ArrowRight className="h-2.5 w-2.5" />
+
+            {/* View All circle */}
+            <Link href="/shop" className="group flex flex-col items-center gap-3 flex-shrink-0">
+              <div
+                className="h-[90px] w-[90px] rounded-full flex items-center justify-center transition-all duration-300"
+                style={{ border: `2.5px dashed ${brand}`, background: "#fdf6f9" }}
+                onMouseEnter={e => (e.currentTarget.style.background = brand)}
+                onMouseLeave={e => (e.currentTarget.style.background = "#fdf6f9")}
+              >
+                <ArrowRight
+                  className="h-7 w-7 transition-colors duration-300"
+                  style={{ color: brand }}
+                />
+              </div>
+              <span className="text-[11px] font-semibold tracking-[0.08em] text-center transition-colors duration-200" style={{ color: brand }}>
+                View All
               </span>
             </Link>
           </div>

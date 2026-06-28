@@ -125,7 +125,7 @@ export function Footer() {
           <img
             src="/brand/logo-white.png"
             alt="Sriswa Studio"
-            style={{ height: 120, width: "auto", objectFit: "contain", objectPosition: "left" }}
+            style={{ maxHeight: 120, height: "auto", width: "auto", display: "block", objectFit: "contain", objectPosition: "top left" }}
           />
           <p className="text-white/60 text-sm leading-relaxed">
             Timeless Beauty, Everyday Shine.<br />

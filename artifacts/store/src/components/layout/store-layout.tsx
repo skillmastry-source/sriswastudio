@@ -217,7 +217,7 @@ export function Footer() {
       <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 md:gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-10">
 
           <div className="flex flex-col gap-4 items-start text-left">
             <img src="/brand/logo-white.png" alt="Sriswa Studio"

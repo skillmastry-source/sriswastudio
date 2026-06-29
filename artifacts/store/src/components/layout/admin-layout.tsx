@@ -3,6 +3,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, ListTree,
   Settings, Users, LogOut, Tags, Palette, ExternalLink,
   ChevronRight, FileText, Tag, Image, LayoutTemplate,
+  BarChart2, Megaphone,
 } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
 import { useEffect } from "react";
@@ -12,6 +13,7 @@ const NAV_GROUPS = [
     label: "Overview",
     items: [
       { href: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+      { href: "/admin/analytics", icon: BarChart2, label: "Analytics", exact: false },
     ],
   },
   {
@@ -32,6 +34,7 @@ const NAV_GROUPS = [
   {
     label: "Marketing",
     items: [
+      { href: "/admin/marketing/announcements", icon: Megaphone, label: "Announcements", exact: false },
       { href: "/admin/marketing/coupons", icon: Tag, label: "Coupons", exact: false },
     ],
   },

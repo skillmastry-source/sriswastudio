@@ -34,6 +34,8 @@ import AdminCustomerDetail from "@/pages/admin/customers/detail";
 import AdminCoupons from "@/pages/admin/marketing/coupons";
 import AdminMedia from "@/pages/admin/media";
 import AdminBuilder from "@/pages/admin/builder";
+import AdminAnalytics from "@/pages/admin/analytics";
+import AdminAnnouncements from "@/pages/admin/marketing/announcements";
 import { AdminLayout } from "@/components/layout/admin-layout";
 
 // Storefront CMS pages
@@ -147,6 +149,12 @@ function Router() {
       </Route>
       <Route path="/admin/marketing/coupons">
         {() => <AdminRoute component={AdminCoupons} />}
+      </Route>
+      <Route path="/admin/analytics">
+        {() => <AdminRoute component={AdminAnalytics} />}
+      </Route>
+      <Route path="/admin/marketing/announcements">
+        {() => <AdminRoute component={AdminAnnouncements} />}
       </Route>
 
       <Route path="/admin/media">

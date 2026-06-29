@@ -165,6 +165,20 @@ function App() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
+      localization={{
+        signIn: {
+          start: {
+            title: "Sign in to Sriswa Studio",
+            subtitle: "Welcome back! Please sign in to continue",
+          },
+        },
+        signUp: {
+          start: {
+            title: "Create your Sriswa Studio account",
+            subtitle: "Sign up to get started",
+          },
+        },
+      }}
       appearance={{
         variables: {
           colorPrimary: "#9B0F5F",

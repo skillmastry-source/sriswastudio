@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Mail, Send, Users, AlertCircle, CheckCircle2, Settings } from "lucide-react";
+import { MessageCircle, Mail, Send, AlertCircle, CheckCircle2, Settings, Download } from "lucide-react";
 import { Link } from "wouter";
 
 const BRAND = "#9B0F5F";
@@ -104,16 +104,43 @@ export default function AdminBroadcasts() {
               <CardTitle className="text-base">WhatsApp Broadcast</CardTitle>
             </div>
             <CardDescription>
-              Sends to all unique customer phone numbers from orders. Requires Twilio configured in Settings.
+              Send a message to all your customers via WhatsApp.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+
+            {/* Download contacts — always visible */}
+            <div className="rounded-xl border border-gray-200 p-4 flex items-start justify-between gap-4 bg-gray-50">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">📥 Download Customer Contacts</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Export all {stats?.whatsappRecipients ?? 0} customer phone numbers as a CSV file.
+                  Open it in Excel or paste numbers directly into{" "}
+                  <strong>WhatsApp Business app</strong> to send messages manually — no Twilio needed.
+                </p>
+              </div>
+              <a
+                href="/api/admin/marketing/broadcast/contacts.csv"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white"
+                style={{ background: "#16a34a" }}
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </a>
+            </div>
+
+            <div className="relative flex items-center gap-3">
+              <div className="flex-1 border-t border-gray-200" />
+              <span className="text-xs text-gray-400 flex-shrink-0">OR send automatically via Twilio</span>
+              <div className="flex-1 border-t border-gray-200" />
+            </div>
+
             <div>
               <Label>Message</Label>
               <Textarea
                 className="mt-1 resize-none"
-                rows={6}
-                placeholder="Hi {{name}}, 🌟 Exciting news from Sriswa Studio! ..."
+                rows={5}
+                placeholder="Hi, 🌟 Exciting news from Sriswa Studio! ..."
                 value={waMessage}
                 onChange={e => setWaMessage(e.target.value)}
               />
@@ -123,16 +150,14 @@ export default function AdminBroadcasts() {
             <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
               <p className="text-xs text-amber-700">
-                WhatsApp Business API may require pre-approved message templates. Check your Twilio sandbox settings.
+                Twilio must be configured in Settings. WhatsApp Business API also requires pre-approved message templates.
               </p>
             </div>
 
             {waResult && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <p className="text-xs text-green-700">
-                  Sent: {waResult.sent} · Failed: {waResult.failed}
-                </p>
+                <p className="text-xs text-green-700">Sent: {waResult.sent} · Failed: {waResult.failed}</p>
               </div>
             )}
 
@@ -143,7 +168,7 @@ export default function AdminBroadcasts() {
               style={{ background: BRAND }}
             >
               <Send className="h-4 w-4" />
-              {sendWA.isPending ? "Sending…" : `Send to ${stats?.whatsappRecipients ?? 0} Customers`}
+              {sendWA.isPending ? "Sending…" : `Send via Twilio to ${stats?.whatsappRecipients ?? 0} Customers`}
             </Button>
           </CardContent>
         </Card>

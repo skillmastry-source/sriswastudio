@@ -199,6 +199,39 @@ router.get("/admin/analytics/top-products", async (req, res) => {
   return res.json(rows);
 });
 
+router.get("/admin/marketing/broadcast/contacts.csv", async (_req, res) => {
+  const rows = await db
+    .select({
+      name: ordersTable.customerName,
+      phone: ordersTable.customerPhone,
+      email: ordersTable.customerEmail,
+      city: ordersTable.city,
+    })
+    .from(ordersTable)
+    .where(sql`customer_phone IS NOT NULL AND customer_phone != ''`)
+    .orderBy(ordersTable.customerName);
+
+  const seen = new Set<string>();
+  const unique = rows.filter(r => {
+    if (!r.phone || seen.has(r.phone)) return false;
+    seen.add(r.phone);
+    return true;
+  });
+
+  const csv = [
+    "Name,Phone,Email,City",
+    ...unique.map(r =>
+      [r.name, r.phone, r.email, r.city]
+        .map(v => `"${(v ?? "").replace(/"/g, '""')}"`)
+        .join(",")
+    ),
+  ].join("\n");
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=sriswa-customers.csv");
+  return res.send(csv);
+});
+
 router.get("/admin/marketing/broadcast/stats", async (_req, res) => {
   const [phones] = await db
     .select({ count: sql<number>`count(distinct customer_phone)::int` })

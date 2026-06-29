@@ -146,7 +146,7 @@ export const DEFAULT_SITE_DESIGN = {
   footer: {
     logoSize: 60,
     tagline: "Timeless Beauty, Everyday Shine.\nPremium anti-tarnish jewellery\ncrafted for the modern woman.",
-    instagramUrl: "https://instagram.com/sriswastudio",
+    instagramUrl: "https://www.instagram.com/sriswa_studio",
     facebookUrl: "https://facebook.com/sriswastudio",
   },
   homepageSections: DEFAULT_HOMEPAGE_SECTIONS,

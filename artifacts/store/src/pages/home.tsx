@@ -118,14 +118,6 @@ const SHOP_CATEGORIES = [
   { label: "Chain Sets", slug: "chain-sets", Icon: Link2, bg: "linear-gradient(135deg,#9B0F5F 30%,#D4AF37 100%)" },
 ];
 
-const WHY_FEATURES = [
-  { Icon: ShieldCheck, title: "Anti-Tarnish Technology", desc: "Our jewellery stays bright & shiny — no colour fading, ever." },
-  { Icon: Droplets, title: "100% Waterproof", desc: "Wear it to the gym, beach, or shower without worry." },
-  { Icon: Heart, title: "Skin-Friendly", desc: "Nickel-free and hypoallergenic — safe for sensitive skin." },
-  { Icon: Truck, title: "Free Shipping ₹999+", desc: "Fast dispatch within 24 hours, delivered pan-India." },
-  { Icon: Gem, title: "Handcrafted Quality", desc: "Every piece is hand-finished by skilled artisans." },
-  { Icon: BadgeCheck, title: "100% Authentic", desc: "Certified quality with genuine anti-tarnish coating." },
-];
 
 const INSTA_GRADIENTS = [
   "linear-gradient(135deg,#9B0F5F,#D4AF37)",
@@ -400,30 +392,6 @@ export default function Home() {
               <p className="text-gray-400 text-sm">Best sellers coming soon!</p>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ── 6. WHY CHOOSE SRISWA ── */}
-      <section className="py-14" style={{ background: dark }}>
-        <div className="container mx-auto px-[30px]">
-          <div className="text-center mb-10">
-            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-2" style={{ color: gold }}>Our Promise</p>
-            <h2 className="font-serif font-bold text-2xl md:text-3xl text-white">Why Choose Sriswa Studio</h2>
-            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {WHY_FEATURES.map(({ Icon, title, desc }, i) => (
-              <div key={i} className="flex gap-4 p-5 rounded-sm" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <div className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center" style={{ background: `${brand}33` }}>
-                  <Icon className="h-5 w-5" style={{ color: gold }} />
-                </div>
-                <div>
-                  <h3 className="font-serif font-bold text-white text-sm mb-1">{title}</h3>
-                  <p className="text-white/50 text-xs leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

@@ -871,15 +871,23 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
           <button
             type="button"
             onClick={handleToggleNav}
-            disabled={update.isPending}
-            title={isInNav ? "Remove from site navigation" : "Show in site navigation"}
+            disabled={!isPublished || update.isPending}
+            title={
+              !isPublished
+                ? "Publish this page first — draft pages are never shown in navigation"
+                : isInNav
+                ? "Remove from site navigation"
+                : "Show in site navigation"
+            }
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
-              isInNav
+              !isPublished
+                ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+                : isInNav
                 ? "border-[#9B0F5F] bg-pink-50 text-[#9B0F5F]"
                 : "border-gray-200 text-gray-500 hover:border-gray-400"
             }`}
           >
-            <Globe className="h-3.5 w-3.5" />
+            <GlobeLock className="h-3.5 w-3.5" />
             {isInNav ? "In Nav" : "Add to Nav"}
           </button>
           <a

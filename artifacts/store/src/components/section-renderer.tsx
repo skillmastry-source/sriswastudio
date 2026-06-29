@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import {
   useListProducts, getListProductsQueryKey,
   useGetFeaturedProducts, getGetFeaturedProductsQueryKey,
@@ -168,76 +168,90 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
   const title = (config.title as string | undefined) ?? "Shop by Category";
   const subtitle = (config.subtitle as string | undefined) ?? "Browse";
 
-  const [activeTab, setActiveTab] = useState<string | null>(null);
   const { data: categoriesData } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
+  const categories = categoriesData ?? [];
+
+  const [activeTab, setActiveTab] = useState<string>(() => categories[0]?.slug ?? "");
 
   const activeCategoryId = useMemo(() => {
     if (!activeTab || !categoriesData) return null;
     return categoriesData.find((c) => c.slug === activeTab)?.id ?? null;
   }, [activeTab, categoriesData]);
 
+  // auto-select first tab once categories load
+  useEffect(() => {
+    if (!activeTab && categories.length > 0) setActiveTab(categories[0].slug);
+  }, [categories.length]);
+
   const { data: tabProductData, isLoading: tabLoading } = useListProducts(
     { categoryId: activeCategoryId, sortBy: "newest" as const, limit: 12 },
-    { query: { enabled: !!activeTab, queryKey: getListProductsQueryKey({ categoryId: activeCategoryId, sortBy: "newest", limit: 12 }) } }
+    { query: { enabled: !!activeCategoryId, queryKey: getListProductsQueryKey({ categoryId: activeCategoryId, sortBy: "newest", limit: 12 }) } }
   );
 
   const { sessionId } = useCartContext();
-  const categories = categoriesData ?? [];
 
   return (
     <section className="py-14 bg-white">
       <div className="container mx-auto px-[30px]">
-        <div className="text-center mb-10">
+
+        {/* Heading */}
+        <div className="text-center mb-8">
           <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: brand }}>{subtitle}</p>
           <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">{title}</h2>
           <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
         </div>
-        <div className="flex items-start gap-5 md:gap-8 overflow-x-auto pb-3 md:justify-center" style={{ scrollbarWidth: "none" }}>
-          {categories.map(({ name, slug }, i) => {
+
+        {/* Tab pills */}
+        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-1 md:justify-center mb-8" style={{ scrollbarWidth: "none" }}>
+          {categories.map(({ name, slug }) => {
             const isActive = activeTab === slug;
-            const Icon = CATEGORY_ICON_MAP[slug] ?? Sparkles;
             return (
-              <button key={slug} onClick={() => setActiveTab(isActive ? null : slug)}
-                className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer border-none bg-transparent p-0">
-                <div className="h-[90px] w-[90px] rounded-full p-[3px] transition-all duration-300"
-                  style={{ background: isActive ? brand : CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length] }}>
-                  <div className="h-full w-full rounded-full flex items-center justify-center transition-all duration-300"
-                    style={{ background: isActive ? brand : "white" }}>
-                    <Icon className="h-7 w-7" style={{ color: isActive ? "white" : brand }} />
-                  </div>
-                </div>
-                <span className="text-[11px] font-semibold tracking-[0.08em] text-center leading-tight max-w-[76px]"
-                  style={{ color: isActive ? brand : dark }}>{name}</span>
+              <button
+                key={slug}
+                onClick={() => setActiveTab(slug)}
+                className="flex-shrink-0 px-5 py-2 text-[11px] font-bold tracking-[0.18em] uppercase transition-all duration-200 rounded-none cursor-pointer"
+                style={isActive
+                  ? { background: brand, color: "white", border: `1.5px solid ${brand}` }
+                  : { background: "transparent", color: dark, border: `1.5px solid ${brand}40` }
+                }
+              >
+                {name}
               </button>
             );
           })}
-          <Link href="/shop" className="flex flex-col items-center gap-3 flex-shrink-0">
-            <div className="h-[90px] w-[90px] rounded-full flex items-center justify-center"
-              style={{ border: `2.5px dashed ${brand}`, background: "#fdf6f9" }}>
-              <ArrowRight className="h-7 w-7" style={{ color: brand }} />
-            </div>
-            <span className="text-[11px] font-semibold tracking-[0.08em] text-center" style={{ color: brand }}>View All</span>
+          <Link
+            href="/shop"
+            className="flex-shrink-0 px-5 py-2 text-[11px] font-bold tracking-[0.18em] uppercase transition-all duration-200 flex items-center gap-1.5"
+            style={{ background: "transparent", color: brand, border: `1.5px dashed ${brand}` }}
+          >
+            View All <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-        {activeTab !== null && (
-          <div className="mt-10">
-            <div className="h-px mb-8" style={{ background: `linear-gradient(to right, transparent, ${gold}, transparent)` }} />
-            {tabLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="animate-pulse rounded-sm" style={{ aspectRatio: "3/4", background: "#f3e8f0" }} />)}
-              </div>
-            ) : (tabProductData?.products ?? []).length === 0 ? (
-              <div className="text-center py-16 text-gray-400 text-sm">No products found in this category yet.</div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {(tabProductData?.products ?? []).map((p) => (
-                  <ProductCard key={p.id} product={{ ...p, stockQuantity: (p as { stockQuantity?: number }).stockQuantity ?? 1 }}
-                    sessionId={sessionId} brand={brand} dark={dark} />
-                ))}
-              </div>
-            )}
+
+        {/* Gold divider */}
+        <div className="h-px mb-8" style={{ background: `linear-gradient(to right, transparent, ${gold}, transparent)` }} />
+
+        {/* Products grid */}
+        {tabLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-sm" style={{ aspectRatio: "3/4", background: "#f3e8f0" }} />
+            ))}
+          </div>
+        ) : (tabProductData?.products ?? []).length === 0 ? (
+          <div className="text-center py-16 text-gray-400 text-sm">No products in this category yet.</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {(tabProductData?.products ?? []).map((p) => (
+              <ProductCard
+                key={p.id}
+                product={{ ...p, stockQuantity: (p as { stockQuantity?: number }).stockQuantity ?? 1 }}
+                sessionId={sessionId} brand={brand} dark={dark}
+              />
+            ))}
           </div>
         )}
+
       </div>
     </section>
   );

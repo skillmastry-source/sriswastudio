@@ -3,6 +3,7 @@ import { StoreLayout } from "@/components/layout/store-layout";
 import {
   useListProducts, getListProductsQueryKey,
   useGetFeaturedProducts, getGetFeaturedProductsQueryKey,
+  useListCategories, getListCategoriesQueryKey,
   useAddToCart,
 } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
@@ -13,7 +14,7 @@ import {
   ChevronLeft, ChevronRight, Clock, Gem, Circle, Heart, Layers,
   Link2, Mail, Instagram, BadgeCheck, ArrowRight,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 
 const TICKER_ITEMS = [
   "✦ Anti-Tarnish Jewellery", "✦ Ships in 24 Hours",
@@ -141,10 +142,26 @@ export default function Home() {
   const sliderBestRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
 
   const s = useSiteSettings();
   const { colors, hero, testimonials } = s;
   const { brand, gold, dark } = colors;
+
+  const { data: categoriesData } = useListCategories({
+    query: { queryKey: getListCategoriesQueryKey() },
+  });
+
+  const activeCategoryId = useMemo(() => {
+    if (!activeTab || !categoriesData) return null;
+    const cat = categoriesData.find((c) => c.slug === activeTab);
+    return cat ? cat.id : null;
+  }, [activeTab, categoriesData]);
+
+  const { data: tabProductData, isLoading: tabLoading } = useListProducts(
+    { categoryId: activeCategoryId, sortBy: "newest" as const, limit: 12 },
+    { query: { queryKey: getListProductsQueryKey({ categoryId: activeCategoryId, sortBy: "newest", limit: 12 }) } }
+  );
 
   const { data: newArrivalsData, isLoading: newLoading } = useListProducts(
     { sortBy: "newest" as const, limit: 8 },
@@ -155,6 +172,7 @@ export default function Home() {
     { query: { queryKey: getGetFeaturedProductsQueryKey({ limit: 8 }) } }
   );
 
+  const tabProducts = (tabProductData?.products ?? []) as CardProduct[];
   const newArrivals = newArrivalsData?.products ?? [];
   const bestSellers = (bestSellerData ?? []) as CardProduct[];
 
@@ -207,7 +225,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 3. SHOP BY CATEGORY ── */}
+      {/* ── 3. SHOP BY CATEGORY (tabs) ── */}
       <section className="py-14 bg-white">
         <div className="container mx-auto px-[30px]">
           <div className="text-center mb-10">
@@ -216,59 +234,90 @@ export default function Home() {
             <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
           </div>
 
-          {/* Horizontal circle row */}
+          {/* Tab circles */}
           <div className="flex items-start gap-5 md:gap-8 overflow-x-auto pb-3 slider-scroll md:justify-center">
-            {SHOP_CATEGORIES.map(({ label, slug, Icon }, i) => (
-              <Link
-                key={i}
-                href={slug ? `/shop?category=${slug}` : "/shop"}
-                className="group flex flex-col items-center gap-3 flex-shrink-0"
-              >
-                {/* Gradient ring → white inner circle → icon */}
-                <div
-                  className="h-[90px] w-[90px] rounded-full p-[3px] transition-all duration-300"
-                  style={{ background: `linear-gradient(135deg, ${gold} 0%, ${brand} 100%)` }}
+            {SHOP_CATEGORIES.map(({ label, slug }, i) => {
+              const isActive = activeTab === slug;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveTab(slug)}
+                  className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer border-none bg-transparent p-0"
                 >
                   <div
-                    className="h-full w-full rounded-full flex items-center justify-center transition-all duration-300"
-                    style={{ background: "white" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = brand)}
-                    onMouseLeave={e => (e.currentTarget.style.background = "white")}
+                    className="h-[90px] w-[90px] rounded-full p-[3px] transition-all duration-300"
+                    style={{ background: isActive ? brand : `linear-gradient(135deg, ${gold} 0%, ${brand} 100%)` }}
                   >
-                    <Icon
-                      className="h-7 w-7 transition-all duration-300"
-                      style={{ color: brand }}
-                      onMouseEnter={e => ((e.currentTarget as SVGElement).style.color = "white")}
-                    />
+                    <div
+                      className="h-full w-full rounded-full flex items-center justify-center transition-all duration-300"
+                      style={{ background: isActive ? brand : "white" }}
+                    >
+                      {(() => {
+                        const { Icon } = SHOP_CATEGORIES[i];
+                        return <Icon className="h-7 w-7" style={{ color: isActive ? "white" : brand }} />;
+                      })()}
+                    </div>
                   </div>
-                </div>
-                <span
-                  className="text-[11px] font-semibold tracking-[0.08em] text-center leading-tight transition-colors duration-200 max-w-[76px]"
-                  style={{ color: "#4b2038", fontFamily: "inherit" }}
-                >
-                  {label}
-                </span>
-              </Link>
-            ))}
+                  <span
+                    className="text-[11px] font-semibold tracking-[0.08em] text-center leading-tight max-w-[76px]"
+                    style={{ color: isActive ? brand : "#4b2038" }}
+                  >
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
 
-            {/* View All circle */}
-            <Link href="/shop" className="group flex flex-col items-center gap-3 flex-shrink-0">
+            {/* View All — navigates to /shop */}
+            <Link href="/shop" className="flex flex-col items-center gap-3 flex-shrink-0">
               <div
-                className="h-[90px] w-[90px] rounded-full flex items-center justify-center transition-all duration-300"
+                className="h-[90px] w-[90px] rounded-full flex items-center justify-center"
                 style={{ border: `2.5px dashed ${brand}`, background: "#fdf6f9" }}
-                onMouseEnter={e => (e.currentTarget.style.background = brand)}
-                onMouseLeave={e => (e.currentTarget.style.background = "#fdf6f9")}
               >
-                <ArrowRight
-                  className="h-7 w-7 transition-colors duration-300"
-                  style={{ color: brand }}
-                />
+                <ArrowRight className="h-7 w-7" style={{ color: brand }} />
               </div>
-              <span className="text-[11px] font-semibold tracking-[0.08em] text-center transition-colors duration-200" style={{ color: brand }}>
+              <span className="text-[11px] font-semibold tracking-[0.08em] text-center" style={{ color: brand }}>
                 View All
               </span>
             </Link>
           </div>
+
+          {/* Inline product grid — only shown when a tab is active */}
+          {activeTab !== null && (
+            <div className="mt-10">
+              <div className="h-px mb-8" style={{ background: `linear-gradient(to right, transparent, ${gold}, transparent)` }} />
+              {tabLoading ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-sm animate-pulse" style={{ aspectRatio: "3/4", background: "#f3e8f0" }} />
+                  ))}
+                </div>
+              ) : tabProducts.length === 0 ? (
+                <div className="text-center py-16">
+                  <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" style={{ color: brand }} />
+                  <p className="text-sm text-gray-400">No products found in this category yet.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                    {tabProducts.map((p) => (
+                      <ProductCard key={p.id} product={p} sessionId={sessionId} brand={brand} dark={dark} />
+                    ))}
+                  </div>
+                  <div className="text-center mt-8">
+                    <Link
+                      href={`/shop?category=${activeTab}`}
+                      className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase font-semibold px-6 py-3 border transition-colors"
+                      style={{ color: brand, borderColor: brand }}
+                    >
+                      View All {SHOP_CATEGORIES.find(c => c.slug === activeTab)?.label}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

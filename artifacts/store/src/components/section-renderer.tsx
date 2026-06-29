@@ -191,18 +191,18 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
   const { sessionId } = useCartContext();
 
   return (
-    <section className="py-14 bg-white">
+    <section className="py-10 bg-white">
       <div className="container mx-auto px-[30px]">
 
         {/* Heading */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: brand }}>{subtitle}</p>
           <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">{title}</h2>
           <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
         </div>
 
         {/* Tab pills */}
-        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-1 md:justify-center mb-8" style={{ scrollbarWidth: "none" }}>
+        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-1 md:justify-center mb-6" style={{ scrollbarWidth: "none" }}>
           {categories.map(({ name, slug }) => {
             const isActive = activeTab === slug;
             return (
@@ -219,17 +219,10 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
               </button>
             );
           })}
-          <Link
-            href="/shop"
-            className="flex-shrink-0 px-5 py-2 text-[11px] font-bold tracking-[0.18em] uppercase transition-all duration-200 flex items-center gap-1.5"
-            style={{ background: "transparent", color: brand, border: `1.5px dashed ${brand}` }}
-          >
-            View All <ArrowRight className="h-3 w-3" />
-          </Link>
         </div>
 
         {/* Gold divider */}
-        <div className="h-px mb-8" style={{ background: `linear-gradient(to right, transparent, ${gold}, transparent)` }} />
+        <div className="h-px mb-6" style={{ background: `linear-gradient(to right, transparent, ${gold}, transparent)` }} />
 
         {/* Products grid */}
         {tabLoading ? (

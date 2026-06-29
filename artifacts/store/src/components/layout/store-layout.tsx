@@ -242,7 +242,7 @@ export function Footer() {
           </div>
 
           <div className="text-left">
-            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Shop</h4>
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Shop by Category</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               {[
                 ["/shop", "New Arrivals"],
@@ -272,6 +272,21 @@ export function Footer() {
             </ul>
           </div>
 
+          {policyPages.length > 0 && (
+            <div className="text-left">
+              <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Policies</h4>
+              <ul className="flex flex-col gap-3 text-sm text-white/60">
+                {policyPages.map((p) => (
+                  <li key={p.id}>
+                    <Link href={`/pages/${p.slug}`} className="hover:text-white transition-colors">
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="text-left">
             <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
@@ -292,21 +307,6 @@ export function Footer() {
               </li>
             </ul>
           </div>
-
-          {policyPages.length > 0 && (
-            <div className="text-left">
-              <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Policies</h4>
-              <ul className="flex flex-col gap-3 text-sm text-white/60">
-                {policyPages.map((p) => (
-                  <li key={p.id}>
-                    <Link href={`/pages/${p.slug}`} className="hover:text-white transition-colors">
-                      {p.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
         </div>
       </div>

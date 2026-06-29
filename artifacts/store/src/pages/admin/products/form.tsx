@@ -15,9 +15,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Upload, Library } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { MediaPicker } from "@/components/media-picker";
 
 const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -64,6 +65,7 @@ export default function AdminProductForm() {
   const [variants, setVariants] = useState<VariantEntry[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initRef = useRef(false);
@@ -319,7 +321,23 @@ export default function AdminProductForm() {
                 <Upload className="h-4 w-4 mr-1" />
                 {uploadingImage ? "Uploading…" : "Upload File"}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMediaPickerOpen(true)}
+              >
+                <Library className="h-4 w-4 mr-1" />
+                From Library
+              </Button>
             </div>
+            <MediaPicker
+              open={mediaPickerOpen}
+              onClose={() => setMediaPickerOpen(false)}
+              onSelect={(url) => {
+                setImages((prev) => [...prev, { url, isPrimary: prev.length === 0, displayOrder: prev.length }]);
+                setMediaPickerOpen(false);
+              }}
+            />
             {images.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {images.map((img, i) => (

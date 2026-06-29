@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ShoppingBag, Package, ListTree,
   Settings, Users, LogOut, Tags, Palette, ExternalLink,
-  ChevronRight, FileText, Tag,
+  ChevronRight, FileText, Tag, Image,
 } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
 import { useEffect } from "react";
@@ -39,6 +39,7 @@ const NAV_GROUPS = [
     label: "Content",
     items: [
       { href: "/admin/cms", icon: FileText, label: "CMS", exact: false },
+      { href: "/admin/media", icon: Image, label: "Media Library", exact: false },
     ],
   },
   {

@@ -12,6 +12,7 @@ import leadsRouter from "./leads";
 import cmsRouter from "./cms";
 import customersRouter from "./customers";
 import couponsRouter from "./coupons";
+import mediaRouter from "./media";
 
 const router: IRouter = Router();
 
@@ -34,6 +35,8 @@ router.use(cmsRouter);
 router.use(customersRouter);
 // coupons: public /coupons/validate + admin CRUD (guards inside router)
 router.use(couponsRouter);
+// media: admin-only, guards inside router
+router.use(mediaRouter);
 router.use(adminRouter);
 
 export default router;

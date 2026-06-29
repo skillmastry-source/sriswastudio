@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Eye } from "lucide-react";
+import { ArrowLeft, Save, Eye, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { MediaPicker } from "@/components/media-picker";
 
 const BRAND = "#9B0F5F";
 
@@ -104,6 +105,8 @@ export default function AdminCmsForm() {
   const [metaDescription, setMetaDescription] = useState("");
   const [isPublished,     setIsPublished]     = useState(false);
   const [previewTab,      setPreviewTab]      = useState<"edit" | "preview">("edit");
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (existing) {
@@ -225,15 +228,29 @@ export default function AdminCmsForm() {
                 <Tabs value={previewTab} onValueChange={(v) => setPreviewTab(v as "edit" | "preview")}>
                   <div className="flex items-center justify-between">
                     <Label>Content (Markdown supported)</Label>
-                    <TabsList className="h-7">
-                      <TabsTrigger value="edit" className="text-xs px-2 py-1">Edit</TabsTrigger>
-                      <TabsTrigger value="preview" className="text-xs px-2 py-1">
-                        <Eye className="h-3 w-3 mr-1" />Preview
-                      </TabsTrigger>
-                    </TabsList>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-muted-foreground"
+                        onClick={() => setMediaPickerOpen(true)}
+                        title="Insert image from Media Library"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5 mr-1" />
+                        Insert Image
+                      </Button>
+                      <TabsList className="h-7">
+                        <TabsTrigger value="edit" className="text-xs px-2 py-1">Edit</TabsTrigger>
+                        <TabsTrigger value="preview" className="text-xs px-2 py-1">
+                          <Eye className="h-3 w-3 mr-1" />Preview
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
                   </div>
                   <TabsContent value="edit" className="mt-1.5">
                     <Textarea
+                      ref={textareaRef}
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Write your content here… Markdown is supported."
@@ -306,6 +323,23 @@ export default function AdminCmsForm() {
           </Card>
         </div>
       </div>
+
+      <MediaPicker
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(url) => {
+          const ta = textareaRef.current;
+          const insert = `\n![image](${url})\n`;
+          if (ta) {
+            const start = ta.selectionStart ?? content.length;
+            const end = ta.selectionEnd ?? content.length;
+            setContent((prev) => prev.slice(0, start) + insert + prev.slice(end));
+          } else {
+            setContent((prev) => prev + insert);
+          }
+          setMediaPickerOpen(false);
+        }}
+      />
     </form>
   );
 }

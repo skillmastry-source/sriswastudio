@@ -7,7 +7,14 @@ export type LandingPageSummary = {
   title: string;
   slug: string;
   isPublished: boolean;
+  isInNav: boolean;
   updatedAt: string;
+};
+
+export type NavLandingPage = {
+  id: number;
+  title: string;
+  slug: string;
 };
 
 export type LandingPageFull = LandingPageSummary & {
@@ -28,6 +35,14 @@ export function useLandingPages() {
   return useQuery<LandingPageSummary[]>({
     queryKey: ["landing-pages"],
     queryFn: () => apiFetch("/landing-pages"),
+  });
+}
+
+export function useNavLandingPages() {
+  return useQuery<NavLandingPage[]>({
+    queryKey: ["landing-pages-nav"],
+    queryFn: () => apiFetch("/landing-pages/nav"),
+    staleTime: 60_000,
   });
 }
 
@@ -55,7 +70,7 @@ export function useCreateLandingPage() {
 export function useUpdateLandingPage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean }) =>
+    mutationFn: ({ id, ...data }: { id: number; title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean }) =>
       apiFetch(`/admin/landing-pages/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -64,6 +79,7 @@ export function useUpdateLandingPage() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["landing-pages"] });
       qc.invalidateQueries({ queryKey: ["landing-page", vars.id] });
+      qc.invalidateQueries({ queryKey: ["landing-pages-nav"] });
     },
   });
 }

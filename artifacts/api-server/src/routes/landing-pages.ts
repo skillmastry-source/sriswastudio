@@ -14,9 +14,13 @@ async function ensureTable() {
         slug TEXT NOT NULL UNIQUE,
         sections JSONB NOT NULL DEFAULT '[]'::jsonb,
         is_published BOOLEAN NOT NULL DEFAULT false,
+        is_in_nav BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMP DEFAULT NOW() NOT NULL
       )
+    `);
+    await db.execute(sql`
+      ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS is_in_nav BOOLEAN NOT NULL DEFAULT false
     `);
   } catch {
     // already exists
@@ -29,13 +33,28 @@ ensureTable();
 router.get("/landing-pages", async (_req, res) => {
   try {
     const pages = await db
-      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug, isPublished: landingPagesTable.isPublished, updatedAt: landingPagesTable.updatedAt })
+      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug, isPublished: landingPagesTable.isPublished, isInNav: landingPagesTable.isInNav, updatedAt: landingPagesTable.updatedAt })
       .from(landingPagesTable)
       .orderBy(landingPagesTable.createdAt);
     return res.json(pages);
   } catch (e) {
     console.error("[landing-pages] list error:", e);
     return res.status(500).json({ error: "Failed to list landing pages" });
+  }
+});
+
+// Public: list nav-visible pages
+router.get("/landing-pages/nav", async (_req, res) => {
+  try {
+    const pages = await db
+      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug })
+      .from(landingPagesTable)
+      .where(sql`is_published = true AND is_in_nav = true`)
+      .orderBy(landingPagesTable.title);
+    return res.json(pages);
+  } catch (e) {
+    console.error("[landing-pages] nav list error:", e);
+    return res.status(500).json({ error: "Failed to list nav pages" });
   }
 });
 
@@ -57,8 +76,8 @@ router.get("/landing-pages/:slug", async (req, res) => {
 // Admin: create page
 router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
   try {
-    const { title, slug, sections, isPublished } = req.body as {
-      title: string; slug: string; sections?: unknown[]; isPublished?: boolean;
+    const { title, slug, sections, isPublished, isInNav } = req.body as {
+      title: string; slug: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean;
     };
     if (!title || !slug) return res.status(400).json({ error: "title and slug are required" });
 
@@ -66,7 +85,7 @@ router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
 
     const [page] = await db
       .insert(landingPagesTable)
-      .values({ title, slug: safeSlug, sections: sections ?? [], isPublished: isPublished ?? false })
+      .values({ title, slug: safeSlug, sections: sections ?? [], isPublished: isPublished ?? false, isInNav: isInNav ?? false })
       .returning();
     return res.status(201).json(page);
   } catch (e: unknown) {
@@ -81,15 +100,16 @@ router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
 router.patch("/admin/landing-pages/:id", requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { title, slug, sections, isPublished } = req.body as {
-      title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean;
+    const { title, slug, sections, isPublished, isInNav } = req.body as {
+      title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean;
     };
 
-    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; updatedAt: Date }> = {};
+    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; isInNav: boolean; updatedAt: Date }> = {};
     if (title !== undefined) updates.title = title;
     if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-").replace(/^-|-$/g, "");
     if (sections !== undefined) updates.sections = sections;
     if (isPublished !== undefined) updates.isPublished = isPublished;
+    if (isInNav !== undefined) updates.isInNav = isInNav;
     updates.updatedAt = new Date();
 
     const [page] = await db

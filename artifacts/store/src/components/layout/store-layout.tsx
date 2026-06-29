@@ -7,6 +7,7 @@ import { CartDrawer } from "@/components/cart-drawer";
 import { useSiteSettings } from "@/hooks/use-site-settings";
 import { ChatWidget } from "@/components/chat-widget";
 import { useQuery } from "@tanstack/react-query";
+import { useNavLandingPages } from "@/hooks/use-landing-pages";
 
 interface FlashSaleData {
   enabled?: boolean;
@@ -95,8 +96,9 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const settings = useSiteSettings();
   const { header, colors } = settings;
+  const { data: navPages = [] } = useNavLandingPages();
 
-  const navLinks = [
+  const staticNavLinks = [
     { href: "/shop", label: "New Arrivals" },
     { href: "/shop?category=watches", label: "Watches" },
     { href: "/shop?category=bracelets", label: "Bracelets" },
@@ -106,6 +108,11 @@ export function Navbar() {
     { href: "/shop?category=chain-sets", label: "Chain Sets" },
     { href: "/blog", label: "Blog" },
     { href: "/faq", label: "FAQ" },
+  ];
+
+  const navLinks = [
+    ...staticNavLinks,
+    ...navPages.map((p) => ({ href: `/p/${p.slug}`, label: p.title })),
   ];
 
   return (
@@ -200,6 +207,7 @@ type CmsPage = { id: number; type: string; slug: string; title: string };
 export function Footer() {
   const settings = useSiteSettings();
   const { footer, colors } = settings;
+  const { data: navPages = [] } = useNavLandingPages();
 
   const { data: cmsPages = [] } = useQuery<CmsPage[]>({
     queryKey: ["/api/cms/pages"],
@@ -271,6 +279,21 @@ export function Footer() {
               <li><Link href="/pages/contact-us" className="hover:text-white transition-colors">Contact Us</Link></li>
             </ul>
           </div>
+
+          {navPages.length > 0 && (
+            <div className="text-left">
+              <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Pages</h4>
+              <ul className="flex flex-col gap-3 text-sm text-white/60">
+                {navPages.map((p) => (
+                  <li key={p.id}>
+                    <Link href={`/p/${p.slug}`} className="hover:text-white transition-colors">
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {policyPages.length > 0 && (
             <div className="text-left">

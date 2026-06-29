@@ -773,17 +773,21 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addingSection, setAddingSection] = useState(false);
   const [isPublished, setIsPublished] = useState(page.isPublished);
+  const [isInNav, setIsInNav] = useState(page.isInNav ?? false);
 
   useEffect(() => {
     if (fullPage?.sections) {
       setSections([...fullPage.sections as HomepageSection[]].sort((a, b) => a.order - b.order));
+    }
+    if (fullPage?.isInNav !== undefined) {
+      setIsInNav(fullPage.isInNav);
     }
   }, [fullPage]);
 
   const handleSave = (pub?: boolean) => {
     const publishedValue = pub ?? isPublished;
     update.mutate(
-      { id: page.id, sections, isPublished: publishedValue },
+      { id: page.id, sections, isPublished: publishedValue, isInNav },
       {
         onSuccess: () => {
           setIsPublished(publishedValue);
@@ -793,6 +797,21 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
           });
         },
         onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleToggleNav = () => {
+    const newVal = !isInNav;
+    setIsInNav(newVal);
+    update.mutate(
+      { id: page.id, isInNav: newVal },
+      {
+        onSuccess: () => toast({
+          title: newVal ? "✓ Added to navigation" : "✓ Removed from navigation",
+          description: newVal ? "Page will appear in the nav and footer." : "Page is no longer in nav.",
+        }),
+        onError: () => { setIsInNav(!newVal); toast({ title: "Failed to update", variant: "destructive" }); },
       }
     );
   };
@@ -821,6 +840,20 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleNav}
+            disabled={update.isPending}
+            title={isInNav ? "Remove from site navigation" : "Show in site navigation"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+              isInNav
+                ? "border-[#9B0F5F] bg-pink-50 text-[#9B0F5F]"
+                : "border-gray-200 text-gray-500 hover:border-gray-400"
+            }`}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            {isInNav ? "In Nav" : "Add to Nav"}
+          </button>
           {isPublished && (
             <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-1.5">

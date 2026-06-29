@@ -8,6 +8,7 @@ export const landingPagesTable = pgTable("landing_pages", {
   slug:        text("slug").notNull().unique(),
   sections:    jsonb("sections").notNull().default([]),
   isPublished: boolean("is_published").notNull().default(false),
+  isInNav:     boolean("is_in_nav").notNull().default(false),
   createdAt:   timestamp("created_at").defaultNow().notNull(),
   updatedAt:   timestamp("updated_at").defaultNow().notNull(),
 });

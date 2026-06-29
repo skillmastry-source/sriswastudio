@@ -79,11 +79,15 @@ function Router() {
 
       {/* Clerk auth routes */}
       <Route path="/sign-in/*?">
-        {() => (
-          <div className="min-h-screen flex items-center justify-center bg-background">
-            <SignIn routing="path" path={`${basePath}/sign-in`} />
-          </div>
-        )}
+        {() => {
+          const params = new URLSearchParams(window.location.search);
+          const redirectUrl = params.get("redirect_url") ?? "/";
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <SignIn routing="path" path={`${basePath}/sign-in`} afterSignInUrl={redirectUrl} />
+            </div>
+          );
+        }}
       </Route>
       <Route path="/sign-up/*?">
         {() => (

@@ -69,7 +69,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (authLoaded && userLoaded) {
-      if (!isSignedIn) setLocation("/sign-in");
+      if (!isSignedIn) setLocation("/sign-in?redirect_url=/admin");
       else if (!isAdmin) setLocation("/");
     }
   }, [authLoaded, userLoaded, isSignedIn, isAdmin, setLocation]);

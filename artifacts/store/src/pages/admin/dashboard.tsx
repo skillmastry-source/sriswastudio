@@ -1,137 +1,266 @@
 import { useGetAdminDashboard, getGetAdminDashboardQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Package, ShoppingCart, IndianRupee, AlertTriangle } from "lucide-react";
+import { ShoppingCart, IndianRupee, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
+
+const BRAND = "#9B0F5F";
+const GOLD  = "#D4AF37";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
+  pending:    "bg-yellow-100 text-yellow-800",
   processing: "bg-blue-100 text-blue-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  shipped:    "bg-purple-100 text-purple-800",
+  delivered:  "bg-green-100 text-green-800",
+  cancelled:  "bg-red-100 text-red-800",
+  returned:   "bg-orange-100 text-orange-800",
 };
 
+const PIE_COLORS: Record<string, string> = {
+  pending: "#f59e0b", processing: "#3b82f6", shipped: "#8b5cf6",
+  delivered: "#10b981", cancelled: "#ef4444", returned: "#f97316",
+};
+
+type Period = "7d" | "30d" | "90d";
+
+async function fetchAnalytics(path: string) {
+  const res = await fetch(path, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch analytics");
+  return res.json();
+}
+
 export default function AdminDashboard() {
-  const { data: dashboard, isLoading } = useGetAdminDashboard({
+  const [period, setPeriod] = useState<Period>("30d");
+
+  const { data: dashboard, isLoading: dashLoading } = useGetAdminDashboard({
     query: { queryKey: getGetAdminDashboardQueryKey() }
   });
+
+  const { data: revenue, isLoading: revLoading } = useQuery({
+    queryKey: ["/api/admin/analytics/revenue", period],
+    queryFn: () => fetchAnalytics(`/api/admin/analytics/revenue?period=${period}`),
+  });
+
+  const { data: topProducts } = useQuery({
+    queryKey: ["/api/admin/analytics/top-products"],
+    queryFn: () => fetchAnalytics("/api/admin/analytics/top-products"),
+  });
+
+  const { data: overview } = useQuery({
+    queryKey: ["/api/admin/analytics/overview"],
+    queryFn: () => fetchAnalytics("/api/admin/analytics/overview"),
+  });
+
+  const isLoading = dashLoading || revLoading;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: BRAND }} />
       </div>
     );
   }
 
+  const revenueData: { date: string; revenue: number; orders: number }[] = revenue ?? [];
+  const pieData = (dashboard?.ordersByStatus ?? []).map((s: any) => ({
+    name: s.status, value: s.count,
+  }));
+  const avgOrderValue = overview?.avgOrderValue ?? 0;
+  const totalCustomers = overview?.totalCustomers ?? 0;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-serif font-bold text-foreground">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Revenue</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{(dashboard?.todayRevenue ?? 0).toFixed(0)}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboard?.todayOrders ?? 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{(dashboard?.totalRevenue ?? 0).toFixed(0)}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">Low Stock Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{dashboard?.lowStockCount ?? 0}</div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-serif font-bold">Dashboard</h1>
+        <span className="text-xs text-muted-foreground">Live data from your store</span>
       </div>
-      
+
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={<IndianRupee className="h-4 w-4" />} label="Total Revenue" value={`₹${Number(dashboard?.totalRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} sub={`₹${Number(dashboard?.todayRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })} today`} />
+        <StatCard icon={<ShoppingCart className="h-4 w-4" />} label="Total Orders" value={String(dashboard?.totalOrders ?? 0)} sub={`${dashboard?.todayOrders ?? 0} today`} />
+        <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Avg Order Value" value={`₹${Number(avgOrderValue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} sub="all time" />
+        <StatCard icon={<AlertTriangle className="h-4 w-4" />} label="Low Stock" value={String(dashboard?.lowStockCount ?? 0)} sub="products" alert={Number(dashboard?.lowStockCount) > 0} link="/admin/inventory" />
+      </div>
+
+      {/* ── Revenue Chart ── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold">Revenue Over Time</CardTitle>
+          <div className="flex gap-1 text-xs">
+            {(["7d", "30d", "90d"] as Period[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className="px-2.5 py-1 rounded-md font-medium transition-colors"
+                style={period === p
+                  ? { background: BRAND, color: "white" }
+                  : { background: "#f3f4f6", color: "#6b7280" }
+                }
+              >
+                {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {revenueData.length === 0 ? (
+            <EmptyChart message="Revenue data will appear here as orders come in." />
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={revenueData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}`} width={60} />
+                <Tooltip
+                  formatter={(v: any) => [`₹${Number(v).toLocaleString("en-IN")}`, "Revenue"]}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                />
+                <Line type="monotone" dataKey="revenue" stroke={BRAND} strokeWidth={2.5} dot={{ fill: BRAND, r: 3 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Middle Row: Pie + Top Products ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Order Status Donut */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Orders</CardTitle>
-            <Link href="/admin/orders" className="text-sm text-primary hover:underline">View all</Link>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Orders by Status</CardTitle>
           </CardHeader>
           <CardContent>
-            {dashboard?.recentOrders?.length ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dashboard.recentOrders.map((order: any) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-xs">{order.orderNumber}</TableCell>
-                      <TableCell className="truncate max-w-[100px]">{order.customerName}</TableCell>
-                      <TableCell>₹{Number(order.total).toFixed(0)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
-                          {order.status}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            {pieData.length === 0 ? (
+              <EmptyChart message="Order status breakdown will appear here." />
             ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">No orders yet. They'll show up here when customers start ordering!</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+                    {pieData.map((entry: any) => (
+                      <Cell key={entry.name} fill={PIE_COLORS[entry.name] ?? "#6b7280"} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v: any, name: any) => [v, name]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
-        
+
+        {/* Top Products */}
         <Card>
-          <CardHeader>
-            <CardTitle>Orders by Status</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Top Products by Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            {dashboard?.ordersByStatus?.length ? (
+            {!topProducts?.length ? (
+              <EmptyChart message="Top products will appear after orders are placed." />
+            ) : (
               <div className="space-y-3">
-                {dashboard.ordersByStatus.map((s: any) => (
-                  <div key={s.status} className="flex items-center justify-between">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[s.status] ?? "bg-gray-100 text-gray-800"}`}>
-                      {s.status}
+                {topProducts.map((p: any, i: number) => (
+                  <div key={p.productId ?? i} className="flex items-center gap-3">
+                    <span className="text-sm font-bold w-5 text-center" style={{ color: GOLD }}>
+                      {i + 1}
                     </span>
-                    <span className="font-bold text-lg">{s.count}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{p.productName}</p>
+                      <p className="text-xs text-muted-foreground">{p.unitsSold} units sold</p>
+                    </div>
+                    <div className="text-sm font-semibold" style={{ color: BRAND }}>
+                      ₹{Number(p.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">Order status breakdown will appear here once you receive orders.</p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Recent Orders ── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold">Recent Orders</CardTitle>
+          <Link href="/admin/orders" className="text-sm hover:underline" style={{ color: BRAND }}>View all →</Link>
+        </CardHeader>
+        <CardContent>
+          {dashboard?.recentOrders?.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboard.recentOrders.map((order: any) => (
+                  <TableRow key={order.id} className="cursor-pointer hover:bg-muted/40">
+                    <TableCell>
+                      <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs hover:underline" style={{ color: BRAND }}>
+                        {order.orderNumber}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[120px] truncate">{order.customerName}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{order.items?.length ?? 0} item{(order.items?.length ?? 0) !== 1 ? "s" : ""}</TableCell>
+                    <TableCell className="font-semibold">₹{Number(order.total).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
+                        {order.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">No orders yet. They'll show up here when customers start ordering!</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, sub, alert, link }: {
+  icon: React.ReactNode; label: string; value: string; sub: string; alert?: boolean; link?: string;
+}) {
+  const content = (
+    <Card className={alert ? "border-red-200" : ""}>
+      <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+        <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
+        <span className={alert ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <div className={`text-2xl font-bold ${alert ? "text-destructive" : ""}`}>{value}</div>
+        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+      </CardContent>
+    </Card>
+  );
+  return link ? <Link href={link}>{content}</Link> : content;
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="h-[160px] flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+      {message}
     </div>
   );
 }

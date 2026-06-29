@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, productsTable, storeSettingsTable } from "@workspace/db";
-import { eq, gte, sql, lte, and } from "drizzle-orm";
+import { eq, gte, sql, lte, and, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router = Router();
@@ -120,6 +120,59 @@ router.patch("/admin/settings", async (req, res) => {
   if (statusUpdateTemplate !== undefined) updates.statusUpdateTemplate = statusUpdateTemplate;
   const [updated] = await db.update(storeSettingsTable).set(updates).where(eq(storeSettingsTable.id, settings.id)).returning();
   return res.json(updated);
+});
+
+router.get("/admin/analytics/overview", async (_req, res) => {
+  const [avg] = await db
+    .select({ avgOrderValue: sql<number>`coalesce(avg(total::numeric), 0)::float` })
+    .from(ordersTable);
+
+  const [customers] = await db
+    .select({ totalCustomers: sql<number>`count(distinct customer_email)::int` })
+    .from(ordersTable);
+
+  return res.json({
+    avgOrderValue: avg.avgOrderValue,
+    totalCustomers: customers.totalCustomers,
+  });
+});
+
+router.get("/admin/analytics/revenue", async (req, res) => {
+  const period = String(req.query.period ?? "30d");
+  const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  from.setHours(0, 0, 0, 0);
+
+  const rows = await db
+    .select({
+      date: sql<string>`to_char(date_trunc('day', created_at), 'DD Mon')`,
+      revenue: sql<number>`coalesce(sum(total::numeric), 0)::float`,
+      orders: sql<number>`count(*)::int`,
+    })
+    .from(ordersTable)
+    .where(gte(ordersTable.createdAt, from))
+    .groupBy(sql`date_trunc('day', created_at)`)
+    .orderBy(sql`date_trunc('day', created_at)`);
+
+  return res.json(rows);
+});
+
+router.get("/admin/analytics/top-products", async (_req, res) => {
+  const rows = await db
+    .select({
+      productId: orderItemsTable.productId,
+      productName: orderItemsTable.productName,
+      revenue: sql<number>`sum(price::numeric * quantity)::float`,
+      unitsSold: sql<number>`sum(quantity)::int`,
+    })
+    .from(orderItemsTable)
+    .groupBy(orderItemsTable.productId, orderItemsTable.productName)
+    .orderBy(desc(sql`sum(price::numeric * quantity)`))
+    .limit(5);
+
+  return res.json(rows);
 });
 
 export default router;

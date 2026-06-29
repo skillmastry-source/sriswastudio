@@ -119,6 +119,21 @@ router.patch("/admin/coupons/:id", requireAdmin, async (req, res) => {
     isActive?: boolean;
   };
 
+  const validTypes = ["percent", "flat", "free-shipping"];
+  if (type !== undefined && !validTypes.includes(type)) {
+    return res.status(400).json({ error: "type must be percent, flat, or free-shipping" });
+  }
+  if (type === "percent" && value !== undefined && (value < 0 || value > 100)) {
+    return res.status(400).json({ error: "Percentage value must be between 0 and 100" });
+  }
+  // If only value is being updated (no type change), check against existing coupon's type
+  if (type === undefined && value !== undefined) {
+    const [existing] = await db.select().from(couponsTable).where(eq(couponsTable.id, id));
+    if (existing?.type === "percent" && (value < 0 || value > 100)) {
+      return res.status(400).json({ error: "Percentage value must be between 0 and 100" });
+    }
+  }
+
   const updates: Partial<typeof couponsTable.$inferInsert> = {};
   if (code !== undefined) updates.code = code.toUpperCase().trim();
   if (type !== undefined) updates.type = type;

@@ -80,7 +80,7 @@ router.post("/orders", async (req, res) => {
   const validItems = itemsToInsert.filter(Boolean) as NonNullable<typeof itemsToInsert[0]>[];
   if (validItems.length === 0) return res.status(400).json({ error: "No active products in cart" });
 
-  // Server-side stock check before committing the order
+  // Server-side stock check before starting the transaction
   const insufficientStock = validItems.filter((i) => i.quantity > i.stockQuantity);
   if (insufficientStock.length > 0) {
     return res.status(400).json({
@@ -121,53 +121,74 @@ router.post("/orders", async (req, res) => {
   const total = Math.max(0, subtotal - discountAmount);
   const orderNumber = generateOrderNumber();
 
-  // Execute order creation, stock decrement, and cart clear in a single transaction
-  // with row-level locks to prevent race-condition oversell
-  const order = await db.transaction(async (tx) => {
-    // Lock the product rows for update to serialise concurrent orders
-    for (const i of validItems) {
-      const result = await tx.execute(
-        sql`SELECT stock_quantity FROM products WHERE id = ${i.productId} FOR UPDATE`
-      );
-      const locked = result.rows[0] as { stock_quantity: number } | undefined;
-      const available = locked?.stock_quantity ?? 0;
-      if (i.quantity > available) {
-        throw new Error(`INSUFFICIENT_STOCK:${i.productName}`);
+  // Execute order creation, stock decrement, coupon consumption, and cart clear
+  // in a single transaction to prevent race conditions on stock and coupon limits.
+  let order: typeof ordersTable.$inferSelect;
+  try {
+    order = await db.transaction(async (tx) => {
+      // Lock the product rows for update to serialise concurrent orders
+      for (const i of validItems) {
+        const result = await tx.execute(
+          sql`SELECT stock_quantity FROM products WHERE id = ${i.productId} FOR UPDATE`
+        );
+        const locked = result.rows[0] as { stock_quantity: number } | undefined;
+        const available = locked?.stock_quantity ?? 0;
+        if (i.quantity > available) {
+          throw new Error(`INSUFFICIENT_STOCK:${i.productName}`);
+        }
       }
-    }
 
-    const [newOrder] = await tx
-      .insert(ordersTable)
-      .values({
-        orderNumber, status: "pending", customerName, customerPhone, customerEmail,
-        shippingAddress, city, state, pincode, notes: notes ?? null,
-        subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
-        couponCode: appliedCoupon ? appliedCoupon.code : null,
-        discountAmount: String(discountAmount),
-      })
-      .returning();
+      // Atomically consume coupon inside the transaction — guards against concurrent
+      // orders that both passed the pre-validation step with remaining quota.
+      if (appliedCoupon) {
+        const couponUpdate = await tx.execute(
+          sql`UPDATE coupons
+              SET used_count = used_count + 1
+              WHERE id = ${appliedCoupon.id}
+                AND is_active = true
+                AND (expires_at IS NULL OR expires_at > NOW())
+                AND (max_uses IS NULL OR used_count < max_uses)
+          `
+        );
+        if ((couponUpdate.rowCount ?? 0) === 0) {
+          throw new Error("COUPON_UNAVAILABLE");
+        }
+      }
 
-    await tx.insert(orderItemsTable).values(
-      validItems.map(({ stockQuantity: _s, ...i }) => ({ orderId: newOrder.id, ...i }))
-    );
+      const [newOrder] = await tx
+        .insert(ordersTable)
+        .values({
+          orderNumber, status: "pending", customerName, customerPhone, customerEmail,
+          shippingAddress, city, state, pincode, notes: notes ?? null,
+          subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
+          discountAmount: String(discountAmount),
+        })
+        .returning();
 
-    for (const i of validItems) {
-      await tx.execute(
-        sql`UPDATE products SET stock_quantity = stock_quantity - ${i.quantity} WHERE id = ${i.productId}`
+      await tx.insert(orderItemsTable).values(
+        validItems.map(({ stockQuantity: _s, ...i }) => ({ orderId: newOrder.id, ...i }))
       );
+
+      for (const i of validItems) {
+        await tx.execute(
+          sql`UPDATE products SET stock_quantity = stock_quantity - ${i.quantity} WHERE id = ${i.productId}`
+        );
+      }
+
+      await tx.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+
+      return newOrder;
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg === "COUPON_UNAVAILABLE") {
+      return res.status(400).json({ error: "Coupon is no longer available. Please remove it and try again." });
     }
-
-    await tx.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
-
-    return newOrder;
-  });
-
-  // Increment coupon usedCount outside transaction (non-critical)
-  if (appliedCoupon) {
-    await db
-      .update(couponsTable)
-      .set({ usedCount: appliedCoupon.usedCount + 1 })
-      .where(eq(couponsTable.id, appliedCoupon.id));
+    if (msg.startsWith("INSUFFICIENT_STOCK:")) {
+      return res.status(400).json({ error: `Insufficient stock for: ${msg.slice(19)}` });
+    }
+    throw err;
   }
 
   const [settings] = await db.select().from(storeSettingsTable);

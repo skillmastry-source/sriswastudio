@@ -27,7 +27,8 @@ const PIE_COLORS: Record<string, string> = {
   delivered: "#10b981", cancelled: "#ef4444", returned: "#f97316",
 };
 
-type Period = "7d" | "30d" | "90d";
+type Period = "daily" | "weekly" | "monthly";
+type TopView = "revenue" | "units";
 
 async function fetchAnalytics(path: string) {
   const res = await fetch(path, { credentials: "include" });
@@ -36,7 +37,8 @@ async function fetchAnalytics(path: string) {
 }
 
 export default function AdminDashboard() {
-  const [period, setPeriod] = useState<Period>("30d");
+  const [period, setPeriod]   = useState<Period>("monthly");
+  const [topView, setTopView] = useState<TopView>("revenue");
 
   const { data: dashboard, isLoading: dashLoading } = useGetAdminDashboard({
     query: { queryKey: getGetAdminDashboardQueryKey() }
@@ -57,9 +59,7 @@ export default function AdminDashboard() {
     queryFn: () => fetchAnalytics("/api/admin/analytics/overview"),
   });
 
-  const isLoading = dashLoading || revLoading;
-
-  if (isLoading) {
+  if (dashLoading || revLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: BRAND }} />
@@ -71,40 +71,74 @@ export default function AdminDashboard() {
   const pieData = (dashboard?.ordersByStatus ?? []).map((s: any) => ({
     name: s.status, value: s.count,
   }));
-  const avgOrderValue = overview?.avgOrderValue ?? 0;
-  const totalCustomers = overview?.totalCustomers ?? 0;
+  const avgOrderValue  = overview?.avgOrderValue  ?? 0;
+  const newCustomers   = overview?.totalCustomers ?? 0;
+
+  const sortedByRevenue = [...(topProducts ?? [])].sort((a: any, b: any) => b.revenue - a.revenue);
+  const sortedByUnits   = [...(topProducts ?? [])].sort((a: any, b: any) => b.unitsSold - a.unitsSold);
+  const displayProducts = topView === "revenue" ? sortedByRevenue : sortedByUnits;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-serif font-bold">Dashboard</h1>
-        <span className="text-xs text-muted-foreground">Live data from your store</span>
+        <span className="text-xs text-muted-foreground">Live data · refreshes on load</span>
       </div>
 
-      {/* ── Stat Cards ── */}
+      {/* ── 4 Required Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={<IndianRupee className="h-4 w-4" />} label="Total Revenue" value={`₹${Number(dashboard?.totalRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} sub={`₹${Number(dashboard?.todayRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })} today`} />
-        <StatCard icon={<ShoppingCart className="h-4 w-4" />} label="Total Orders" value={String(dashboard?.totalOrders ?? 0)} sub={`${dashboard?.todayOrders ?? 0} today`} />
-        <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Avg Order Value" value={`₹${Number(avgOrderValue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} sub="all time" />
-        <StatCard icon={<AlertTriangle className="h-4 w-4" />} label="Low Stock" value={String(dashboard?.lowStockCount ?? 0)} sub="products" alert={Number(dashboard?.lowStockCount) > 0} link="/admin/inventory" />
+        <StatCard
+          icon={<IndianRupee className="h-4 w-4" />}
+          label="Total Revenue"
+          value={`₹${Number(dashboard?.totalRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
+          sub="all time"
+        />
+        <StatCard
+          icon={<ShoppingCart className="h-4 w-4" />}
+          label="Orders Today"
+          value={String(dashboard?.todayOrders ?? 0)}
+          sub={`₹${Number(dashboard?.todayRevenue ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })} today`}
+        />
+        <StatCard
+          icon={<Users className="h-4 w-4" />}
+          label="New Customers"
+          value={String(newCustomers)}
+          sub="unique buyers"
+        />
+        <StatCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Avg Order Value"
+          value={`₹${Number(avgOrderValue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`}
+          sub="per order"
+        />
       </div>
+
+      {/* Low Stock alert strip (below cards so it doesn't displace required KPIs) */}
+      {Number(dashboard?.lowStockCount) > 0 && (
+        <Link href="/admin/inventory">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span>{dashboard?.lowStockCount} product{Number(dashboard?.lowStockCount) !== 1 ? "s" : ""} running low on stock — view inventory</span>
+          </div>
+        </Link>
+      )}
 
       {/* ── Revenue Chart ── */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base font-semibold">Revenue Over Time</CardTitle>
           <div className="flex gap-1 text-xs">
-            {(["7d", "30d", "90d"] as Period[]).map(p => (
+            {(["daily", "weekly", "monthly"] as Period[]).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className="px-2.5 py-1 rounded-md font-medium transition-colors"
+                className="px-2.5 py-1 rounded-md font-medium capitalize transition-colors"
                 style={period === p
                   ? { background: BRAND, color: "white" }
                   : { background: "#f3f4f6", color: "#6b7280" }
                 }
               >
-                {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
+                {p}
               </button>
             ))}
           </div>
@@ -158,27 +192,50 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Top Products */}
+        {/* Top Products — toggle by revenue / by units */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Top Products by Revenue</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base font-semibold">Top 5 Products</CardTitle>
+            <div className="flex gap-1 text-xs">
+              {(["revenue", "units"] as TopView[]).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setTopView(v)}
+                  className="px-2.5 py-1 rounded-md font-medium transition-colors"
+                  style={topView === v
+                    ? { background: BRAND, color: "white" }
+                    : { background: "#f3f4f6", color: "#6b7280" }
+                  }
+                >
+                  {v === "revenue" ? "By Revenue" : "By Units"}
+                </button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent>
-            {!topProducts?.length ? (
+            {!displayProducts?.length ? (
               <EmptyChart message="Top products will appear after orders are placed." />
             ) : (
               <div className="space-y-3">
-                {topProducts.map((p: any, i: number) => (
-                  <div key={p.productId ?? i} className="flex items-center gap-3">
-                    <span className="text-sm font-bold w-5 text-center" style={{ color: GOLD }}>
+                {displayProducts.map((p: any, i: number) => (
+                  <div key={`${p.productId ?? i}-${topView}`} className="flex items-center gap-3">
+                    <span className="text-sm font-bold w-5 text-center flex-shrink-0" style={{ color: GOLD }}>
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.productName}</p>
-                      <p className="text-xs text-muted-foreground">{p.unitsSold} units sold</p>
+                      <p className="text-xs text-muted-foreground">
+                        {topView === "revenue"
+                          ? `${p.unitsSold} units sold`
+                          : `₹${Number(p.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })} revenue`
+                        }
+                      </p>
                     </div>
-                    <div className="text-sm font-semibold" style={{ color: BRAND }}>
-                      ₹{Number(p.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    <div className="text-sm font-semibold flex-shrink-0" style={{ color: BRAND }}>
+                      {topView === "revenue"
+                        ? `₹${Number(p.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+                        : `${p.unitsSold} units`
+                      }
                     </div>
                   </div>
                 ))}
@@ -231,7 +288,7 @@ export default function AdminDashboard() {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground py-8 text-center">No orders yet. They'll show up here when customers start ordering!</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">No orders yet. They'll appear here when customers start ordering!</p>
           )}
         </CardContent>
       </Card>
@@ -239,22 +296,21 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ icon, label, value, sub, alert, link }: {
-  icon: React.ReactNode; label: string; value: string; sub: string; alert?: boolean; link?: string;
+function StatCard({ icon, label, value, sub }: {
+  icon: React.ReactNode; label: string; value: string; sub: string;
 }) {
-  const content = (
-    <Card className={alert ? "border-red-200" : ""}>
+  return (
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
         <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
-        <span className={alert ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
+        <span className="text-muted-foreground">{icon}</span>
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <div className={`text-2xl font-bold ${alert ? "text-destructive" : ""}`}>{value}</div>
+        <div className="text-2xl font-bold">{value}</div>
         <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
       </CardContent>
     </Card>
   );
-  return link ? <Link href={link}>{content}</Link> : content;
 }
 
 function EmptyChart({ message }: { message: string }) {

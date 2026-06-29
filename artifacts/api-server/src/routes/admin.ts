@@ -138,23 +138,40 @@ router.get("/admin/analytics/overview", async (_req, res) => {
 });
 
 router.get("/admin/analytics/revenue", async (req, res) => {
-  const period = String(req.query.period ?? "30d");
-  const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
+  const period = String(req.query.period ?? "monthly");
 
-  const from = new Date();
-  from.setDate(from.getDate() - days);
+  let truncUnit: string;
+  let labelFormat: string;
+  let from: Date;
+
+  if (period === "daily") {
+    truncUnit = "day";
+    labelFormat = "DD Mon";
+    from = new Date();
+    from.setDate(from.getDate() - 30);
+  } else if (period === "weekly") {
+    truncUnit = "week";
+    labelFormat = "DD Mon";
+    from = new Date();
+    from.setDate(from.getDate() - 84);
+  } else {
+    truncUnit = "month";
+    labelFormat = "Mon YYYY";
+    from = new Date();
+    from.setMonth(from.getMonth() - 12);
+  }
   from.setHours(0, 0, 0, 0);
 
   const rows = await db
     .select({
-      date: sql<string>`to_char(date_trunc('day', created_at), 'DD Mon')`,
+      date: sql<string>`to_char(date_trunc(${truncUnit}, created_at), ${labelFormat})`,
       revenue: sql<number>`coalesce(sum(total::numeric), 0)::float`,
       orders: sql<number>`count(*)::int`,
     })
     .from(ordersTable)
     .where(gte(ordersTable.createdAt, from))
-    .groupBy(sql`date_trunc('day', created_at)`)
-    .orderBy(sql`date_trunc('day', created_at)`);
+    .groupBy(sql`date_trunc(${truncUnit}, created_at)`)
+    .orderBy(sql`date_trunc(${truncUnit}, created_at)`);
 
   return res.json(rows);
 });

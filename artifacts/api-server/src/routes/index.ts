@@ -8,6 +8,7 @@ import storageRouter from "./storage";
 import siteDesignRouter from "./site-design";
 import paymentsRouter from "./payments";
 import adminRouter from "./admin";
+import leadsRouter from "./leads";
 
 const router: IRouter = Router();
 
@@ -23,6 +24,7 @@ router.use(storageRouter);
 router.use(siteDesignRouter);
 // payments must also be before adminRouter for same reason
 router.use(paymentsRouter);
+router.use(leadsRouter);
 router.use(adminRouter);
 
 export default router;

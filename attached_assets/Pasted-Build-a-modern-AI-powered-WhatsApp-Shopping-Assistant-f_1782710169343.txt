@@ -1,0 +1,238 @@
+Build a modern AI-powered WhatsApp Shopping Assistant for Sriswa Studio, a premium anti-tarnish fashion jewellery brand.
+
+The chatbot should have a luxurious, friendly, feminine, and professional personality.
+
+Brand Name:
+Sriswa Studio
+
+Brand Theme:
+Premium • Elegant • Luxury • Modern • Anti Tarnish Jewellery
+
+Brand Colors:
+Primary: #9B0F5F
+Secondary: #D4AF37
+Background: White
+
+Products:
+- Watches
+- Necklaces
+- Chain Sets
+- Mangalsutras
+- Bracelets
+- Chain Bracelets
+- Kadas
+- Rings
+- Earrings
+
+The chatbot should greet customers with:
+
+"✨ Welcome to Sriswa Studio.
+
+Discover premium anti-tarnish jewellery crafted for everyday elegance.
+
+How can I help you today?"
+
+Provide quick reply buttons:
+
+🛍 Shop Categories
+🔥 Best Sellers
+✨ New Arrivals
+💎 Anti Tarnish Collection
+🚚 Track Order
+📦 Shipping
+🔄 Returns
+💬 Talk to Support
+
+---------------------------------
+
+When users choose Shop Categories, display:
+
+⌚ Watches
+💍 Rings
+✨ Earrings
+📿 Necklaces
+💖 Mangalsutras
+🪄 Bracelets
+🟡 Kadas
+🎁 Chain Sets
+
+---------------------------------
+
+The chatbot should answer FAQs including:
+
+• Is the jewellery anti tarnish?
+• Is it waterproof?
+• What material is used?
+• Is Cash on Delivery available?
+• How long is delivery?
+• Shipping charges
+• Return policy
+• Exchange policy
+• Jewellery care
+• Warranty
+• Payment methods
+• Order tracking
+
+---------------------------------
+
+Shopping Assistant Features
+
+If customer says:
+
+"I need earrings"
+
+Return:
+
+"Great choice! 😊
+
+Would you like:
+
+• Daily Wear
+• Party Wear
+• Minimal
+• Premium
+• Under ₹500
+• Under ₹1000"
+
+---------------------------------
+
+If customer asks:
+
+"Suggest a gift"
+
+Ask:
+
+Who is it for?
+
+• Wife
+• Girlfriend
+• Mother
+• Sister
+• Friend
+
+Then ask budget:
+
+Under ₹500
+₹500-₹1000
+₹1000-₹2000
+Premium Collection
+
+---------------------------------
+
+If customer asks about anti tarnish:
+
+Answer:
+
+"Our Anti-Tarnish Jewellery is designed for everyday wear and long-lasting shine.
+
+For best results:
+• Avoid harsh chemicals
+• Store in a dry place
+• Wipe with a soft cloth after use."
+
+---------------------------------
+
+Collect Leads
+
+If customer wants to order:
+
+Ask sequentially:
+
+Name
+
+Mobile Number
+
+Product Name
+
+Quantity
+
+City
+
+Pin Code
+
+Save these details.
+
+---------------------------------
+
+Escalation
+
+If AI cannot answer:
+
+"I'd love to help.
+
+Let me connect you with our jewellery expert."
+
+---------------------------------
+
+Admin Features
+
+Create a dashboard to manage:
+
+Products
+
+Categories
+
+Orders
+
+Customer Leads
+
+Broadcast Messages
+
+FAQs
+
+Coupon Codes
+
+Analytics
+
+---------------------------------
+
+Future Ready Features
+
+Product Search
+
+Image Search
+
+Voice Messages
+
+Order Tracking
+
+Discount Coupons
+
+WhatsApp Broadcast
+
+AI Product Recommendation
+
+Frequently Bought Together
+
+Wishlist Reminder
+
+Abandoned Cart Reminder
+
+Review Collection
+
+---------------------------------
+
+Technical Stack
+
+Frontend:
+React + TailwindCSS
+
+Backend:
+Node.js + Express
+
+Database:
+Supabase
+
+Authentication:
+JWT
+
+AI:
+OpenAI GPT API
+
+WhatsApp:
+Meta WhatsApp Cloud API
+
+Deployment:
+Replit
+
+Create a beautiful luxury interface using Sriswa Studio branding with premium animations and responsive mobile design.

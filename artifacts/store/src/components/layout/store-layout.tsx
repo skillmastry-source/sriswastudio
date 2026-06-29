@@ -276,8 +276,8 @@ export function Footer() {
             <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               <li>
-                <a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">
-                  hello@sriswastudio.com
+                <a href="mailto:contact@sriswastudio.com" className="hover:text-white transition-colors">
+                  contact@sriswastudio.com
                 </a>
               </li>
               <li>

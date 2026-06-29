@@ -708,16 +708,25 @@ function HomepageBuilder() {
   const [sections, setSections] = useState<HomepageSection[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addingSection, setAddingSection] = useState(false);
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [showSeo, setShowSeo] = useState(false);
 
   useEffect(() => {
     if (settings.homepageSections && settings.homepageSections.length > 0) {
       setSections([...settings.homepageSections].sort((a, b) => a.order - b.order));
     }
-  }, [settings.homepageSections]);
+    setMetaTitle(settings.homepageMetaTitle ?? "");
+    setMetaDescription(settings.homepageMetaDescription ?? "");
+  }, [settings.homepageSections, settings.homepageMetaTitle, settings.homepageMetaDescription]);
 
   const handleSave = () => {
     update.mutate(
-      { homepageSections: sections } as Parameters<typeof update.mutate>[0],
+      {
+        homepageSections: sections,
+        homepageMetaTitle: metaTitle || "",
+        homepageMetaDescription: metaDescription || "",
+      } as Parameters<typeof update.mutate>[0],
       {
         onSuccess: () => toast({ title: "✓ Homepage saved", description: "Changes are live on the store." }),
         onError: () => toast({ title: "Failed to save", variant: "destructive" }),
@@ -734,6 +743,19 @@ function HomepageBuilder() {
           <span className="text-xs text-muted-foreground">— live at /</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSeo((v) => !v)}
+            title="SEO settings"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+              showSeo
+                ? "border-[#9B0F5F] bg-pink-50 text-[#9B0F5F]"
+                : "border-gray-200 text-gray-500 hover:border-gray-400"
+            }`}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            SEO
+          </button>
           <a href="/" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="gap-1.5">
               <ExternalLink className="h-3.5 w-3.5" /> Preview
@@ -744,6 +766,37 @@ function HomepageBuilder() {
           </Button>
         </div>
       </div>
+
+      {showSeo && (
+        <div className="mb-4 border rounded-lg bg-white p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="h-4 w-4 text-[#9B0F5F]" />
+            <h3 className="font-semibold text-sm">SEO &amp; Social Sharing</h3>
+            <span className="text-xs text-muted-foreground ml-auto">Saved when you click Save &amp; Publish</span>
+          </div>
+          <Field label="Page Title (browser tab &amp; Google)">
+            <Input
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
+              placeholder="Sriswa Studio"
+              maxLength={70}
+              className="h-9 text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{metaTitle.length}/70 characters — leave blank to use the default store name</p>
+          </Field>
+          <Field label="Meta Description (shown in Google results &amp; WhatsApp previews)">
+            <Textarea
+              value={metaDescription}
+              onChange={(e) => setMetaDescription(e.target.value)}
+              placeholder="Describe your homepage in 1–2 sentences…"
+              maxLength={160}
+              className="h-20 text-sm resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{metaDescription.length}/160 characters</p>
+          </Field>
+        </div>
+      )}
+
       <SectionsEditor
         sections={sections}
         setSections={setSections}

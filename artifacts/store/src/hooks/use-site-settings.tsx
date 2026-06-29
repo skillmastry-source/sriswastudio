@@ -150,6 +150,8 @@ export const DEFAULT_SITE_DESIGN = {
     facebookUrl: "https://facebook.com/sriswastudio",
   },
   homepageSections: DEFAULT_HOMEPAGE_SECTIONS,
+  homepageMetaTitle: "",
+  homepageMetaDescription: "",
 };
 
 export type SiteDesign = typeof DEFAULT_SITE_DESIGN;

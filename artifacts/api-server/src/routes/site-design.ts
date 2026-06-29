@@ -145,6 +145,8 @@ export const DEFAULT_SITE_DESIGN = {
     facebookUrl: "https://facebook.com/sriswastudio",
   },
   homepageSections: DEFAULT_HOMEPAGE_SECTIONS,
+  homepageMetaTitle: "",
+  homepageMetaDescription: "",
 };
 
 function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {

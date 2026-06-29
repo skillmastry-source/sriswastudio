@@ -1,12 +1,77 @@
 import { Link, useLocation } from "wouter";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { ShoppingBag, Menu, X, User, Search, Instagram, Facebook } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useSiteSettings } from "@/hooks/use-site-settings";
 import { ChatWidget } from "@/components/chat-widget";
 import { useQuery } from "@tanstack/react-query";
+
+interface FlashSaleData {
+  enabled?: boolean;
+  title?: string;
+  subtitle?: string;
+  endTime?: string;
+  bgColor?: string;
+  link?: string;
+}
+
+export function FlashSaleCountdown() {
+  const { data: design } = useQuery<{ flashSale?: FlashSaleData }>({
+    queryKey: ["/api/site-design"],
+    queryFn: async () => {
+      const res = await fetch("/api/site-design");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
+  const fs = design?.flashSale;
+  const [t, setT] = useState({ d: 0, h: 0, m: 0, s: 0, expired: false });
+
+  useEffect(() => {
+    if (!fs?.enabled || !fs?.endTime) return;
+    const tick = () => {
+      const diff = new Date(fs.endTime!).getTime() - Date.now();
+      if (diff <= 0) { setT({ d: 0, h: 0, m: 0, s: 0, expired: true }); return; }
+      setT({
+        d: Math.floor(diff / 86400000),
+        h: Math.floor((diff % 86400000) / 3600000),
+        m: Math.floor((diff % 3600000) / 60000),
+        s: Math.floor((diff % 60000) / 1000),
+        expired: false,
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [fs?.enabled, fs?.endTime]);
+
+  if (!fs?.enabled || !fs?.endTime || t.expired) return null;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const bg = fs.bgColor ?? "#9B0F5F";
+
+  const inner = (
+    <div className="w-full px-4 py-2.5 flex flex-wrap items-center justify-center gap-3 text-white text-sm"
+      style={{ background: bg }}>
+      <span className="font-bold tracking-wide">{fs.title ?? "⚡ Flash Sale"}</span>
+      <span className="opacity-75 text-xs">{fs.subtitle ?? "Ends in"}</span>
+      <div className="flex items-center gap-1 font-mono font-bold text-base">
+        {t.d > 0 && <><span className="bg-white/20 rounded px-1.5 py-0.5">{t.d}d</span><span className="opacity-50">:</span></>}
+        <span className="bg-white/20 rounded px-1.5 py-0.5">{pad(t.h)}</span>
+        <span className="opacity-50 animate-pulse">:</span>
+        <span className="bg-white/20 rounded px-1.5 py-0.5">{pad(t.m)}</span>
+        <span className="opacity-50 animate-pulse">:</span>
+        <span className="bg-white/20 rounded px-1.5 py-0.5">{pad(t.s)}</span>
+      </div>
+      <span className="text-xs underline opacity-80 hover:opacity-100">Shop Now →</span>
+    </div>
+  );
+
+  return fs.link ? <a href={fs.link}>{inner}</a> : <div>{inner}</div>;
+}
 
 export function AnnouncementBar() {
   const settings = useSiteSettings();
@@ -239,9 +304,56 @@ export function Footer() {
   );
 }
 
+export function InstagramFeedSection() {
+  const { data: design } = useQuery<{ instagramSection?: { enabled?: boolean; username?: string; heading?: string; subheading?: string; images?: { url: string; link?: string }[] } }>({
+    queryKey: ["/api/site-design"],
+    queryFn: async () => { const res = await fetch("/api/site-design"); return res.json(); },
+    staleTime: 60_000,
+  });
+  const ig = design?.instagramSection;
+  if (!ig?.enabled || !ig.images?.length) return null;
+  return (
+    <section className="py-14 bg-white">
+      <div className="container mx-auto px-[30px]">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900">{ig.heading ?? "Follow Our Journey"}</h2>
+          <p className="text-sm text-gray-500 mt-2">
+            {ig.subheading ?? "Tag us @sriswa_studio to be featured"}{" "}
+            <a href={`https://instagram.com/${ig.username ?? "sriswa_studio"}`} target="_blank" rel="noopener noreferrer"
+              className="font-medium" style={{ color: "#9B0F5F" }}>
+              @{ig.username ?? "sriswa_studio"}
+            </a>
+          </p>
+        </div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {ig.images.slice(0, 6).map((img, i) => (
+            <a key={i} href={img.link || `https://instagram.com/${ig.username ?? "sriswa_studio"}`}
+              target="_blank" rel="noopener noreferrer"
+              className="aspect-square overflow-hidden rounded-lg group relative block">
+              <img src={img.url} alt={`Instagram post ${i + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <Instagram className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </a>
+          ))}
+        </div>
+        <div className="text-center mt-6">
+          <a href={`https://instagram.com/${ig.username ?? "sriswa_studio"}`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium text-white transition-opacity hover:opacity-90"
+            style={{ background: "#9B0F5F" }}>
+            <Instagram className="h-4 w-4" />
+            Follow @{ig.username ?? "sriswa_studio"}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans bg-white">
+      <FlashSaleCountdown />
       <AnnouncementBar />
       <Navbar />
       <main className="flex-1">{children}</main>

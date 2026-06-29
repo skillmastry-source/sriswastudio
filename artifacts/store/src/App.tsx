@@ -38,6 +38,11 @@ import AdminMedia from "@/pages/admin/media";
 import AdminBuilder from "@/pages/admin/builder";
 import AdminAnalytics from "@/pages/admin/analytics";
 import AdminAnnouncements from "@/pages/admin/marketing/announcements";
+import AdminBroadcasts from "@/pages/admin/marketing/broadcasts";
+import AdminFlashSale from "@/pages/admin/marketing/flash-sale";
+import AdminReferrals from "@/pages/admin/marketing/referrals";
+import AdminEmailSettings from "@/pages/admin/marketing/email-settings";
+import AdminInstagram from "@/pages/admin/marketing/instagram";
 import { AdminLayout } from "@/components/layout/admin-layout";
 
 // Storefront CMS pages
@@ -166,6 +171,21 @@ function Router() {
       </Route>
       <Route path="/admin/marketing/announcements">
         {() => <AdminRoute component={AdminAnnouncements} />}
+      </Route>
+      <Route path="/admin/marketing/broadcasts">
+        {() => <AdminRoute component={AdminBroadcasts} />}
+      </Route>
+      <Route path="/admin/marketing/flash-sale">
+        {() => <AdminRoute component={AdminFlashSale} />}
+      </Route>
+      <Route path="/admin/marketing/referrals">
+        {() => <AdminRoute component={AdminReferrals} />}
+      </Route>
+      <Route path="/admin/marketing/email-settings">
+        {() => <AdminRoute component={AdminEmailSettings} />}
+      </Route>
+      <Route path="/admin/marketing/instagram">
+        {() => <AdminRoute component={AdminInstagram} />}
       </Route>
 
       <Route path="/admin/media">

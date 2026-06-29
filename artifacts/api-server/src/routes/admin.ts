@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, productsTable, storeSettingsTable } from "@workspace/db";
 import { eq, gte, sql, lte, and, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { sendWhatsApp } from "../lib/whatsapp";
+import nodemailer from "nodemailer";
 
 const router = Router();
 
@@ -195,6 +197,79 @@ router.get("/admin/analytics/top-products", async (req, res) => {
     .limit(5);
 
   return res.json(rows);
+});
+
+router.get("/admin/marketing/broadcast/stats", async (_req, res) => {
+  const [phones] = await db
+    .select({ count: sql<number>`count(distinct customer_phone)::int` })
+    .from(ordersTable)
+    .where(sql`customer_phone IS NOT NULL AND customer_phone != ''`);
+
+  const [emails] = await db
+    .select({ count: sql<number>`count(distinct customer_email)::int` })
+    .from(ordersTable)
+    .where(sql`customer_email IS NOT NULL AND customer_email != ''`);
+
+  return res.json({ whatsappRecipients: phones.count, emailRecipients: emails.count });
+});
+
+router.post("/admin/marketing/broadcast/whatsapp", async (req, res) => {
+  const { message } = req.body;
+  if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
+
+  const rows = await db
+    .selectDistinct({ phone: ordersTable.customerPhone })
+    .from(ordersTable)
+    .where(sql`customer_phone IS NOT NULL AND customer_phone != ''`);
+
+  let sent = 0, failed = 0;
+  for (const { phone } of rows) {
+    if (!phone) continue;
+    const ok = await sendWhatsApp(phone, message);
+    if (ok) sent++; else failed++;
+  }
+
+  return res.json({ sent, failed, total: rows.length });
+});
+
+router.post("/admin/marketing/broadcast/email", async (req, res) => {
+  const { subject, html } = req.body;
+  if (!subject?.trim() || !html?.trim()) return res.status(400).json({ error: "Subject and body are required" });
+
+  let [settings] = await db.select().from(storeSettingsTable);
+  const smtp = (settings?.siteDesign as Record<string, unknown> | null)?.smtpConfig as Record<string, unknown> | undefined;
+
+  if (!smtp?.host || !smtp?.user || !smtp?.pass) {
+    return res.status(400).json({ error: "SMTP not configured. Go to Marketing → Email Settings." });
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: String(smtp.host),
+    port: Number(smtp.port ?? 587),
+    secure: Boolean(smtp.secure ?? false),
+    auth: { user: String(smtp.user), pass: String(smtp.pass) },
+  });
+
+  const rows = await db
+    .selectDistinct({ email: ordersTable.customerEmail })
+    .from(ordersTable)
+    .where(sql`customer_email IS NOT NULL AND customer_email != ''`);
+
+  const storeName = settings?.storeName ?? "Sriswa Studio";
+  const fromAddr = smtp.from ? String(smtp.from) : `${storeName} <${smtp.user}>`;
+
+  let sent = 0, failed = 0;
+  for (const { email } of rows) {
+    if (!email) continue;
+    try {
+      await transporter.sendMail({ from: fromAddr, to: email, subject, html });
+      sent++;
+    } catch {
+      failed++;
+    }
+  }
+
+  return res.json({ sent, failed, total: rows.length });
 });
 
 export default router;

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, ListTree,
   Settings, Users, LogOut, Tags, Palette, ExternalLink,
   ChevronRight, FileText, Tag, Image, LayoutTemplate,
-  BarChart2, Megaphone,
+  BarChart2, Megaphone, Send, Zap, GitBranch, Mail, Instagram,
 } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
 import { useEffect } from "react";
@@ -36,6 +36,11 @@ const NAV_GROUPS = [
     items: [
       { href: "/admin/marketing/announcements", icon: Megaphone, label: "Announcements", exact: false },
       { href: "/admin/marketing/coupons", icon: Tag, label: "Coupons", exact: false },
+      { href: "/admin/marketing/flash-sale", icon: Zap, label: "Flash Sale", exact: false },
+      { href: "/admin/marketing/broadcasts", icon: Send, label: "Broadcasts", exact: false },
+      { href: "/admin/marketing/referrals", icon: GitBranch, label: "Referrals", exact: false },
+      { href: "/admin/marketing/instagram", icon: Instagram, label: "Instagram Feed", exact: false },
+      { href: "/admin/marketing/email-settings", icon: Mail, label: "Email Settings", exact: false },
     ],
   },
   {

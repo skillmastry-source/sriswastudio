@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 
 const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "")
   .split(",").map((s) => s.trim()).filter(Boolean);
@@ -8,19 +8,21 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 
 export const requireAdmin: RequestHandler = async (req, res, next) => {
-  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  if (!auth?.userId) {
+  const auth = getAuth(req);
+  const userId = auth.userId;
+
+  if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  if (ADMIN_USER_IDS.length > 0 && ADMIN_USER_IDS.includes(auth.userId)) {
+  if (ADMIN_USER_IDS.length > 0 && ADMIN_USER_IDS.includes(userId)) {
     next();
     return;
   }
 
   try {
-    const user = await clerkClient.users.getUser(auth.userId);
+    const user = await clerkClient.users.getUser(userId);
 
     if (ADMIN_EMAILS.length > 0) {
       const userEmail = user.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";

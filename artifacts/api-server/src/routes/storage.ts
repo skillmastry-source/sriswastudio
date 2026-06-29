@@ -7,6 +7,7 @@ import {
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { getAuth } from "@clerk/express";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -92,8 +93,8 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
 
-    const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-    if (!auth?.userId) {
+    const auth = getAuth(req);
+    if (!auth.userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }

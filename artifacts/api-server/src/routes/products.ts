@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, asc, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { getAuth } from "@clerk/express";
 
 const router = Router();
 
@@ -135,8 +136,8 @@ async function checkIsAdmin(userId: string): Promise<boolean> {
 
 router.get("/products/slug/:slug", async (req, res) => {
   const slug = req.params.slug;
-  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  const isAdmin = auth?.userId ? await checkIsAdmin(auth.userId) : false;
+  const auth = getAuth(req);
+  const isAdmin = auth.userId ? await checkIsAdmin(auth.userId) : false;
   const whereClause = isAdmin
     ? eq(productsTable.slug, slug)
     : and(eq(productsTable.slug, slug), eq(productsTable.isActive, true));
@@ -147,8 +148,8 @@ router.get("/products/slug/:slug", async (req, res) => {
 
 router.get("/products/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  const isAdmin = auth?.userId ? await checkIsAdmin(auth.userId) : false;
+  const auth = getAuth(req);
+  const isAdmin = auth.userId ? await checkIsAdmin(auth.userId) : false;
   const whereClause = isAdmin
     ? eq(productsTable.id, id)
     : and(eq(productsTable.id, id), eq(productsTable.isActive, true));

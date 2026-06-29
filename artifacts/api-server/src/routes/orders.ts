@@ -8,7 +8,7 @@ import {
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
 import { requireAdmin } from "../middlewares/requireAdmin";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 
 const router = Router();
 
@@ -203,8 +203,8 @@ router.post("/orders", async (req, res) => {
 });
 
 router.get("/orders/my", async (req, res) => {
-  const auth = (req as unknown as { auth?: { userId?: string } }).auth;
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+  const auth = getAuth(req);
+  if (!auth.userId) return res.status(401).json({ error: "Unauthorized" });
 
   let email: string;
   try {

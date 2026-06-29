@@ -17,6 +17,15 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 
 **Why:** Clerk v6 removed `SignedIn`/`SignedOut` in favor of `Show` with `when="signed-in|signed-out"`.
 
+## Clerk Express v2 Auth — CRITICAL
+- **NEVER use `(req as any).auth?.userId`** — this is the v1 pattern and always returns undefined in v2
+- **Always use `getAuth(req)` from `@clerk/express`** to read the auth state
+- `clerkMiddleware` callback must explicitly include `secretKey: process.env.CLERK_SECRET_KEY` — without it the middleware cannot verify JWTs even if `CLERK_SECRET_KEY` is in the environment
+- `customFetch` (api-client-react) must set `credentials: "include"` so session cookies are sent
+- `AuthTokenSync` component in App.tsx uses `useAuth().getToken()` via `setAuthTokenGetter` to attach Bearer tokens
+
+**Why:** `@clerk/express` v2 changed auth access from `req.auth` property injection to `getAuth(req)` helper. Using the old pattern silently returns undefined → all admin routes 401.
+
 ## Backend Routes
 - GET/POST `/api/categories`, `/api/products`, `/api/cart`, `/api/orders`
 - PATCH `/api/orders/:id/status` (triggers WhatsApp to customer)

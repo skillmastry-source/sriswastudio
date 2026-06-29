@@ -4,8 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { CartProvider } from "@/hooks/use-cart-context";
-import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
+import { useEffect } from "react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 // Pages
 import Home from "@/pages/home";
@@ -53,6 +55,15 @@ const clerkPubKey = publishableKeyFromHost(
 );
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function AuthTokenSync() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => { setAuthTokenGetter(null); };
+  }, [getToken]);
+  return null;
+}
 
 function AdminRoute({ component: Component }: { component: any }) {
   return (
@@ -199,6 +210,7 @@ function App() {
       }}
     >
       <QueryClientProvider client={queryClient}>
+        <AuthTokenSync />
         <TooltipProvider>
           <CartProvider>
             <WouterRouter base={basePath}>

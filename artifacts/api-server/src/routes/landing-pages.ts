@@ -65,7 +65,40 @@ router.get("/landing-pages/nav", async (_req, res) => {
 });
 
 // Public: get page by slug (returns sections for SectionRenderer)
+// Only returns published pages — drafts get a 404.
 router.get("/landing-pages/:slug", async (req, res) => {
+  try {
+    const [page] = await db
+      .select()
+      .from(landingPagesTable)
+      .where(eq(landingPagesTable.slug, req.params.slug));
+    if (!page) return res.status(404).json({ error: "Page not found" });
+    if (!page.isPublished) return res.status(404).json({ error: "Page not found" });
+    return res.json(page);
+  } catch (e) {
+    console.error("[landing-pages] get error:", e);
+    return res.status(500).json({ error: "Failed to get page" });
+  }
+});
+
+// Admin: get page by ID (works for drafts — used by the builder)
+router.get("/admin/landing-pages/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [page] = await db
+      .select()
+      .from(landingPagesTable)
+      .where(eq(landingPagesTable.id, id));
+    if (!page) return res.status(404).json({ error: "Page not found" });
+    return res.json(page);
+  } catch (e) {
+    console.error("[landing-pages] admin get error:", e);
+    return res.status(500).json({ error: "Failed to get page" });
+  }
+});
+
+// Admin: get page by slug (works for drafts — used by storefront preview mode)
+router.get("/admin/landing-pages/slug/:slug", requireAdmin, async (req, res) => {
   try {
     const [page] = await db
       .select()
@@ -74,7 +107,7 @@ router.get("/landing-pages/:slug", async (req, res) => {
     if (!page) return res.status(404).json({ error: "Page not found" });
     return res.json(page);
   } catch (e) {
-    console.error("[landing-pages] get error:", e);
+    console.error("[landing-pages] admin slug get error:", e);
     return res.status(500).json({ error: "Failed to get page" });
   }
 });

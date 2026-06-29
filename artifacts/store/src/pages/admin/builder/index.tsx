@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/clerk-stub";
 import { useSiteSettings, useUpdateSiteSettings } from "@/hooks/use-site-settings";
 import type { HomepageSection } from "@/components/section-renderer";
 import { Button } from "@/components/ui/button";
@@ -760,10 +761,15 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
   const { toast } = useToast();
   const update = useUpdateLandingPage();
 
+  const { getToken } = useAuth();
+
   const { data: fullPage, isLoading } = useQuery({
     queryKey: ["landing-page-full", page.id],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}/api/landing-pages/${page.slug}`);
+      const token = await getToken();
+      const res = await fetch(`${BASE_URL}/api/admin/landing-pages/${page.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to load");
       return res.json();
     },
@@ -876,13 +882,16 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
             <Globe className="h-3.5 w-3.5" />
             {isInNav ? "In Nav" : "Add to Nav"}
           </button>
-          {isPublished && (
-            <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <ExternalLink className="h-3.5 w-3.5" /> Preview
-              </Button>
-            </a>
-          )}
+          <a
+            href={isPublished ? `/p/${page.slug}` : `/p/${page.slug}?preview=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <ExternalLink className="h-3.5 w-3.5" />
+              {isPublished ? "Preview" : "Preview Draft"}
+            </Button>
+          </a>
           {!isPublished ? (
             <Button onClick={() => handleSave(true)} disabled={update.isPending} variant="outline" size="sm" className="gap-1.5 border-green-500 text-green-600 hover:bg-green-50">
               <Globe className="h-3.5 w-3.5" /> Publish

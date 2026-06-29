@@ -22,6 +22,12 @@ async function ensureTable() {
     await db.execute(sql`
       ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS is_in_nav BOOLEAN NOT NULL DEFAULT false
     `);
+    await db.execute(sql`
+      ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS meta_title TEXT
+    `);
+    await db.execute(sql`
+      ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS meta_description TEXT
+    `);
   } catch {
     // already exists
   }
@@ -76,8 +82,9 @@ router.get("/landing-pages/:slug", async (req, res) => {
 // Admin: create page
 router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
   try {
-    const { title, slug, sections, isPublished, isInNav } = req.body as {
+    const { title, slug, sections, isPublished, isInNav, metaTitle, metaDescription } = req.body as {
       title: string; slug: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean;
+      metaTitle?: string; metaDescription?: string;
     };
     if (!title || !slug) return res.status(400).json({ error: "title and slug are required" });
 
@@ -85,7 +92,7 @@ router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
 
     const [page] = await db
       .insert(landingPagesTable)
-      .values({ title, slug: safeSlug, sections: sections ?? [], isPublished: isPublished ?? false, isInNav: isInNav ?? false })
+      .values({ title, slug: safeSlug, sections: sections ?? [], isPublished: isPublished ?? false, isInNav: isInNav ?? false, metaTitle: metaTitle ?? null, metaDescription: metaDescription ?? null })
       .returning();
     return res.status(201).json(page);
   } catch (e: unknown) {
@@ -100,16 +107,19 @@ router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
 router.patch("/admin/landing-pages/:id", requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { title, slug, sections, isPublished, isInNav } = req.body as {
+    const { title, slug, sections, isPublished, isInNav, metaTitle, metaDescription } = req.body as {
       title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean;
+      metaTitle?: string | null; metaDescription?: string | null;
     };
 
-    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; isInNav: boolean; updatedAt: Date }> = {};
+    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; isInNav: boolean; metaTitle: string | null; metaDescription: string | null; updatedAt: Date }> = {};
     if (title !== undefined) updates.title = title;
     if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-").replace(/^-|-$/g, "");
     if (sections !== undefined) updates.sections = sections;
     if (isPublished !== undefined) updates.isPublished = isPublished;
     if (isInNav !== undefined) updates.isInNav = isInNav;
+    if (metaTitle !== undefined) updates.metaTitle = metaTitle ?? null;
+    if (metaDescription !== undefined) updates.metaDescription = metaDescription ?? null;
     updates.updatedAt = new Date();
 
     const [page] = await db

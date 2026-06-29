@@ -9,6 +9,8 @@ export type LandingPageSummary = {
   isPublished: boolean;
   isInNav: boolean;
   updatedAt: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
 };
 
 export type NavLandingPage = {
@@ -70,7 +72,7 @@ export function useCreateLandingPage() {
 export function useUpdateLandingPage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean }) =>
+    mutationFn: ({ id, ...data }: { id: number; title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean; metaTitle?: string | null; metaDescription?: string | null }) =>
       apiFetch(`/admin/landing-pages/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

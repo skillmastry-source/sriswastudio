@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { StoreLayout } from "@/components/layout/store-layout";
@@ -15,6 +16,26 @@ async function fetchLandingPage(slug: string) {
   return res.json();
 }
 
+function setMetaTag(name: string, content: string) {
+  let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute("name", name);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+function setOgTag(property: string, content: string) {
+  let el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute("property", property);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
 export default function LandingPage() {
   const [, params] = useRoute("/p/:slug");
   const slug = params?.slug ?? "";
@@ -26,6 +47,25 @@ export default function LandingPage() {
     enabled: !!slug,
     retry: false,
   });
+
+  useEffect(() => {
+    if (!page) return;
+
+    const title = page.metaTitle || page.title || settings.storeName || "Sriswa Studio";
+    const description = page.metaDescription || "";
+
+    document.title = title;
+    setOgTag("og:title", title);
+
+    if (description) {
+      setMetaTag("description", description);
+      setOgTag("og:description", description);
+    }
+
+    return () => {
+      document.title = settings.storeName || "Sriswa Studio";
+    };
+  }, [page, settings.storeName]);
 
   if (isLoading) {
     return (

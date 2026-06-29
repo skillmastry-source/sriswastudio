@@ -3,14 +3,16 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const landingPagesTable = pgTable("landing_pages", {
-  id:          serial("id").primaryKey(),
-  title:       text("title").notNull(),
-  slug:        text("slug").notNull().unique(),
-  sections:    jsonb("sections").notNull().default([]),
-  isPublished: boolean("is_published").notNull().default(false),
-  isInNav:     boolean("is_in_nav").notNull().default(false),
-  createdAt:   timestamp("created_at").defaultNow().notNull(),
-  updatedAt:   timestamp("updated_at").defaultNow().notNull(),
+  id:              serial("id").primaryKey(),
+  title:           text("title").notNull(),
+  slug:            text("slug").notNull().unique(),
+  sections:        jsonb("sections").notNull().default([]),
+  isPublished:     boolean("is_published").notNull().default(false),
+  isInNav:         boolean("is_in_nav").notNull().default(false),
+  metaTitle:       text("meta_title"),
+  metaDescription: text("meta_description"),
+  createdAt:       timestamp("created_at").defaultNow().notNull(),
+  updatedAt:       timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertLandingPageSchema = createInsertSchema(landingPagesTable).omit({

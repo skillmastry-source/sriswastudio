@@ -774,6 +774,9 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
   const [addingSection, setAddingSection] = useState(false);
   const [isPublished, setIsPublished] = useState(page.isPublished);
   const [isInNav, setIsInNav] = useState(page.isInNav ?? false);
+  const [metaTitle, setMetaTitle] = useState(page.metaTitle ?? "");
+  const [metaDescription, setMetaDescription] = useState(page.metaDescription ?? "");
+  const [showSeo, setShowSeo] = useState(false);
 
   useEffect(() => {
     if (fullPage?.sections) {
@@ -782,12 +785,18 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
     if (fullPage?.isInNav !== undefined) {
       setIsInNav(fullPage.isInNav);
     }
+    if (fullPage?.metaTitle !== undefined) {
+      setMetaTitle(fullPage.metaTitle ?? "");
+    }
+    if (fullPage?.metaDescription !== undefined) {
+      setMetaDescription(fullPage.metaDescription ?? "");
+    }
   }, [fullPage]);
 
   const handleSave = (pub?: boolean) => {
     const publishedValue = pub ?? isPublished;
     update.mutate(
-      { id: page.id, sections, isPublished: publishedValue, isInNav },
+      { id: page.id, sections, isPublished: publishedValue, isInNav, metaTitle: metaTitle || null, metaDescription: metaDescription || null },
       {
         onSuccess: () => {
           setIsPublished(publishedValue);
@@ -842,6 +851,19 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setShowSeo((v) => !v)}
+            title="SEO settings"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+              showSeo
+                ? "border-[#9B0F5F] bg-pink-50 text-[#9B0F5F]"
+                : "border-gray-200 text-gray-500 hover:border-gray-400"
+            }`}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            SEO
+          </button>
+          <button
+            type="button"
             onClick={handleToggleNav}
             disabled={update.isPending}
             title={isInNav ? "Remove from site navigation" : "Show in site navigation"}
@@ -875,6 +897,37 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
           </Button>
         </div>
       </div>
+
+      {showSeo && (
+        <div className="mb-4 border rounded-lg bg-white p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="h-4 w-4 text-[#9B0F5F]" />
+            <h3 className="font-semibold text-sm">SEO &amp; Social Sharing</h3>
+            <span className="text-xs text-muted-foreground ml-auto">Saved when you click Save</span>
+          </div>
+          <Field label="Page Title (browser tab &amp; Google)">
+            <Input
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
+              placeholder={page.title}
+              maxLength={70}
+              className="h-9 text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{metaTitle.length}/70 characters — leave blank to use the page title</p>
+          </Field>
+          <Field label="Meta Description (shown in Google results &amp; WhatsApp previews)">
+            <Textarea
+              value={metaDescription}
+              onChange={(e) => setMetaDescription(e.target.value)}
+              placeholder="Describe this page in 1–2 sentences…"
+              maxLength={160}
+              className="h-20 text-sm resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{metaDescription.length}/160 characters</p>
+          </Field>
+        </div>
+      )}
+
       <SectionsEditor
         sections={sections}
         setSections={setSections}

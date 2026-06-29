@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ShoppingBag, Package, ListTree,
   Settings, Users, LogOut, Tags, Palette, ExternalLink,
-  ChevronRight, FileText, Tag, Image,
+  ChevronRight, FileText, Tag, Image, LayoutTemplate,
 } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
 import { useEffect } from "react";
@@ -45,6 +45,7 @@ const NAV_GROUPS = [
   {
     label: "Store",
     items: [
+      { href: "/admin/builder", icon: LayoutTemplate, label: "Page Builder", exact: false },
       { href: "/admin/design", icon: Palette, label: "Design", exact: false },
       { href: "/admin/settings", icon: Settings, label: "Settings", exact: false },
     ],

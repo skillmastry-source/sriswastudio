@@ -59,11 +59,16 @@ router.get("/admin/cms/pages", requireAdmin, async (_req, res) => {
   }
 });
 
+const VALID_TYPES = ["blog", "faq", "policy"];
+
 router.post("/admin/cms/pages", requireAdmin, async (req, res) => {
   try {
     const { type, slug, title, content, metaTitle, metaDescription, isPublished } = req.body;
     if (!type || !slug || !title) {
       return res.status(400).json({ error: "type, slug, and title are required" });
+    }
+    if (!VALID_TYPES.includes(type)) {
+      return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(", ")}` });
     }
     const now = new Date();
     const [page] = await db
@@ -101,8 +106,13 @@ router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
     const existing = await db.select().from(cmsPagesTable).where(eq(cmsPagesTable.id, id)).limit(1);
     if (!existing.length) return res.status(404).json({ error: "Page not found" });
 
+    if (type !== undefined && !VALID_TYPES.includes(type)) {
+      return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(", ")}` });
+    }
+
     const wasPublished = existing[0].isPublished;
-    const willPublish  = Boolean(isPublished);
+    // Only change isPublished if the client explicitly sent the field
+    const willPublish = isPublished !== undefined ? Boolean(isPublished) : wasPublished;
 
     const [page] = await db
       .update(cmsPagesTable)

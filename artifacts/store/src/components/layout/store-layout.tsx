@@ -263,10 +263,18 @@ export function Footer() {
           <div className="text-left">
             <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Company</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
+              <li><Link href="/pages/about-us" className="hover:text-white transition-colors">About Us</Link></li>
               <li><Link href="/track-order" className="hover:text-white transition-colors">Track My Order</Link></li>
               <li><Link href="/account" className="hover:text-white transition-colors">My Account</Link></li>
               <li><Link href="/blog" className="hover:text-white transition-colors">Journal</Link></li>
               <li><Link href="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
+              <li><Link href="/pages/contact-us" className="hover:text-white transition-colors">Contact Us</Link></li>
+            </ul>
+          </div>
+
+          <div className="text-left">
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Contact</h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/60">
               <li>
                 <a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">
                   hello@sriswastudio.com
@@ -274,7 +282,13 @@ export function Footer() {
               </li>
               <li>
                 <a href="https://wa.me/919618535437" target="_blank" rel="noopener noreferrer"
-                  className="hover:text-white transition-colors">WhatsApp Us</a>
+                  className="hover:text-white transition-colors">+91 96185 35437</a>
+              </li>
+              <li className="text-white/40 leading-relaxed text-xs">
+                Hyderabad, Telangana<br />India – 500001
+              </li>
+              <li className="text-white/40 text-xs">
+                Mon–Sat · 10 AM – 6 PM IST
               </li>
             </ul>
           </div>

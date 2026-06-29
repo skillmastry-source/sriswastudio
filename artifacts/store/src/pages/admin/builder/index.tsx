@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { MediaPicker } from "@/components/media-picker";
 import {
-  useLandingPages, useCreateLandingPage, useUpdateLandingPage, useDeleteLandingPage,
+  useLandingPages, useCreateLandingPage, useUpdateLandingPage, useDeleteLandingPage, useReorderLandingPages,
   type LandingPageSummary,
 } from "@/hooks/use-landing-pages";
 import { useQuery } from "@tanstack/react-query";
@@ -1016,13 +1016,127 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p
   );
 }
 
+// ── Sortable page row ────────────────────────────────────────────────────────
+function SortablePageRow({
+  page,
+  onSelect,
+  onDelete,
+  isDragOverlay,
+}: {
+  page: LandingPageSummary;
+  onSelect: () => void;
+  onDelete: () => void;
+  isDragOverlay?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: page.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+  };
+
+  return (
+    <div
+      ref={isDragOverlay ? undefined : setNodeRef}
+      style={isDragOverlay ? undefined : style}
+      className={`border rounded-lg p-4 bg-white transition-all flex items-center gap-3 ${
+        isDragOverlay ? "border-[#9B0F5F] shadow-lg rotate-1 bg-pink-50/80" : "hover:border-gray-300"
+      }`}
+    >
+      <button
+        type="button"
+        {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
+        className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+        onClick={(e) => e.stopPropagation()}
+        title="Drag to reorder"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onSelect}>
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm truncate">{page.title}</p>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${page.isPublished ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+            {page.isPublished ? "Published" : "Draft"}
+          </span>
+          {page.isInNav && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 bg-pink-100 text-pink-700">
+              In Nav
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5 font-mono">/p/{page.slug}</p>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {page.isPublished && (
+          <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+            <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Open page">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          </a>
+        )}
+        <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Edit page" onClick={onSelect}>
+          <PencilLine className="h-3.5 w-3.5" />
+        </button>
+        <button
+          className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+          title="Delete page"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── My Pages sidebar list ───────────────────────────────────────────────────
 function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => void }) {
-  const { data: pages = [], isLoading } = useLandingPages();
+  const { data: rawPages = [], isLoading } = useLandingPages();
   const deletePage = useDeleteLandingPage();
+  const reorder = useReorderLandingPages();
   const { toast } = useToast();
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [pages, setPages] = useState<LandingPageSummary[]>([]);
+  const [activeDragId, setActiveDragId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setPages([...rawPages].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title)));
+  }, [rawPages]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as number);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setPages((prev) => {
+      const oldIndex = prev.findIndex((p) => p.id === active.id);
+      const newIndex = prev.findIndex((p) => p.id === over.id);
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      const items = reordered.map((p, i) => ({ id: p.id, sortOrder: i }));
+      reorder.mutate(items, {
+        onError: () => toast({ title: "Failed to save order", variant: "destructive" }),
+      });
+      return reordered.map((p, i) => ({ ...p, sortOrder: i }));
+    });
+  };
 
   const handleDelete = (id: number) => {
     deletePage.mutate(id, {
@@ -1031,6 +1145,8 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
     });
   };
 
+  const activePageDrag = activeDragId !== null ? pages.find((p) => p.id === activeDragId) ?? null : null;
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
@@ -1038,7 +1154,7 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
           <h2 className="font-semibold text-base flex items-center gap-2">
             <FileText className="h-4 w-4 text-[#9B0F5F]" /> Landing Pages
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Create pages with rich sections — sale pages, about pages, campaigns</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Create pages with rich sections — drag to set the nav order</p>
         </div>
         <Button onClick={() => setCreating(true)} size="sm" style={{ background: BRAND }} className="text-white hover:opacity-90 gap-1.5">
           <Plus className="h-3.5 w-3.5" /> New Page
@@ -1061,40 +1177,42 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {pages.map((page) => (
-            <div key={page.id} className="border rounded-lg p-4 bg-white hover:border-gray-300 transition-all flex items-center gap-3">
-              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelect(page)}>
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{page.title}</p>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${page.isPublished ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {page.isPublished ? "Published" : "Draft"}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono">/p/{page.slug}</p>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {page.isPublished && (
-                  <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                    <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Open page">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
-                  </a>
-                )}
-                <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Edit page" onClick={() => onSelect(page)}>
-                  <PencilLine className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
-                  title="Delete page"
-                  onClick={() => setConfirmDelete(page.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={pages.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {pages.map((page) => (
+                <SortablePageRow
+                  key={page.id}
+                  page={page}
+                  onSelect={() => onSelect(page)}
+                  onDelete={() => setConfirmDelete(page.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+          <DragOverlay>
+            {activePageDrag && (
+              <SortablePageRow
+                page={activePageDrag}
+                onSelect={() => {}}
+                onDelete={() => {}}
+                isDragOverlay
+              />
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {pages.length > 1 && (
+        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+          <GripVertical className="h-3.5 w-3.5 opacity-50" />
+          Drag pages to control the order they appear in the navigation
+        </p>
       )}
 
       {creating && (

@@ -8,6 +8,7 @@ export type LandingPageSummary = {
   slug: string;
   isPublished: boolean;
   isInNav: boolean;
+  sortOrder: number;
   updatedAt: string;
   metaTitle?: string | null;
   metaDescription?: string | null;
@@ -92,5 +93,21 @@ export function useDeleteLandingPage() {
     mutationFn: (id: number) =>
       apiFetch(`/admin/landing-pages/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["landing-pages"] }),
+  });
+}
+
+export function useReorderLandingPages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: { id: number; sortOrder: number }[]) =>
+      apiFetch("/admin/landing-pages/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(items),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["landing-pages"] });
+      qc.invalidateQueries({ queryKey: ["landing-pages-nav"] });
+    },
   });
 }

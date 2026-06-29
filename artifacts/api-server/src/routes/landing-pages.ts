@@ -28,6 +28,9 @@ async function ensureTable() {
     await db.execute(sql`
       ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS meta_description TEXT
     `);
+    await db.execute(sql`
+      ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0
+    `);
   } catch {
     // already exists
   }
@@ -39,9 +42,9 @@ ensureTable();
 router.get("/landing-pages", async (_req, res) => {
   try {
     const pages = await db
-      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug, isPublished: landingPagesTable.isPublished, isInNav: landingPagesTable.isInNav, updatedAt: landingPagesTable.updatedAt })
+      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug, isPublished: landingPagesTable.isPublished, isInNav: landingPagesTable.isInNav, sortOrder: landingPagesTable.sortOrder, updatedAt: landingPagesTable.updatedAt })
       .from(landingPagesTable)
-      .orderBy(landingPagesTable.createdAt);
+      .orderBy(landingPagesTable.sortOrder, landingPagesTable.title);
     return res.json(pages);
   } catch (e) {
     console.error("[landing-pages] list error:", e);
@@ -53,10 +56,10 @@ router.get("/landing-pages", async (_req, res) => {
 router.get("/landing-pages/nav", async (_req, res) => {
   try {
     const pages = await db
-      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug })
+      .select({ id: landingPagesTable.id, title: landingPagesTable.title, slug: landingPagesTable.slug, sortOrder: landingPagesTable.sortOrder })
       .from(landingPagesTable)
       .where(sql`is_published = true AND is_in_nav = true`)
-      .orderBy(landingPagesTable.title);
+      .orderBy(landingPagesTable.sortOrder, landingPagesTable.title);
     return res.json(pages);
   } catch (e) {
     console.error("[landing-pages] nav list error:", e);
@@ -136,21 +139,39 @@ router.post("/admin/landing-pages", requireAdmin, async (req, res) => {
   }
 });
 
+// Admin: bulk reorder pages
+router.patch("/admin/landing-pages/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items = req.body as { id: number; sortOrder: number }[];
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array of { id, sortOrder }" });
+    await Promise.all(
+      items.map(({ id, sortOrder }) =>
+        db.update(landingPagesTable).set({ sortOrder }).where(eq(landingPagesTable.id, id))
+      )
+    );
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("[landing-pages] reorder error:", e);
+    return res.status(500).json({ error: "Failed to reorder pages" });
+  }
+});
+
 // Admin: update page
 router.patch("/admin/landing-pages/:id", requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { title, slug, sections, isPublished, isInNav, metaTitle, metaDescription } = req.body as {
+    const { title, slug, sections, isPublished, isInNav, sortOrder, metaTitle, metaDescription } = req.body as {
       title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean; isInNav?: boolean;
-      metaTitle?: string | null; metaDescription?: string | null;
+      sortOrder?: number; metaTitle?: string | null; metaDescription?: string | null;
     };
 
-    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; isInNav: boolean; metaTitle: string | null; metaDescription: string | null; updatedAt: Date }> = {};
+    const updates: Partial<{ title: string; slug: string; sections: unknown[]; isPublished: boolean; isInNav: boolean; sortOrder: number; metaTitle: string | null; metaDescription: string | null; updatedAt: Date }> = {};
     if (title !== undefined) updates.title = title;
     if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-").replace(/^-|-$/g, "");
     if (sections !== undefined) updates.sections = sections;
     if (isPublished !== undefined) updates.isPublished = isPublished;
     if (isInNav !== undefined) updates.isInNav = isInNav;
+    if (sortOrder !== undefined) updates.sortOrder = sortOrder;
     if (metaTitle !== undefined) updates.metaTitle = metaTitle ?? null;
     if (metaDescription !== undefined) updates.metaDescription = metaDescription ?? null;
     updates.updatedAt = new Date();

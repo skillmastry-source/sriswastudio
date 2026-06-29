@@ -115,6 +115,14 @@ export function Navbar() {
     ...navPages.map((p) => ({ href: `/p/${p.slug}`, label: p.title })),
   ];
 
+  const isLinkActive = (href: string) => {
+    const [hrefPath, hrefQuery] = href.split("?");
+    if (hrefQuery) {
+      return location === hrefPath && window.location.search === `?${hrefQuery}`;
+    }
+    return location === hrefPath;
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
       <style>{`.navbar-logo { height: 28px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
@@ -141,8 +149,8 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               style={{
-                color: location === link.href ? colors.brand : "#4b5563",
-                borderBottom: location === link.href ? `2px solid ${colors.brand}` : "2px solid transparent",
+                color: isLinkActive(link.href) ? colors.brand : "#4b5563",
+                borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
                 paddingBottom: "2px",
                 transition: "color 0.15s, border-color 0.15s",
               }}
@@ -190,7 +198,7 @@ export function Navbar() {
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className="transition-colors"
-                style={{ color: location === link.href ? colors.brand : undefined }}
+                style={{ color: isLinkActive(link.href) ? colors.brand : undefined }}
               >
                 {link.label}
               </Link>

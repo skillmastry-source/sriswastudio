@@ -21,3 +21,9 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+VITE_ADMIN_EMAILS = "sravani.srivani@gmail.com"
+ADMIN_EMAILS = "sravani.srivani@gmail.com"

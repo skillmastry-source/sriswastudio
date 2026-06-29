@@ -52,13 +52,20 @@ const NAV_GROUPS = [
   },
 ];
 
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e: string) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
-  const isAdmin =
-    (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "admin";
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
+  const isAdmin = ADMIN_EMAILS.length > 0
+    ? ADMIN_EMAILS.includes(userEmail)
+    : (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "admin";
 
   useEffect(() => {
     if (authLoaded && userLoaded) {

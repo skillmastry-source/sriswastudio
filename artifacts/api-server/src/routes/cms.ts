@@ -8,7 +8,7 @@ const router = Router();
 
 /* ── Public routes ── */
 
-router.get("/api/cms/pages", async (_req, res) => {
+router.get("/cms/pages", async (_req, res) => {
   try {
     const pages = await db
       .select()
@@ -22,7 +22,7 @@ router.get("/api/cms/pages", async (_req, res) => {
   }
 });
 
-router.get("/api/cms/pages/:slug", async (req, res) => {
+router.get("/cms/pages/:slug", async (req, res) => {
   try {
     const [page] = await db
       .select()
@@ -46,7 +46,7 @@ router.get("/api/cms/pages/:slug", async (req, res) => {
 
 /* ── Admin routes ── */
 
-router.get("/api/admin/cms/pages", requireAdmin, async (_req, res) => {
+router.get("/admin/cms/pages", requireAdmin, async (_req, res) => {
   try {
     const pages = await db
       .select()
@@ -59,7 +59,7 @@ router.get("/api/admin/cms/pages", requireAdmin, async (_req, res) => {
   }
 });
 
-router.post("/api/admin/cms/pages", requireAdmin, async (req, res) => {
+router.post("/admin/cms/pages", requireAdmin, async (req, res) => {
   try {
     const { type, slug, title, content, metaTitle, metaDescription, isPublished } = req.body;
     if (!type || !slug || !title) {
@@ -90,7 +90,7 @@ router.post("/api/admin/cms/pages", requireAdmin, async (req, res) => {
   }
 });
 
-router.patch("/api/admin/cms/pages/:id", requireAdmin, async (req, res) => {
+router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
@@ -129,7 +129,7 @@ router.patch("/api/admin/cms/pages/:id", requireAdmin, async (req, res) => {
   }
 });
 
-router.delete("/api/admin/cms/pages/:id", requireAdmin, async (req, res) => {
+router.delete("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });

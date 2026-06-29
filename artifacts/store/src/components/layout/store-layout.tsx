@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useSiteSettings } from "@/hooks/use-site-settings";
 import { ChatWidget } from "@/components/chat-widget";
+import { useQuery } from "@tanstack/react-query";
 
 export function AnnouncementBar() {
   const settings = useSiteSettings();
@@ -127,9 +128,22 @@ export function Navbar() {
   );
 }
 
+type CmsPage = { id: number; type: string; slug: string; title: string };
+
 export function Footer() {
   const settings = useSiteSettings();
   const { footer, colors } = settings;
+
+  const { data: cmsPages = [] } = useQuery<CmsPage[]>({
+    queryKey: ["/api/cms/pages"],
+    queryFn: async () => {
+      const res = await fetch("/api/cms/pages");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const policyPages = cmsPages.filter((p) => p.type === "policy");
 
   return (
     <footer style={{ background: colors.dark, color: "white" }}>
@@ -198,15 +212,20 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="text-left md:col-span-3 md:hidden lg:block">
-            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Policies</h4>
-            <ul className="flex flex-col gap-3 text-sm text-white/60">
-              <li><Link href="/pages/shipping-policy" className="hover:text-white transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/pages/returns-policy" className="hover:text-white transition-colors">Returns & Exchanges</Link></li>
-              <li><Link href="/pages/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/pages/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link></li>
-            </ul>
-          </div>
+          {policyPages.length > 0 && (
+            <div className="text-left">
+              <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Policies</h4>
+              <ul className="flex flex-col gap-3 text-sm text-white/60">
+                {policyPages.map((p) => (
+                  <li key={p.id}>
+                    <Link href={`/pages/${p.slug}`} className="hover:text-white transition-colors">
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
         </div>
       </div>

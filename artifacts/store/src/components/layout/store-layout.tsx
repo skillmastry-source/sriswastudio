@@ -10,65 +10,122 @@ const WA_ICON = (
   </svg>
 );
 
-const WA_OPTIONS = [
+const WA_MAIN_OPTIONS = [
   { emoji: "🛍️", label: "Place an Order", msg: "Hi Sriswa Studio! I'd like to place an order." },
   { emoji: "📦", label: "Track my Order", msg: "Hi! I'd like to track my recent order." },
   { emoji: "💎", label: "Ask about a Product", msg: "Hi! I have a question about one of your products." },
+  { emoji: "🏷️", label: "Ask about a Category", sub: true },
   { emoji: "🔄", label: "Return / Exchange", msg: "Hi! I'd like to return or exchange an item." },
   { emoji: "💬", label: "Other Query", msg: "Hi Sriswa Studio! I have a query for you." },
 ];
 
+const WA_CATEGORIES = [
+  { emoji: "✨", label: "New Arrivals", msg: "Hi! I'd like to know about your New Arrivals collection." },
+  { emoji: "⌚", label: "Watches", msg: "Hi! I have a question about your Watches collection." },
+  { emoji: "📿", label: "Bracelets", msg: "Hi! I'm interested in your Bracelets collection." },
+  { emoji: "💍", label: "Rings", msg: "Hi! I'd like to know more about your Rings collection." },
+  { emoji: "✨", label: "Earrings", msg: "Hi! I have a query about your Earrings collection." },
+  { emoji: "🪬", label: "Mangalsutra", msg: "Hi! I'm looking for details about your Mangalsutra collection." },
+  { emoji: "🔗", label: "Chain Sets", msg: "Hi! I'd like to know about your Chain Sets collection." },
+];
+
 function WhatsAppWidget() {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"main" | "categories">("main");
+
+  const handleClose = () => { setOpen(false); setStep("main"); };
+  const handleOpen = () => { setOpen(o => { if (o) { setStep("main"); return false; } return true; }); };
+
   return (
     <>
       {/* Chat popup */}
       {open && (
         <div className="fixed bottom-24 right-5 z-50 w-[320px] rounded-2xl shadow-2xl overflow-hidden"
           style={{ fontFamily: "inherit" }}>
+
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3" style={{ background: "#075e54" }}>
             <div className="flex items-center gap-3">
+              {step === "categories" && (
+                <button onClick={() => setStep("main")}
+                  className="text-white/70 hover:text-white text-lg mr-1 leading-none">‹</button>
+              )}
               <div className="h-10 w-10 rounded-full flex items-center justify-center text-white flex-shrink-0"
                 style={{ background: "#25D366" }}>
                 <span className="h-6 w-6">{WA_ICON}</span>
               </div>
               <div>
                 <p className="text-white font-bold text-sm leading-tight">Sriswa Studio</p>
-                <p className="text-white/60 text-[11px]">Typically replies in minutes</p>
+                <p className="text-white/60 text-[11px]">
+                  {step === "categories" ? "Select a category" : "Typically replies in minutes"}
+                </p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)}
+            <button onClick={handleClose}
               className="text-white/70 hover:text-white transition-colors text-xl leading-none">×</button>
           </div>
 
           {/* Chat body */}
-          <div className="px-4 py-4" style={{ background: "#e5ddd5" }}>
-            {/* Greeting bubble */}
-            <div className="bg-white rounded-lg rounded-tl-none px-4 py-3 text-sm text-gray-700 shadow-sm mb-4 max-w-[85%]">
-              👋 <span className="font-semibold">Hello!</span> How can we help you today?
-              <p className="text-xs text-gray-400 mt-1">Choose an option below</p>
-            </div>
+          <div className="px-4 py-4 max-h-[420px] overflow-y-auto" style={{ background: "#e5ddd5" }}>
 
-            {/* Quick reply options */}
-            <div className="flex flex-col gap-2">
-              {WA_OPTIONS.map(({ emoji, label, msg }) => (
-                <a
-                  key={label}
-                  href={`https://wa.me/${WA_NUM}?text=${encodeURIComponent(msg)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 bg-white text-gray-800 text-sm px-4 py-2.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors font-medium"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{emoji}</span>
-                  <span>{label}</span>
-                </a>
-              ))}
-            </div>
+            {step === "main" && (
+              <>
+                <div className="bg-white rounded-lg rounded-tl-none px-4 py-3 text-sm text-gray-700 shadow-sm mb-4 max-w-[85%]">
+                  👋 <span className="font-semibold">Hello!</span> How can we help you today?
+                  <p className="text-xs text-gray-400 mt-1">Choose an option below</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {WA_MAIN_OPTIONS.map(({ emoji, label, msg, sub }) =>
+                    sub ? (
+                      <button
+                        key={label}
+                        onClick={() => setStep("categories")}
+                        className="flex items-center justify-between gap-2.5 bg-white text-gray-800 text-sm px-4 py-2.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors font-medium w-full text-left"
+                      >
+                        <span className="flex items-center gap-2.5"><span>{emoji}</span><span>{label}</span></span>
+                        <span className="text-gray-400 text-base">›</span>
+                      </button>
+                    ) : (
+                      <a
+                        key={label}
+                        href={`https://wa.me/${WA_NUM}?text=${encodeURIComponent(msg!)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 bg-white text-gray-800 text-sm px-4 py-2.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors font-medium"
+                        onClick={handleClose}
+                      >
+                        <span>{emoji}</span><span>{label}</span>
+                      </a>
+                    )
+                  )}
+                </div>
+              </>
+            )}
+
+            {step === "categories" && (
+              <>
+                <div className="bg-white rounded-lg rounded-tl-none px-4 py-3 text-sm text-gray-700 shadow-sm mb-4 max-w-[85%]">
+                  🏷️ Which <span className="font-semibold">category</span> would you like to ask about?
+                </div>
+                <div className="flex flex-col gap-2">
+                  {WA_CATEGORIES.map(({ emoji, label, msg }) => (
+                    <a
+                      key={label}
+                      href={`https://wa.me/${WA_NUM}?text=${encodeURIComponent(msg)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 bg-white text-gray-800 text-sm px-4 py-2.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors font-medium"
+                      onClick={handleClose}
+                    >
+                      <span>{emoji}</span><span>{label}</span>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Powered by footer */}
+          {/* Footer */}
           <div className="px-4 py-2 text-center text-[10px] text-white/60" style={{ background: "#075e54" }}>
             Powered by WhatsApp · +91 96185 35437
           </div>
@@ -77,7 +134,7 @@ function WhatsAppWidget() {
 
       {/* Floating trigger button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         className="fixed bottom-6 right-5 z-50 flex items-center gap-2 shadow-xl transition-transform hover:scale-105 active:scale-95"
         style={{ background: "#25D366", borderRadius: 50, padding: "13px 20px" }}
         aria-label="Chat with us on WhatsApp"

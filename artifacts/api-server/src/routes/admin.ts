@@ -176,7 +176,12 @@ router.get("/admin/analytics/revenue", async (req, res) => {
   return res.json(rows);
 });
 
-router.get("/admin/analytics/top-products", async (_req, res) => {
+router.get("/admin/analytics/top-products", async (req, res) => {
+  const sortBy = String(req.query.sortBy ?? "revenue");
+  const orderExpr = sortBy === "units"
+    ? desc(sql`sum(quantity)`)
+    : desc(sql`sum(price::numeric * quantity)`);
+
   const rows = await db
     .select({
       productId: orderItemsTable.productId,
@@ -186,7 +191,7 @@ router.get("/admin/analytics/top-products", async (_req, res) => {
     })
     .from(orderItemsTable)
     .groupBy(orderItemsTable.productId, orderItemsTable.productName)
-    .orderBy(desc(sql`sum(price::numeric * quantity)`))
+    .orderBy(orderExpr)
     .limit(5);
 
   return res.json(rows);

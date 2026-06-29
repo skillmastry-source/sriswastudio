@@ -50,8 +50,8 @@ export default function AdminDashboard() {
   });
 
   const { data: topProducts } = useQuery({
-    queryKey: ["/api/admin/analytics/top-products"],
-    queryFn: () => fetchAnalytics("/api/admin/analytics/top-products"),
+    queryKey: ["/api/admin/analytics/top-products", topView],
+    queryFn: () => fetchAnalytics(`/api/admin/analytics/top-products?sortBy=${topView}`),
   });
 
   const { data: overview } = useQuery({
@@ -74,9 +74,7 @@ export default function AdminDashboard() {
   const avgOrderValue  = overview?.avgOrderValue  ?? 0;
   const newCustomers   = overview?.totalCustomers ?? 0;
 
-  const sortedByRevenue = [...(topProducts ?? [])].sort((a: any, b: any) => b.revenue - a.revenue);
-  const sortedByUnits   = [...(topProducts ?? [])].sort((a: any, b: any) => b.unitsSold - a.unitsSold);
-  const displayProducts = topView === "revenue" ? sortedByRevenue : sortedByUnits;
+  const displayProducts: any[] = topProducts ?? [];
 
   return (
     <div className="space-y-6">

@@ -13,11 +13,29 @@ import {
 } from "@/hooks/use-landing-pages";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Plus, ExternalLink,
+  Eye, EyeOff, Trash2, Plus, ExternalLink,
   LayoutTemplate, Megaphone, Image as ImageIcon, Grid3X3, Users,
   AlignLeft, MessageSquare, Code, Sparkles, X, Star,
-  Home, FileText, Globe, GlobeLock, PencilLine, ChevronLeft,
+  Home, FileText, Globe, GlobeLock, PencilLine, ChevronLeft, GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const BRAND = "#9B0F5F";
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -410,6 +428,92 @@ function SectionEditor({
   }
 }
 
+// ── Sortable section card ──────────────────────────────────────────────────
+function SortableSectionCard({
+  section,
+  isSelected,
+  onSelect,
+  onToggleVisible,
+  onDelete,
+  isDragOverlay,
+}: {
+  section: HomepageSection;
+  isSelected: boolean;
+  onSelect: () => void;
+  onToggleVisible: () => void;
+  onDelete: () => void;
+  isDragOverlay?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 0 : undefined,
+  };
+
+  return (
+    <div
+      ref={isDragOverlay ? undefined : setNodeRef}
+      style={isDragOverlay ? undefined : style}
+      className={`border rounded-lg p-3 transition-colors cursor-pointer ${
+        isDragOverlay
+          ? "border-[#9B0F5F] bg-pink-50/80 shadow-lg rotate-1"
+          : isSelected
+          ? "border-[#9B0F5F] bg-pink-50/50"
+          : "border-gray-200 bg-white hover:border-gray-300"
+      } ${!section.isVisible && !isDragOverlay ? "opacity-50" : ""}`}
+      onClick={onSelect}
+    >
+      <div className="flex items-center gap-2">
+        {/* Drag handle */}
+        <button
+          type="button"
+          {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
+          className="p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <SectionIcon type={section.type} />
+        <span className="text-sm font-medium flex-1 truncate">
+          <SectionLabel type={section.type} />
+          {typeof section.config.title === "string" && section.config.title && (
+            <span className="text-muted-foreground font-normal ml-1 text-xs truncate">
+              — {section.config.title}
+            </span>
+          )}
+        </span>
+        <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onToggleVisible}
+            className="p-1 rounded hover:bg-muted text-muted-foreground"
+            title={section.isVisible ? "Hide section" : "Show section"}
+          >
+            {section.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Section list + editor panel (shared for homepage and landing pages) ────
 function SectionsEditor({
   sections,
@@ -427,16 +531,25 @@ function SectionsEditor({
   setAddingSection: (v: boolean) => void;
 }) {
   const selectedSection = sections.find((s) => s.id === selectedId) ?? null;
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
-  const move = (id: string, dir: "up" | "down") => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
     setSections((prev) => {
-      const idx = prev.findIndex((s) => s.id === id);
-      if (dir === "up" && idx === 0) return prev;
-      if (dir === "down" && idx === prev.length - 1) return prev;
-      const newSections = [...prev];
-      const swap = dir === "up" ? idx - 1 : idx + 1;
-      [newSections[idx], newSections[swap]] = [newSections[swap], newSections[idx]];
-      return newSections.map((s, i) => ({ ...s, order: i }));
+      const oldIndex = prev.findIndex((s) => s.id === active.id);
+      const newIndex = prev.findIndex((s) => s.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex).map((s, i) => ({ ...s, order: i }));
     });
   };
 
@@ -466,6 +579,8 @@ function SectionsEditor({
     setSections((prev) => prev.map((s) => s.id === id ? { ...s, config } : s));
   };
 
+  const activeSection = activeDragId ? sections.find((s) => s.id === activeDragId) ?? null : null;
+
   return (
     <div className="flex gap-6 flex-1 min-h-0">
       {/* Left: section list */}
@@ -474,69 +589,46 @@ function SectionsEditor({
           <Plus className="h-4 w-4" /> Add Section
         </Button>
 
-        <div className="space-y-2 overflow-y-auto">
-          {sections.map((section, idx) => {
-            const isSelected = selectedId === section.id;
-            return (
-              <div
-                key={section.id}
-                className={`border rounded-lg p-3 transition-all cursor-pointer ${
-                  isSelected ? "border-[#9B0F5F] bg-pink-50/50" : "border-gray-200 bg-white hover:border-gray-300"
-                } ${!section.isVisible ? "opacity-50" : ""}`}
-                onClick={() => setSelectedId(isSelected ? null : section.id)}
-              >
-                <div className="flex items-center gap-2">
-                  <SectionIcon type={section.type} />
-                  <span className="text-sm font-medium flex-1 truncate">
-                    <SectionLabel type={section.type} />
-                    {typeof section.config.title === "string" && section.config.title && (
-                      <span className="text-muted-foreground font-normal ml-1 text-xs truncate">
-                        — {section.config.title}
-                      </span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleVisible(section.id)}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground"
-                      title={section.isVisible ? "Hide section" : "Show section"}
-                    >
-                      {section.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    </button>
-                    <button
-                      onClick={() => move(section.id, "up")}
-                      disabled={idx === 0}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                      title="Move up"
-                    >
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => move(section.id, "down")}
-                      disabled={idx === sections.length - 1}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                      title="Move down"
-                    >
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteSection(section.id)}
-                      className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2 overflow-y-auto">
+              {sections.map((section) => (
+                <SortableSectionCard
+                  key={section.id}
+                  section={section}
+                  isSelected={selectedId === section.id}
+                  onSelect={() => setSelectedId(selectedId === section.id ? null : section.id)}
+                  onToggleVisible={() => toggleVisible(section.id)}
+                  onDelete={() => deleteSection(section.id)}
+                />
+              ))}
 
-          {sections.length === 0 && (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-              <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
+              {sections.length === 0 && (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </SortableContext>
+          <DragOverlay>
+            {activeSection && (
+              <SortableSectionCard
+                section={activeSection}
+                isSelected={false}
+                onSelect={() => {}}
+                onToggleVisible={() => {}}
+                onDelete={() => {}}
+                isDragOverlay
+              />
+            )}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* Right: section editor */}

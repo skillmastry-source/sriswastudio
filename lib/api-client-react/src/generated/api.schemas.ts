@@ -219,6 +219,9 @@ export interface Order {
   shippingCost?: number;
   total: number;
   paymentMethod?: string;
+  /** @nullable */
+  couponCode?: string | null;
+  discountAmount?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -240,6 +243,8 @@ export interface OrderInput {
   /** @nullable */
   notes?: string | null;
   paymentMethod?: string;
+  /** @nullable */
+  couponCode?: string | null;
 }
 
 export type OrderStatusUpdateStatus = typeof OrderStatusUpdateStatus[keyof typeof OrderStatusUpdateStatus];

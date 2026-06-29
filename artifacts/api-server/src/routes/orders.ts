@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import {
   ordersTable, orderItemsTable, cartItemsTable,
   productsTable, productImagesTable, productVariantsTable, storeSettingsTable,
+  couponsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
@@ -24,6 +25,7 @@ async function buildOrderResponse(order: typeof ordersTable.$inferSelect) {
     subtotal: Number(order.subtotal),
     shippingCost: Number(order.shippingCost),
     total: Number(order.total),
+    discountAmount: Number(order.discountAmount ?? 0),
     items: items.map((i) => ({ ...i, price: Number(i.price) })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
@@ -34,7 +36,12 @@ router.post("/orders", async (req, res) => {
   const {
     sessionId, customerName, customerPhone, customerEmail,
     shippingAddress, city, state, pincode, notes, paymentMethod = "cod",
-  } = req.body;
+    couponCode,
+  } = req.body as {
+    sessionId?: string; customerName?: string; customerPhone?: string; customerEmail?: string;
+    shippingAddress?: string; city?: string; state?: string; pincode?: string; notes?: string;
+    paymentMethod?: string; couponCode?: string;
+  };
 
   if (!sessionId || !customerName || !customerPhone || !customerEmail || !shippingAddress || !city || !state || !pincode) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -88,7 +95,30 @@ router.post("/orders", async (req, res) => {
   }
 
   const subtotal = validItems.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
-  const total = subtotal;
+
+  // Validate coupon server-side if provided
+  let appliedCoupon: typeof couponsTable.$inferSelect | null = null;
+  let discountAmount = 0;
+
+  if (couponCode) {
+    const [coupon] = await db
+      .select()
+      .from(couponsTable)
+      .where(eq(couponsTable.code, couponCode.toUpperCase().trim()));
+
+    if (coupon && coupon.isActive &&
+      !(coupon.expiresAt && coupon.expiresAt < new Date()) &&
+      !(coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) &&
+      subtotal >= Number(coupon.minOrderAmount ?? 0)
+    ) {
+      appliedCoupon = coupon;
+      const val = Number(coupon.value);
+      if (coupon.type === "percent") discountAmount = Math.round((subtotal * val) / 100 * 100) / 100;
+      else if (coupon.type === "flat") discountAmount = Math.min(val, subtotal);
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount);
   const orderNumber = generateOrderNumber();
 
   // Execute order creation, stock decrement, and cart clear in a single transaction
@@ -112,6 +142,8 @@ router.post("/orders", async (req, res) => {
         orderNumber, status: "pending", customerName, customerPhone, customerEmail,
         shippingAddress, city, state, pincode, notes: notes ?? null,
         subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        discountAmount: String(discountAmount),
       })
       .returning();
 
@@ -129,6 +161,14 @@ router.post("/orders", async (req, res) => {
 
     return newOrder;
   });
+
+  // Increment coupon usedCount outside transaction (non-critical)
+  if (appliedCoupon) {
+    await db
+      .update(couponsTable)
+      .set({ usedCount: appliedCoupon.usedCount + 1 })
+      .where(eq(couponsTable.id, appliedCoupon.id));
+  }
 
   const [settings] = await db.select().from(storeSettingsTable);
   if (settings?.adminWhatsapp) {

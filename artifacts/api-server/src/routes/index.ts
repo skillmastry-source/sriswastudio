@@ -11,6 +11,7 @@ import adminRouter from "./admin";
 import leadsRouter from "./leads";
 import cmsRouter from "./cms";
 import customersRouter from "./customers";
+import couponsRouter from "./coupons";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,8 @@ router.use(leadsRouter);
 router.use(cmsRouter);
 // customers router has its own requireAdmin guards per-router
 router.use(customersRouter);
+// coupons: public /coupons/validate + admin CRUD (guards inside router)
+router.use(couponsRouter);
 router.use(adminRouter);
 
 export default router;

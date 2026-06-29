@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, CreditCard, Smartphone, Truck, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CreditCard, Smartphone, Truck, CheckCircle2, Tag, X, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -34,6 +34,13 @@ const checkoutSchema = z.object({
 
 type PaymentMethod = "razorpay" | "phonepe" | "cod";
 
+interface CouponResult {
+  discount: number;
+  type: string;
+  value: number;
+  code: string;
+}
+
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (window.Razorpay) return resolve(true);
@@ -53,12 +60,54 @@ export default function Checkout() {
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
 
+  // Coupon state
+  const [couponInput, setCouponInput] = useState("");
+  const [couponResult, setCouponResult] = useState<CouponResult | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const { data: cart } = useGetCart(
     { sessionId },
     { query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }
   );
 
   const createOrder = useCreateOrder();
+
+  const cartTotal = Number(cart?.total ?? 0);
+  const discountAmount = couponResult?.discount ?? 0;
+  const finalTotal = Math.max(0, cartTotal - discountAmount);
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) { setCouponError("Enter a coupon code first"); return; }
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch(`${BASE}/api/coupons/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, orderTotal: cartTotal }),
+      });
+      const data = await res.json() as { error?: string; discount?: number; type?: string; value?: number; code?: string };
+      if (!res.ok) {
+        setCouponError(data.error ?? "Invalid coupon");
+        setCouponResult(null);
+      } else {
+        setCouponResult({ discount: data.discount!, type: data.type!, value: data.value!, code: data.code! });
+        setCouponError("");
+      }
+    } catch {
+      setCouponError("Could not validate coupon. Try again.");
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  function removeCoupon() {
+    setCouponResult(null);
+    setCouponInput("");
+    setCouponError("");
+  }
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -75,6 +124,7 @@ export default function Checkout() {
         sessionId,
         paymentMethod: paymentId ? "RAZORPAY" : paymentMethod === "phonepe" ? "PHONEPE" : "COD",
         ...(paymentId ? { paymentId } : {}),
+        ...(couponResult ? { couponCode: couponResult.code } : {}),
       },
     }, {
       onSuccess: (order) => {
@@ -112,7 +162,7 @@ export default function Checkout() {
     const orderRes = await fetch(`${BASE}/api/payments/razorpay/create-order`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: cart?.total ?? 0 }),
+      body: JSON.stringify({ amount: finalTotal }),
     });
     if (!orderRes.ok) {
       setError("Could not initiate payment. Please try again.");
@@ -165,7 +215,7 @@ export default function Checkout() {
     const res = await fetch(`${BASE}/api/payments/phonepe/initiate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: cart?.total ?? 0, transactionId, redirectUrl }),
+      body: JSON.stringify({ amount: finalTotal, transactionId, redirectUrl }),
     });
 
     if (!res.ok) {
@@ -308,10 +358,10 @@ export default function Checkout() {
                     {processing || createOrder.isPending
                       ? "Processing…"
                       : paymentMethod === "cod"
-                        ? `Place Order • ₹${cart.total}`
+                        ? `Place Order • ₹${finalTotal.toFixed(2)}`
                         : paymentMethod === "phonepe"
-                          ? `Pay with PhonePe • ₹${cart.total}`
-                          : `Pay with Razorpay • ₹${cart.total}`
+                          ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
+                          : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
                     }
                   </Button>
                 </form>
@@ -339,17 +389,74 @@ export default function Checkout() {
                 ))}
               </div>
 
+              {/* Coupon input */}
+              <div className="border-t pt-4 mb-4">
+                {couponResult ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-green-700 font-mono">{couponResult.code}</p>
+                        <p className="text-xs text-green-600">
+                          {couponResult.type === "free-shipping"
+                            ? "Free shipping applied"
+                            : `-₹${couponResult.discount.toFixed(2)} discount`}
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={removeCoupon} className="text-green-500 hover:text-green-700 p-1">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5" /> Have a coupon code?
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter code"
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCoupon(); } }}
+                        className="font-mono text-sm h-9"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 px-3 text-sm flex-shrink-0"
+                        disabled={couponLoading}
+                        onClick={applyCoupon}
+                      >
+                        {couponLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
+                      </Button>
+                    </div>
+                    {couponError && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 flex-shrink-0" /> {couponError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2 text-sm border-t pt-4 mb-4">
                 <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span><span className="font-medium text-gray-900">₹{cart.total}</span>
+                  <span>Subtotal</span><span className="font-medium text-gray-900">₹{cartTotal.toFixed(2)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({couponResult?.code})</span>
+                    <span className="font-medium">-₹{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span><span className="font-medium text-green-600">Free</span>
                 </div>
               </div>
 
               <div className="flex justify-between font-serif font-bold text-xl border-t pt-4">
-                <span>Total</span><span>₹{cart.total}</span>
+                <span>Total</span><span>₹{finalTotal.toFixed(2)}</span>
               </div>
 
               <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">

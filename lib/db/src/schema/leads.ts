@@ -8,5 +8,6 @@ export const leads = pgTable("leads", {
   qty:       text("qty"),
   city:      text("city"),
   pin:       text("pin"),
+  status:    text("status").notNull().default("new"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

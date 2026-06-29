@@ -10,6 +10,7 @@ import paymentsRouter from "./payments";
 import adminRouter from "./admin";
 import leadsRouter from "./leads";
 import cmsRouter from "./cms";
+import customersRouter from "./customers";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,8 @@ router.use(paymentsRouter);
 router.use(leadsRouter);
 // cms public routes must be before adminRouter (admin guard would block public reads)
 router.use(cmsRouter);
+// customers router has its own requireAdmin guards per-router
+router.use(customersRouter);
 router.use(adminRouter);
 
 export default router;

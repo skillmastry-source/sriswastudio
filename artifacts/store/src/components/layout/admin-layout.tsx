@@ -26,6 +26,7 @@ const NAV_GROUPS = [
     label: "Sales",
     items: [
       { href: "/admin/orders", icon: ShoppingBag, label: "Orders", exact: false },
+      { href: "/admin/customers", icon: Users, label: "Customers", exact: false },
     ],
   },
   {

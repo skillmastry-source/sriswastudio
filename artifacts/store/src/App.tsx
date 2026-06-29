@@ -29,6 +29,8 @@ import AdminSettings from "@/pages/admin/settings";
 import AdminDesign from "@/pages/admin/design";
 import AdminCMS from "@/pages/admin/cms";
 import AdminCmsForm from "@/pages/admin/cms/form";
+import AdminCustomers from "@/pages/admin/customers";
+import AdminCustomerDetail from "@/pages/admin/customers/detail";
 import { AdminLayout } from "@/components/layout/admin-layout";
 
 // Storefront CMS pages
@@ -127,6 +129,12 @@ function Router() {
       </Route>
       <Route path="/admin/cms/:id/edit">
         {() => <AdminRoute component={AdminCmsForm} />}
+      </Route>
+      <Route path="/admin/customers">
+        {() => <AdminRoute component={AdminCustomers} />}
+      </Route>
+      <Route path="/admin/customers/:email">
+        {() => <AdminRoute component={AdminCustomerDetail} />}
       </Route>
 
       <Route component={NotFound} />

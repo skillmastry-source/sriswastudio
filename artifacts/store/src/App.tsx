@@ -41,6 +41,7 @@ import BlogList from "@/pages/blog";
 import BlogPost from "@/pages/blog/post";
 import FAQ from "@/pages/faq";
 import PolicyPage from "@/pages/policy";
+import LandingPage from "@/pages/landing-page";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/faq" component={FAQ} />
       <Route path="/pages/:slug" component={PolicyPage} />
+      <Route path="/p/:slug" component={LandingPage} />
 
       {/* Clerk auth routes */}
       <Route path="/sign-in/*?">

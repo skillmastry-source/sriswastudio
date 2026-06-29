@@ -1,0 +1,78 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+export type LandingPageSummary = {
+  id: number;
+  title: string;
+  slug: string;
+  isPublished: boolean;
+  updatedAt: string;
+};
+
+export type LandingPageFull = LandingPageSummary & {
+  sections: unknown[];
+  createdAt: string;
+};
+
+async function apiFetch(path: string, opts?: RequestInit) {
+  const res = await fetch(`${BASE_URL}/api${path}`, opts);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export function useLandingPages() {
+  return useQuery<LandingPageSummary[]>({
+    queryKey: ["landing-pages"],
+    queryFn: () => apiFetch("/landing-pages"),
+  });
+}
+
+export function useLandingPage(id: number | null) {
+  return useQuery<LandingPageFull>({
+    queryKey: ["landing-page", id],
+    queryFn: () => apiFetch(`/landing-pages/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useCreateLandingPage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title: string; slug: string }) =>
+      apiFetch("/admin/landing-pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["landing-pages"] }),
+  });
+}
+
+export function useUpdateLandingPage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; title?: string; slug?: string; sections?: unknown[]; isPublished?: boolean }) =>
+      apiFetch(`/admin/landing-pages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["landing-pages"] });
+      qc.invalidateQueries({ queryKey: ["landing-page", vars.id] });
+    },
+  });
+}
+
+export function useDeleteLandingPage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiFetch(`/admin/landing-pages/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["landing-pages"] }),
+  });
+}

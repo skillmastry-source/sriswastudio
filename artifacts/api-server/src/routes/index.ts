@@ -13,6 +13,7 @@ import cmsRouter from "./cms";
 import customersRouter from "./customers";
 import couponsRouter from "./coupons";
 import mediaRouter from "./media";
+import landingPagesRouter from "./landing-pages";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,10 @@ router.use(paymentsRouter);
 router.use(leadsRouter);
 // cms public routes must be before adminRouter (admin guard would block public reads)
 router.use(cmsRouter);
+// landing pages: public GET by slug/list, admin POST/PATCH/DELETE (guards inside router)
+// MUST be before customersRouter — customersRouter has a global router.use(requireAdmin)
+// that intercepts all unauthenticated requests before they reach later routers.
+router.use(landingPagesRouter);
 // customers router has its own requireAdmin guards per-router
 router.use(customersRouter);
 // coupons: public /coupons/validate + admin CRUD (guards inside router)

@@ -1,0 +1,20 @@
+import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const landingPagesTable = pgTable("landing_pages", {
+  id:          serial("id").primaryKey(),
+  title:       text("title").notNull(),
+  slug:        text("slug").notNull().unique(),
+  sections:    jsonb("sections").notNull().default([]),
+  isPublished: boolean("is_published").notNull().default(false),
+  createdAt:   timestamp("created_at").defaultNow().notNull(),
+  updatedAt:   timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLandingPageSchema = createInsertSchema(landingPagesTable).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+
+export type InsertLandingPage = z.infer<typeof insertLandingPageSchema>;
+export type LandingPage = typeof landingPagesTable.$inferSelect;

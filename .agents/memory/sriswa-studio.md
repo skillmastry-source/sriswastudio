@@ -25,9 +25,11 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 - GET `/api/site-design` (public), PATCH `/api/admin/site-design` (admin)
 
 ## Route Registration Order Matters
-adminRouter uses `router.use(requireAdmin)` WITHOUT a path prefix — it intercepts ALL unauthenticated requests before they reach later routers. Any public routes MUST be registered before adminRouter in `routes/index.ts`.
+Both `adminRouter` AND `customersRouter` use `router.use(requireAdmin)` WITHOUT a path prefix — they intercept ALL unauthenticated requests before later routers. Any public routes MUST be registered before BOTH of these in `routes/index.ts`.
 
-**Why:** Express evaluates sub-routers in registration order. adminRouter's global requireAdmin guard fires on every request, returning 401 before Express ever checks if a route matches. siteDesignRouter (with public GET) must come first.
+Current safe order: health → categories → products → cart → orders → storage → siteDesign → payments → leads → cms → **landingPages** → customers → coupons → media → admin
+
+**Why:** Express evaluates sub-routers in registration order. customersRouter's global requireAdmin fires on every request reaching it, returning 401 before the landing-pages GET handler ever runs. Discovered when public GET /landing-pages returned 401 with 2ms response time — a sign that requireAdmin fired synchronously before any DB call.
 
 ## Site Design Settings
 - `store_settings.site_design` jsonb column — auto-added on server start via `ALTER TABLE IF NOT EXISTS`
@@ -41,7 +43,7 @@ adminRouter uses `router.use(requireAdmin)` WITHOUT a path prefix — it interce
 - Templates use `{{orderNumber}}`, `{{customerName}}`, `{{total}}`, `{{phone}}`, `{{status}}`
 
 ## Database Tables
-categories, products, product_images, product_variants, orders, order_items, cart_items, store_settings
+categories, products, product_images, product_variants, orders, order_items, cart_items, store_settings, landing_pages
 
 ## Deployment
 - Deploy via Replit, then point Hostinger domain CNAME to `.replit.app` domain

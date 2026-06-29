@@ -8,12 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { MediaPicker } from "@/components/media-picker";
 import {
+  useLandingPages, useCreateLandingPage, useUpdateLandingPage, useDeleteLandingPage,
+  type LandingPageSummary,
+} from "@/hooks/use-landing-pages";
+import { useQuery } from "@tanstack/react-query";
+import {
   Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Plus, ExternalLink,
   LayoutTemplate, Megaphone, Image as ImageIcon, Grid3X3, Users,
   AlignLeft, MessageSquare, Code, Sparkles, X, Star,
+  Home, FileText, Globe, GlobeLock, PencilLine, ChevronLeft,
 } from "lucide-react";
 
 const BRAND = "#9B0F5F";
+const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type SectionTypeMeta = {
   type: HomepageSection["type"];
@@ -135,7 +142,6 @@ function SectionLabel({ type }: { type: HomepageSection["type"] }) {
   return <>{SECTION_TYPES.find((t) => t.type === type)?.label ?? type}</>;
 }
 
-// ── Section editor fields ──────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -404,24 +410,22 @@ function SectionEditor({
   }
 }
 
-// ── Main builder page ──────────────────────────────────────────────────────
-export default function AdminBuilder() {
-  const settings = useSiteSettings();
-  const update = useUpdateSiteSettings();
-  const { toast } = useToast();
-
-  const [sections, setSections] = useState<HomepageSection[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [addingSection, setAddingSection] = useState(false);
-
-  useEffect(() => {
-    if (settings.homepageSections && settings.homepageSections.length > 0) {
-      setSections(
-        [...settings.homepageSections].sort((a, b) => a.order - b.order)
-      );
-    }
-  }, [settings.homepageSections]);
-
+// ── Section list + editor panel (shared for homepage and landing pages) ────
+function SectionsEditor({
+  sections,
+  setSections,
+  selectedId,
+  setSelectedId,
+  addingSection,
+  setAddingSection,
+}: {
+  sections: HomepageSection[];
+  setSections: React.Dispatch<React.SetStateAction<HomepageSection[]>>;
+  selectedId: string | null;
+  setSelectedId: (id: string | null) => void;
+  addingSection: boolean;
+  setAddingSection: (v: boolean) => void;
+}) {
   const selectedSection = sections.find((s) => s.id === selectedId) ?? null;
 
   const move = (id: string, dir: "up" | "down") => {
@@ -462,128 +466,107 @@ export default function AdminBuilder() {
     setSections((prev) => prev.map((s) => s.id === id ? { ...s, config } : s));
   };
 
-  const handleSave = () => {
-    update.mutate(
-      { homepageSections: sections } as Parameters<typeof update.mutate>[0],
-      {
-        onSuccess: () => toast({ title: "✓ Homepage saved", description: "Changes are live on the store." }),
-        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
-      }
-    );
-  };
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold">Page Builder</h1>
-          <p className="text-sm text-muted-foreground mt-1">Drag sections to reorder — changes go live when you save</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a href="/" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <ExternalLink className="h-3.5 w-3.5" /> Preview Store
-            </Button>
-          </a>
-          <Button onClick={handleSave} disabled={update.isPending} style={{ background: BRAND }} className="text-white hover:opacity-90 min-w-[120px]">
-            {update.isPending ? "Saving…" : "Save & Publish"}
-          </Button>
-        </div>
-      </div>
+    <div className="flex gap-6 flex-1 min-h-0">
+      {/* Left: section list */}
+      <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+        <Button variant="outline" className="w-full gap-2" onClick={() => setAddingSection(true)}>
+          <Plus className="h-4 w-4" /> Add Section
+        </Button>
 
-      <div className="flex gap-6 flex-1 min-h-0">
-        {/* Left: section list */}
-        <div className="w-80 flex-shrink-0 flex flex-col gap-3">
-          <Button variant="outline" className="w-full gap-2" onClick={() => setAddingSection(true)}>
-            <Plus className="h-4 w-4" /> Add Section
-          </Button>
-
-          <div className="space-y-2 overflow-y-auto">
-            {sections.map((section, idx) => {
-              const isSelected = selectedId === section.id;
-              return (
-                <div
-                  key={section.id}
-                  className={`border rounded-lg p-3 transition-all cursor-pointer ${
-                    isSelected ? "border-[#9B0F5F] bg-pink-50/50" : "border-gray-200 bg-white hover:border-gray-300"
-                  } ${!section.isVisible ? "opacity-50" : ""}`}
-                  onClick={() => setSelectedId(isSelected ? null : section.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <SectionIcon type={section.type} />
-                    <span className="text-sm font-medium flex-1 truncate">
-                      <SectionLabel type={section.type} />
-                      {typeof section.config.title === "string" && section.config.title && (
-                        <span className="text-muted-foreground font-normal ml-1 text-xs truncate">
-                          — {section.config.title}
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => toggleVisible(section.id)}
-                        className="p-1 rounded hover:bg-muted text-muted-foreground"
-                        title={section.isVisible ? "Hide section" : "Show section"}
-                      >
-                        {section.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                      </button>
-                      <button onClick={() => move(section.id, "up")} disabled={idx === 0}
-                        className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30">
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => move(section.id, "down")} disabled={idx === sections.length - 1}
-                        className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30">
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => deleteSection(section.id)}
-                        className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+        <div className="space-y-2 overflow-y-auto">
+          {sections.map((section, idx) => {
+            const isSelected = selectedId === section.id;
+            return (
+              <div
+                key={section.id}
+                className={`border rounded-lg p-3 transition-all cursor-pointer ${
+                  isSelected ? "border-[#9B0F5F] bg-pink-50/50" : "border-gray-200 bg-white hover:border-gray-300"
+                } ${!section.isVisible ? "opacity-50" : ""}`}
+                onClick={() => setSelectedId(isSelected ? null : section.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <SectionIcon type={section.type} />
+                  <span className="text-sm font-medium flex-1 truncate">
+                    <SectionLabel type={section.type} />
+                    {typeof section.config.title === "string" && section.config.title && (
+                      <span className="text-muted-foreground font-normal ml-1 text-xs truncate">
+                        — {section.config.title}
+                      </span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => toggleVisible(section.id)}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground"
+                      title={section.isVisible ? "Hide section" : "Show section"}
+                    >
+                      {section.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => move(section.id, "up")}
+                      disabled={idx === 0}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
+                      title="Move up"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => move(section.id, "down")}
+                      disabled={idx === sections.length - 1}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
+                      title="Move down"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => deleteSection(section.id)}
+                      className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-
-            {sections.length === 0 && (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-                <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
               </div>
-            )}
-          </div>
-        </div>
+            );
+          })}
 
-        {/* Right: section editor */}
-        <div className="flex-1 min-w-0">
-          {selectedSection ? (
-            <div className="bg-white border rounded-lg p-6 h-full overflow-y-auto">
-              <div className="flex items-center gap-3 mb-6">
-                <SectionIcon type={selectedSection.type} />
-                <div className="flex-1">
-                  <h2 className="font-semibold text-base"><SectionLabel type={selectedSection.type} /></h2>
-                  <p className="text-xs text-muted-foreground">
-                    {SECTION_TYPES.find((t) => t.type === selectedSection.type)?.description}
-                  </p>
-                </div>
-                <button onClick={() => setSelectedId(null)} className="text-muted-foreground hover:text-foreground">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <SectionEditor
-                section={selectedSection}
-                onChange={(config) => updateConfig(selectedSection.id, config)}
-              />
-            </div>
-          ) : (
-            <div className="bg-gray-50 border-2 border-dashed rounded-lg h-full flex flex-col items-center justify-center text-muted-foreground">
-              <LayoutTemplate className="h-12 w-12 mb-3 opacity-20" />
-              <p className="text-sm font-medium">Select a section to edit its settings</p>
-              <p className="text-xs mt-1">Or add a new section from the panel on the left</p>
+          {sections.length === 0 && (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+              <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Right: section editor */}
+      <div className="flex-1 min-w-0">
+        {selectedSection ? (
+          <div className="bg-white border rounded-lg p-6 h-full overflow-y-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <SectionIcon type={selectedSection.type} />
+              <div className="flex-1">
+                <h2 className="font-semibold text-base"><SectionLabel type={selectedSection.type} /></h2>
+                <p className="text-xs text-muted-foreground">
+                  {SECTION_TYPES.find((t) => t.type === selectedSection.type)?.description}
+                </p>
+              </div>
+              <button onClick={() => setSelectedId(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <SectionEditor
+              section={selectedSection}
+              onChange={(config) => updateConfig(selectedSection.id, config)}
+            />
+          </div>
+        ) : (
+          <div className="bg-gray-50 border-2 border-dashed rounded-lg h-full flex flex-col items-center justify-center text-muted-foreground">
+            <LayoutTemplate className="h-12 w-12 mb-3 opacity-20" />
+            <p className="text-sm font-medium">Select a section to edit its settings</p>
+            <p className="text-xs mt-1">Or add a new section from the panel on the left</p>
+          </div>
+        )}
       </div>
 
       {/* Add Section Modal */}
@@ -619,6 +602,402 @@ export default function AdminBuilder() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Homepage builder ────────────────────────────────────────────────────────
+function HomepageBuilder() {
+  const settings = useSiteSettings();
+  const update = useUpdateSiteSettings();
+  const { toast } = useToast();
+
+  const [sections, setSections] = useState<HomepageSection[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [addingSection, setAddingSection] = useState(false);
+
+  useEffect(() => {
+    if (settings.homepageSections && settings.homepageSections.length > 0) {
+      setSections([...settings.homepageSections].sort((a, b) => a.order - b.order));
+    }
+  }, [settings.homepageSections]);
+
+  const handleSave = () => {
+    update.mutate(
+      { homepageSections: sections } as Parameters<typeof update.mutate>[0],
+      {
+        onSuccess: () => toast({ title: "✓ Homepage saved", description: "Changes are live on the store." }),
+        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Home className="h-4 w-4 text-[#9B0F5F]" />
+          <span className="font-semibold text-sm">Homepage</span>
+          <span className="text-xs text-muted-foreground">— live at /</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href="/" target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <ExternalLink className="h-3.5 w-3.5" /> Preview
+            </Button>
+          </a>
+          <Button onClick={handleSave} disabled={update.isPending} style={{ background: BRAND }} className="text-white hover:opacity-90 min-w-[120px]">
+            {update.isPending ? "Saving…" : "Save & Publish"}
+          </Button>
+        </div>
+      </div>
+      <SectionsEditor
+        sections={sections}
+        setSections={setSections}
+        selectedId={selectedId}
+        setSelectedId={setSelectedId}
+        addingSection={addingSection}
+        setAddingSection={setAddingSection}
+      />
+    </div>
+  );
+}
+
+// ── Landing page builder ────────────────────────────────────────────────────
+function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack: () => void }) {
+  const { toast } = useToast();
+  const update = useUpdateLandingPage();
+
+  const { data: fullPage, isLoading } = useQuery({
+    queryKey: ["landing-page-full", page.id],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/landing-pages/${page.slug}`);
+      if (!res.ok) throw new Error("Failed to load");
+      return res.json();
+    },
+  });
+
+  const [sections, setSections] = useState<HomepageSection[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [addingSection, setAddingSection] = useState(false);
+  const [isPublished, setIsPublished] = useState(page.isPublished);
+
+  useEffect(() => {
+    if (fullPage?.sections) {
+      setSections([...fullPage.sections as HomepageSection[]].sort((a, b) => a.order - b.order));
+    }
+  }, [fullPage]);
+
+  const handleSave = (pub?: boolean) => {
+    const publishedValue = pub ?? isPublished;
+    update.mutate(
+      { id: page.id, sections, isPublished: publishedValue },
+      {
+        onSuccess: () => {
+          setIsPublished(publishedValue);
+          toast({
+            title: publishedValue ? "✓ Page saved & published" : "✓ Page saved",
+            description: publishedValue ? `Live at /p/${page.slug}` : "Saved as draft.",
+          });
+        },
+        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="w-6 h-6 border-2 border-[#9B0F5F] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <button onClick={onBack} className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
+            <ChevronLeft className="h-4 w-4" /> My Pages
+          </button>
+          <span className="text-muted-foreground">/</span>
+          <FileText className="h-4 w-4 text-[#9B0F5F]" />
+          <span className="font-semibold text-sm">{page.title}</span>
+          <span className="text-xs text-muted-foreground">— /p/{page.slug}</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isPublished ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+            {isPublished ? "Published" : "Draft"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isPublished && (
+            <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <ExternalLink className="h-3.5 w-3.5" /> Preview
+              </Button>
+            </a>
+          )}
+          {!isPublished ? (
+            <Button onClick={() => handleSave(true)} disabled={update.isPending} variant="outline" size="sm" className="gap-1.5 border-green-500 text-green-600 hover:bg-green-50">
+              <Globe className="h-3.5 w-3.5" /> Publish
+            </Button>
+          ) : (
+            <Button onClick={() => handleSave(false)} disabled={update.isPending} variant="outline" size="sm" className="gap-1.5 border-orange-400 text-orange-600 hover:bg-orange-50">
+              <GlobeLock className="h-3.5 w-3.5" /> Unpublish
+            </Button>
+          )}
+          <Button onClick={() => handleSave()} disabled={update.isPending} style={{ background: BRAND }} className="text-white hover:opacity-90 min-w-[100px]">
+            {update.isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </div>
+      <SectionsEditor
+        sections={sections}
+        setSections={setSections}
+        selectedId={selectedId}
+        setSelectedId={setSelectedId}
+        addingSection={addingSection}
+        setAddingSection={setAddingSection}
+      />
+    </div>
+  );
+}
+
+// ── New page creation modal ─────────────────────────────────────────────────
+function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (page: LandingPageSummary) => void }) {
+  const { toast } = useToast();
+  const create = useCreateLandingPage();
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+
+  const handleTitleChange = (v: string) => {
+    setTitle(v);
+    if (!slugEdited) {
+      setSlug(v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !slug.trim()) return;
+    create.mutate(
+      { title: title.trim(), slug: slug.trim() },
+      {
+        onSuccess: (page) => {
+          toast({ title: "Page created", description: `Editing /p/${(page as LandingPageSummary).slug}` });
+          onCreate(page as LandingPageSummary);
+        },
+        onError: (err) => toast({ title: err.message || "Failed to create page", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="font-serif font-bold text-lg">New Landing Page</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <Field label="Page Title">
+            <Input value={title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="e.g. Sale — Up to 50% Off" className="h-9" autoFocus />
+          </Field>
+          <Field label="URL Slug">
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">/p/</span>
+              <Input
+                value={slug}
+                onChange={(e) => { setSlug(e.target.value); setSlugEdited(true); }}
+                placeholder="sale"
+                className="h-9 font-mono text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Only lowercase letters, numbers, and hyphens.</p>
+          </Field>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={create.isPending || !title.trim() || !slug.trim()} style={{ background: BRAND }} className="flex-1 text-white hover:opacity-90">
+              {create.isPending ? "Creating…" : "Create Page"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── My Pages sidebar list ───────────────────────────────────────────────────
+function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => void }) {
+  const { data: pages = [], isLoading } = useLandingPages();
+  const deletePage = useDeleteLandingPage();
+  const { toast } = useToast();
+  const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+
+  const handleDelete = (id: number) => {
+    deletePage.mutate(id, {
+      onSuccess: () => { setConfirmDelete(null); toast({ title: "Page deleted" }); },
+      onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-semibold text-base flex items-center gap-2">
+            <FileText className="h-4 w-4 text-[#9B0F5F]" /> Landing Pages
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Create pages with rich sections — sale pages, about pages, campaigns</p>
+        </div>
+        <Button onClick={() => setCreating(true)} size="sm" style={{ background: BRAND }} className="text-white hover:opacity-90 gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> New Page
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 border-2 border-[#9B0F5F] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : pages.length === 0 ? (
+        <div className="border-2 border-dashed rounded-xl p-10 text-center text-muted-foreground flex flex-col items-center gap-3">
+          <FileText className="h-10 w-10 opacity-20" />
+          <div>
+            <p className="font-medium text-sm">No landing pages yet</p>
+            <p className="text-xs mt-1">Create a Sale page, About Us, or seasonal campaign</p>
+          </div>
+          <Button onClick={() => setCreating(true)} variant="outline" size="sm" className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Create your first page
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {pages.map((page) => (
+            <div key={page.id} className="border rounded-lg p-4 bg-white hover:border-gray-300 transition-all flex items-center gap-3">
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelect(page)}>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm truncate">{page.title}</p>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${page.isPublished ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {page.isPublished ? "Published" : "Draft"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 font-mono">/p/{page.slug}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {page.isPublished && (
+                  <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                    <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Open page">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </button>
+                  </a>
+                )}
+                <button className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Edit page" onClick={() => onSelect(page)}>
+                  <PencilLine className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                  title="Delete page"
+                  onClick={() => setConfirmDelete(page.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {creating && (
+        <NewPageModal
+          onClose={() => setCreating(false)}
+          onCreate={(page) => { setCreating(false); onSelect(page); }}
+        />
+      )}
+
+      {confirmDelete !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="font-serif font-bold text-lg">Delete page?</h2>
+            <p className="text-sm text-muted-foreground">This cannot be undone. The page and all its sections will be permanently deleted.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button
+                className="flex-1 bg-red-600 text-white hover:bg-red-700"
+                disabled={deletePage.isPending}
+                onClick={() => handleDelete(confirmDelete)}
+              >
+                {deletePage.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main builder page ──────────────────────────────────────────────────────
+export default function AdminBuilder() {
+  type Tab = "homepage" | "pages";
+  const [activeTab, setActiveTab] = useState<Tab>("homepage");
+  const [editingPage, setEditingPage] = useState<LandingPageSummary | null>(null);
+
+  const handleSelectPage = (page: LandingPageSummary) => {
+    setEditingPage(page);
+  };
+
+  const handleBackToList = () => {
+    setEditingPage(null);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-serif font-bold">Page Builder</h1>
+          <p className="text-sm text-muted-foreground mt-1">Build pages with rich sections — changes go live when you save</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      {!editingPage && (
+        <div className="flex gap-1 mb-6 border-b">
+          <button
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "homepage"
+                ? "border-[#9B0F5F] text-[#9B0F5F]"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("homepage")}
+          >
+            <Home className="h-4 w-4" /> Homepage
+          </button>
+          <button
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "pages"
+                ? "border-[#9B0F5F] text-[#9B0F5F]"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("pages")}
+          >
+            <FileText className="h-4 w-4" /> Landing Pages
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {activeTab === "homepage" && !editingPage && <HomepageBuilder />}
+        {activeTab === "pages" && !editingPage && (
+          <MyPagesList onSelect={handleSelectPage} />
+        )}
+        {editingPage && (
+          <LandingPageBuilder page={editingPage} onBack={handleBackToList} />
+        )}
+      </div>
     </div>
   );
 }

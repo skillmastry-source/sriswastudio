@@ -9,6 +9,7 @@ import siteDesignRouter from "./site-design";
 import paymentsRouter from "./payments";
 import adminRouter from "./admin";
 import leadsRouter from "./leads";
+import cmsRouter from "./cms";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,8 @@ router.use(siteDesignRouter);
 // payments must also be before adminRouter for same reason
 router.use(paymentsRouter);
 router.use(leadsRouter);
+// cms public routes must be before adminRouter (admin guard would block public reads)
+router.use(cmsRouter);
 router.use(adminRouter);
 
 export default router;

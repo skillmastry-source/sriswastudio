@@ -27,7 +27,15 @@ import AdminOrderDetail from "@/pages/admin/orders/detail";
 import AdminInventory from "@/pages/admin/inventory";
 import AdminSettings from "@/pages/admin/settings";
 import AdminDesign from "@/pages/admin/design";
+import AdminCMS from "@/pages/admin/cms";
+import AdminCmsForm from "@/pages/admin/cms/form";
 import { AdminLayout } from "@/components/layout/admin-layout";
+
+// Storefront CMS pages
+import BlogList from "@/pages/blog";
+import BlogPost from "@/pages/blog/post";
+import FAQ from "@/pages/faq";
+import PolicyPage from "@/pages/policy";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +65,12 @@ function Router() {
       <Route path="/order-confirmation" component={OrderConfirmation} />
       <Route path="/track-order" component={TrackOrder} />
       <Route path="/account" component={Account} />
+
+      {/* CMS / Content routes */}
+      <Route path="/blog" component={BlogList} />
+      <Route path="/blog/:slug" component={BlogPost} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/pages/:slug" component={PolicyPage} />
 
       {/* Clerk auth routes */}
       <Route path="/sign-in/*?">
@@ -104,6 +118,15 @@ function Router() {
       </Route>
       <Route path="/admin/design">
         {() => <AdminRoute component={AdminDesign} />}
+      </Route>
+      <Route path="/admin/cms">
+        {() => <AdminRoute component={AdminCMS} />}
+      </Route>
+      <Route path="/admin/cms/new">
+        {() => <AdminRoute component={AdminCmsForm} />}
+      </Route>
+      <Route path="/admin/cms/:id/edit">
+        {() => <AdminRoute component={AdminCmsForm} />}
       </Route>
 
       <Route component={NotFound} />

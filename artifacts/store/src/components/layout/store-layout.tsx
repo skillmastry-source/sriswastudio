@@ -136,7 +136,7 @@ export function Footer() {
       <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 md:gap-12">
 
           <div className="flex flex-col gap-4 items-start text-left">
             <img src="/brand/logo-white.png" alt="Sriswa Studio"
@@ -184,6 +184,8 @@ export function Footer() {
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               <li><Link href="/track-order" className="hover:text-white transition-colors">Track My Order</Link></li>
               <li><Link href="/account" className="hover:text-white transition-colors">My Account</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition-colors">Journal</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
               <li>
                 <a href="mailto:hello@sriswastudio.com" className="hover:text-white transition-colors">
                   hello@sriswastudio.com
@@ -193,6 +195,16 @@ export function Footer() {
                 <a href="https://wa.me/919618535437" target="_blank" rel="noopener noreferrer"
                   className="hover:text-white transition-colors">WhatsApp Us</a>
               </li>
+            </ul>
+          </div>
+
+          <div className="text-left md:col-span-3 md:hidden lg:block">
+            <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Policies</h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/60">
+              <li><Link href="/pages/shipping-policy" className="hover:text-white transition-colors">Shipping Policy</Link></li>
+              <li><Link href="/pages/returns-policy" className="hover:text-white transition-colors">Returns & Exchanges</Link></li>
+              <li><Link href="/pages/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/pages/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
 

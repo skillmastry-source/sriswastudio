@@ -144,11 +144,11 @@ router.patch("/admin/landing-pages/reorder", requireAdmin, async (req, res) => {
   try {
     const items = req.body as { id: number; sortOrder: number }[];
     if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array of { id, sortOrder }" });
-    await Promise.all(
-      items.map(({ id, sortOrder }) =>
-        db.update(landingPagesTable).set({ sortOrder }).where(eq(landingPagesTable.id, id))
-      )
-    );
+    await db.transaction(async (tx) => {
+      for (const { id, sortOrder } of items) {
+        await tx.update(landingPagesTable).set({ sortOrder }).where(eq(landingPagesTable.id, id));
+      }
+    });
     return res.json({ ok: true });
   } catch (e) {
     console.error("[landing-pages] reorder error:", e);

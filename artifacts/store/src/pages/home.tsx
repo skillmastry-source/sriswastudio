@@ -43,6 +43,8 @@ export default function Home() {
 
     return () => {
       document.title = "Sriswa Studio";
+      setOgTag("og:title", "");
+      setOgTag("og:description", "");
     };
   }, [settings.homepageMetaTitle, settings.homepageMetaDescription]);
 

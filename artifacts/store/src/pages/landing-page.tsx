@@ -79,6 +79,8 @@ export default function LandingPage() {
 
     return () => {
       document.title = settings.storeName || "Sriswa Studio";
+      setOgTag("og:title", "");
+      setOgTag("og:description", "");
     };
   }, [page, settings.storeName]);
 

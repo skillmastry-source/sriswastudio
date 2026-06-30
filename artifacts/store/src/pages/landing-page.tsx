@@ -38,7 +38,7 @@ export default function LandingPage() {
   const isPreview = new URLSearchParams(search).get("preview") === "1";
   const { getToken } = useAuth();
 
-  const { data: page, isLoading, isError } = useQuery({
+  const { data: pageResult, isLoading, isError } = useQuery({
     queryKey: ["landing-page", slug, isPreview],
     queryFn: async () => {
       if (isPreview) {
@@ -46,18 +46,22 @@ export default function LandingPage() {
         const res = await fetch(`${BASE_URL}/api/admin/landing-pages/slug/${slug}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        if (res.status === 404 || res.status === 401 || res.status === 403) return null;
+        if (res.status === 401 || res.status === 403) return { authError: true };
+        if (res.status === 404) return null;
         if (!res.ok) throw new Error("Failed to load page");
-        return res.json();
+        return { page: await res.json() };
       }
       const res = await fetch(`${BASE_URL}/api/landing-pages/${slug}`);
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to load page");
-      return res.json();
+      return { page: await res.json() };
     },
     enabled: !!slug,
     retry: false,
   });
+
+  const page = pageResult && "page" in pageResult ? pageResult.page : null;
+  const isAuthError = pageResult && "authError" in pageResult && pageResult.authError === true;
 
   useEffect(() => {
     if (!page) return;
@@ -83,6 +87,33 @@ export default function LandingPage() {
       <StoreLayout>
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-[#9B0F5F] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </StoreLayout>
+    );
+  }
+
+  if (isAuthError) {
+    const currentUrl = encodeURIComponent(window.location.href);
+    return (
+      <StoreLayout>
+        <div className="min-h-[60vh] flex items-center justify-center px-4">
+          <div className="max-w-md w-full text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-7 h-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-semibold text-gray-900">This is a draft page</h1>
+            <p className="text-gray-500 text-sm">
+              Sign in as an admin to preview this page before it's published.
+            </p>
+            <a
+              href={`/sign-in?redirect_url=${currentUrl}`}
+              className="inline-block mt-2 px-5 py-2.5 bg-[#9B0F5F] text-white text-sm font-medium rounded-lg hover:bg-[#7a0c4c] transition-colors"
+            >
+              Sign in as admin
+            </a>
+          </div>
         </div>
       </StoreLayout>
     );

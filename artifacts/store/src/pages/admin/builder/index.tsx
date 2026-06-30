@@ -830,7 +830,7 @@ function HomepageBuilder() {
 }
 
 // ── Landing page builder ────────────────────────────────────────────────────
-function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack: () => void }) {
+function LandingPageBuilder({ page, onBack, navPosition }: { page: LandingPageSummary; onBack: () => void; navPosition?: number }) {
   const { toast } = useToast();
   const update = useUpdateLandingPage();
 
@@ -962,6 +962,11 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
           >
             <GlobeLock className="h-3.5 w-3.5" />
             {isInNav ? "In Nav" : "Add to Nav"}
+            {isInNav && navPosition !== undefined && (
+              <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#9B0F5F] text-white text-[9px] font-bold leading-none">
+                {navPosition}
+              </span>
+            )}
           </button>
           <a
             href={isPublished ? `/p/${page.slug}` : `/p/${page.slug}?preview=1`}
@@ -1353,6 +1358,7 @@ export default function AdminBuilder() {
   type Tab = "homepage" | "pages";
   const [activeTab, setActiveTab] = useState<Tab>("homepage");
   const [editingPage, setEditingPage] = useState<LandingPageSummary | null>(null);
+  const { data: allPages = [] } = useLandingPages();
 
   const handleSelectPage = (page: LandingPageSummary) => {
     setEditingPage(page);
@@ -1361,6 +1367,19 @@ export default function AdminBuilder() {
   const handleBackToList = () => {
     setEditingPage(null);
   };
+
+  const editingNavPosition = (() => {
+    if (!editingPage) return undefined;
+    const sorted = [...allPages].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+    let counter = 0;
+    for (const p of sorted) {
+      if (p.isInNav) {
+        counter += 1;
+        if (p.id === editingPage.id) return counter;
+      }
+    }
+    return undefined;
+  })();
 
   return (
     <div className="flex flex-col h-full">
@@ -1404,7 +1423,7 @@ export default function AdminBuilder() {
           <MyPagesList onSelect={handleSelectPage} />
         )}
         {editingPage && (
-          <LandingPageBuilder page={editingPage} onBack={handleBackToList} />
+          <LandingPageBuilder page={editingPage} onBack={handleBackToList} navPosition={editingNavPosition} />
         )}
       </div>
     </div>

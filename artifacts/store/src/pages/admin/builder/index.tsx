@@ -170,6 +170,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function GoogleSearchPreview({ title, description, url }: { title: string; description: string; url: string }) {
+  const displayTitle = title.trim() || "Your page title will appear here";
+  const displayDesc = description.trim() || "Your meta description will appear here — write 1–2 sentences that describe the page content clearly.";
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Google Search Preview</p>
+      <div className="max-w-[600px] space-y-0.5">
+        <p className="text-[13px] text-[#1a0dab] font-medium leading-snug line-clamp-1">{displayTitle}</p>
+        <p className="text-[12px] text-[#006621] leading-snug truncate">{url}</p>
+        <p className="text-[12px] text-[#545454] leading-snug line-clamp-2">{displayDesc}</p>
+      </div>
+    </div>
+  );
+}
+
 function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -794,6 +809,11 @@ function HomepageBuilder() {
             />
             <p className="text-xs text-muted-foreground mt-1">{metaDescription.length}/160 characters</p>
           </Field>
+          <GoogleSearchPreview
+            title={metaTitle}
+            description={metaDescription}
+            url={`${typeof window !== "undefined" ? window.location.hostname : "yourstore.com"}/`}
+          />
         </div>
       )}
 
@@ -995,6 +1015,11 @@ function LandingPageBuilder({ page, onBack }: { page: LandingPageSummary; onBack
             />
             <p className="text-xs text-muted-foreground mt-1">{metaDescription.length}/160 characters</p>
           </Field>
+          <GoogleSearchPreview
+            title={metaTitle || page.title}
+            description={metaDescription}
+            url={`${typeof window !== "undefined" ? window.location.hostname : "yourstore.com"}/p/${page.slug}`}
+          />
         </div>
       )}
 

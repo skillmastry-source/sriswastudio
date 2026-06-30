@@ -127,3 +127,126 @@ describe("Landing page draft visibility", () => {
     expect(draft!.isPublished).toBe(false);
   });
 });
+
+// ── Helper: compute nav position map the same way MyPagesList does ──────────
+function computeNavPositions(
+  pages: { id: number; isInNav: boolean; sortOrder: number }[],
+): Map<number, number> {
+  const sorted = [...pages].sort((a, b) => a.sortOrder - b.sortOrder);
+  const map = new Map<number, number>();
+  let counter = 0;
+  for (const p of sorted) {
+    if (p.isInNav) {
+      counter += 1;
+      map.set(p.id, counter);
+    }
+  }
+  return map;
+}
+
+describe("Nav position renumbering after unpublish", () => {
+  let app: ReturnType<typeof buildApp>;
+  const createdIds: number[] = [];
+  const ts = Date.now();
+
+  beforeEach(async () => {
+    mockRequireAdmin.mockImplementation((_req, _res, next) => next());
+    app = buildApp();
+  });
+
+  afterEach(async () => {
+    for (const id of createdIds) {
+      await db.delete(landingPagesTable).where(eq(landingPagesTable.id, id));
+    }
+    createdIds.length = 0;
+    vi.clearAllMocks();
+  });
+
+  it("unpublishing a nav page clears isInNav in the server response", async () => {
+    const [page] = await db
+      .insert(landingPagesTable)
+      .values({ title: "Nav Page", slug: `nav-unp-single-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 0 })
+      .returning();
+    createdIds.push(page.id);
+
+    const res = await request(app)
+      .patch(`/api/admin/landing-pages/${page.id}`)
+      .send({ isPublished: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.isPublished).toBe(false);
+    expect(res.body.isInNav).toBe(false);
+  });
+
+  it("GET /landing-pages reflects isInNav=false for an unpublished page", async () => {
+    const [page] = await db
+      .insert(landingPagesTable)
+      .values({ title: "Nav Page 2", slug: `nav-unp-list-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 0 })
+      .returning();
+    createdIds.push(page.id);
+
+    await request(app)
+      .patch(`/api/admin/landing-pages/${page.id}`)
+      .send({ isPublished: false });
+
+    const listRes = await request(app).get("/api/landing-pages");
+    expect(listRes.status).toBe(200);
+    const entry = (listRes.body as { id: number; isInNav: boolean }[]).find((p) => p.id === page.id);
+    expect(entry).toBeDefined();
+    expect(entry!.isInNav).toBe(false);
+  });
+
+  it("remaining nav pages renumber with no gaps after the middle page is unpublished", async () => {
+    const rows = await db
+      .insert(landingPagesTable)
+      .values([
+        { title: "Nav A", slug: `nav-pos-a-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 0 },
+        { title: "Nav B", slug: `nav-pos-b-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 1 },
+        { title: "Nav C", slug: `nav-pos-c-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 2 },
+      ])
+      .returning();
+    for (const r of rows) createdIds.push(r.id);
+    const [pageA, pageB, pageC] = rows;
+
+    const listBefore = await request(app).get("/api/landing-pages");
+    const beforeAll = (listBefore.body as { id: number; isInNav: boolean; sortOrder: number }[])
+      .filter((p) => createdIds.includes(p.id));
+    const posBefore = computeNavPositions(beforeAll);
+    expect(posBefore.get(pageA.id)).toBe(1);
+    expect(posBefore.get(pageB.id)).toBe(2);
+    expect(posBefore.get(pageC.id)).toBe(3);
+
+    await request(app)
+      .patch(`/api/admin/landing-pages/${pageB.id}`)
+      .send({ isPublished: false });
+
+    const listAfter = await request(app).get("/api/landing-pages");
+    const afterAll = (listAfter.body as { id: number; isInNav: boolean; sortOrder: number }[])
+      .filter((p) => createdIds.includes(p.id));
+    const posAfter = computeNavPositions(afterAll);
+
+    expect(posAfter.get(pageB.id)).toBeUndefined();
+    expect(posAfter.get(pageA.id)).toBe(1);
+    expect(posAfter.get(pageC.id)).toBe(2);
+
+    const positions = [...posAfter.values()].sort((a, b) => a - b);
+    expect(positions).toEqual([1, 2]);
+  });
+
+  it("GET /landing-pages/nav does not include the unpublished page", async () => {
+    const [page] = await db
+      .insert(landingPagesTable)
+      .values({ title: "Nav D", slug: `nav-pos-d-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 0 })
+      .returning();
+    createdIds.push(page.id);
+
+    await request(app)
+      .patch(`/api/admin/landing-pages/${page.id}`)
+      .send({ isPublished: false });
+
+    const navRes = await request(app).get("/api/landing-pages/nav");
+    expect(navRes.status).toBe(200);
+    const navIds = (navRes.body as { id: number }[]).map((p) => p.id);
+    expect(navIds).not.toContain(page.id);
+  });
+});

@@ -171,6 +171,7 @@ router.patch("/admin/landing-pages/:id", requireAdmin, async (req, res) => {
     if (sections !== undefined) updates.sections = sections;
     if (isPublished !== undefined) updates.isPublished = isPublished;
     if (isInNav !== undefined) updates.isInNav = isInNav;
+    if (isPublished === false) updates.isInNav = false;
     if (sortOrder !== undefined) updates.sortOrder = sortOrder;
     if (metaTitle !== undefined) updates.metaTitle = metaTitle ?? null;
     if (metaDescription !== undefined) updates.metaDescription = metaDescription ?? null;

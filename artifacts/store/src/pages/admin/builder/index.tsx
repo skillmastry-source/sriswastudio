@@ -1080,11 +1080,13 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p
 // ── Sortable page row ────────────────────────────────────────────────────────
 function SortablePageRow({
   page,
+  navPosition,
   onSelect,
   onDelete,
   isDragOverlay,
 }: {
   page: LandingPageSummary;
+  navPosition?: number;
   onSelect: () => void;
   onDelete: () => void;
   isDragOverlay?: boolean;
@@ -1129,8 +1131,13 @@ function SortablePageRow({
             {page.isPublished ? "Published" : "Draft"}
           </span>
           {page.isInNav && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 bg-pink-100 text-pink-700">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 bg-pink-100 text-pink-700 flex items-center gap-1">
               In Nav
+              {navPosition !== undefined && (
+                <span className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full bg-pink-600 text-white text-[9px] font-bold leading-none">
+                  {navPosition}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -1208,6 +1215,15 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
 
   const activePageDrag = activeDragId !== null ? pages.find((p) => p.id === activeDragId) ?? null : null;
 
+  const navPositionMap = new Map<number, number>();
+  let navCounter = 0;
+  for (const p of pages) {
+    if (p.isInNav) {
+      navCounter += 1;
+      navPositionMap.set(p.id, navCounter);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
@@ -1250,6 +1266,7 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
                 <SortablePageRow
                   key={page.id}
                   page={page}
+                  navPosition={navPositionMap.get(page.id)}
                   onSelect={() => onSelect(page)}
                   onDelete={() => setConfirmDelete(page.id)}
                 />
@@ -1260,6 +1277,7 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
             {activePageDrag && (
               <SortablePageRow
                 page={activePageDrag}
+                navPosition={navPositionMap.get(activePageDrag.id)}
                 onSelect={() => {}}
                 onDelete={() => {}}
                 isDragOverlay

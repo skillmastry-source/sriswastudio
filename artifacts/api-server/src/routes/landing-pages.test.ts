@@ -3,11 +3,11 @@ import type { RequestHandler } from "express";
 
 // vi.mock is hoisted — this runs before any real module imports.
 // We proxy through a vi.fn() so each test can swap behaviour.
-const mockRequireAdmin = vi.fn<Parameters<RequestHandler>>();
+const mockRequireAdmin = vi.fn<RequestHandler>();
 
 vi.mock("../middlewares/requireAdmin.js", () => ({
   requireAdmin: (...args: Parameters<RequestHandler>) =>
-    mockRequireAdmin(...(args as Parameters<RequestHandler>)),
+    mockRequireAdmin(...args),
 }));
 
 import request from "supertest";

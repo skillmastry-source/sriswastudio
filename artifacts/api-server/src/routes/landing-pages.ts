@@ -74,7 +74,7 @@ router.get("/landing-pages/:slug", async (req, res) => {
     const [page] = await db
       .select()
       .from(landingPagesTable)
-      .where(eq(landingPagesTable.slug, req.params.slug));
+      .where(eq(landingPagesTable.slug, req.params.slug as string));
     if (!page) return res.status(404).json({ error: "Page not found" });
     if (!page.isPublished) return res.status(404).json({ error: "Page not found" });
     return res.json(page);
@@ -106,7 +106,7 @@ router.get("/admin/landing-pages/slug/:slug", requireAdmin, async (req, res) => 
     const [page] = await db
       .select()
       .from(landingPagesTable)
-      .where(eq(landingPagesTable.slug, req.params.slug));
+      .where(eq(landingPagesTable.slug, req.params.slug as string));
     if (!page) return res.status(404).json({ error: "Page not found" });
     return res.json(page);
   } catch (e) {

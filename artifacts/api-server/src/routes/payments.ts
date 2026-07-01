@@ -25,7 +25,7 @@ function getRazorpay() {
 router.get("/payments/razorpay/key", (_req, res) => {
   const key = process.env.RAZORPAY_KEY_ID;
   if (!key) return res.status(503).json({ error: "Razorpay not configured" });
-  res.json({ key });
+  return res.json({ key });
 });
 
 // Create Razorpay order
@@ -42,10 +42,10 @@ router.post("/payments/razorpay/create-order", async (req, res) => {
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
     });
-    res.json(order);
+    return res.json(order);
   } catch (err) {
     console.error("[Razorpay] create-order error:", err);
-    res.status(500).json({ error: "Could not create Razorpay order" });
+    return res.status(500).json({ error: "Could not create Razorpay order" });
   }
 });
 
@@ -62,13 +62,13 @@ router.post("/payments/razorpay/verify", (req, res) => {
     const expected = crypto.createHmac("sha256", secret).update(sign).digest("hex");
 
     if (expected === razorpay_signature) {
-      res.json({ verified: true, paymentId: razorpay_payment_id });
+      return res.json({ verified: true, paymentId: razorpay_payment_id });
     } else {
-      res.status(400).json({ verified: false, error: "Invalid signature" });
+      return res.status(400).json({ verified: false, error: "Invalid signature" });
     }
   } catch (err) {
     console.error("[Razorpay] verify error:", err);
-    res.status(500).json({ error: "Verification failed" });
+    return res.status(500).json({ error: "Verification failed" });
   }
 });
 
@@ -128,10 +128,10 @@ router.post("/payments/phonepe/initiate", async (req, res) => {
     }
 
     const redirectInfo = data.data?.instrumentResponse?.redirectInfo;
-    res.json({ redirectUrl: redirectInfo?.url, transactionId });
+    return res.json({ redirectUrl: redirectInfo?.url, transactionId });
   } catch (err) {
     console.error("[PhonePe] initiate error:", err);
-    res.status(500).json({ error: "Could not initiate PhonePe payment" });
+    return res.status(500).json({ error: "Could not initiate PhonePe payment" });
   }
 });
 
@@ -160,10 +160,10 @@ router.get("/payments/phonepe/status/:transactionId", async (req, res) => {
     });
 
     const data = await response.json();
-    res.json(data);
+    return res.json(data);
   } catch (err) {
     console.error("[PhonePe] status error:", err);
-    res.status(500).json({ error: "Status check failed" });
+    return res.status(500).json({ error: "Status check failed" });
   }
 });
 

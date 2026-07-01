@@ -250,3 +250,111 @@ describe("Nav position renumbering after unpublish", () => {
     expect(navIds).not.toContain(page.id);
   });
 });
+
+describe("Nav reorder endpoint", () => {
+  let app: ReturnType<typeof buildApp>;
+  const createdIds: number[] = [];
+  const ts = Date.now();
+
+  beforeEach(async () => {
+    mockRequireAdmin.mockImplementation((_req, _res, next) => next());
+    app = buildApp();
+  });
+
+  afterEach(async () => {
+    for (const id of createdIds) {
+      await db.delete(landingPagesTable).where(eq(landingPagesTable.id, id));
+    }
+    createdIds.length = 0;
+    vi.restoreAllMocks();
+  });
+
+  it("happy path — all sortOrder values are updated to the requested positions", async () => {
+    const rows = await db
+      .insert(landingPagesTable)
+      .values([
+        { title: "Reorder A", slug: `reorder-a-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 0 },
+        { title: "Reorder B", slug: `reorder-b-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 1 },
+        { title: "Reorder C", slug: `reorder-c-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 2 },
+      ])
+      .returning();
+    for (const r of rows) createdIds.push(r.id);
+    const [pageA, pageB, pageC] = rows;
+
+    // Reverse the order: A→2, B→0, C→1
+    const res = await request(app)
+      .patch("/api/admin/landing-pages/reorder")
+      .send([
+        { id: pageA.id, sortOrder: 2 },
+        { id: pageB.id, sortOrder: 0 },
+        { id: pageC.id, sortOrder: 1 },
+      ]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+
+    // Verify each row was actually updated in the DB.
+    const [updatedA] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageA.id));
+    const [updatedB] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageB.id));
+    const [updatedC] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageC.id));
+
+    expect(updatedA.sortOrder).toBe(2);
+    expect(updatedB.sortOrder).toBe(0);
+    expect(updatedC.sortOrder).toBe(1);
+  });
+
+  it("failure path — a mid-transaction error rolls back all position changes", async () => {
+    const rows = await db
+      .insert(landingPagesTable)
+      .values([
+        { title: "Rollback A", slug: `rollback-a-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 10 },
+        { title: "Rollback B", slug: `rollback-b-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 11 },
+        { title: "Rollback C", slug: `rollback-c-${ts}`, sections: [], isPublished: true, isInNav: true, sortOrder: 12 },
+      ])
+      .returning();
+    for (const r of rows) createdIds.push(r.id);
+    const [pageA, pageB, pageC] = rows;
+
+    // Capture the real db.transaction before replacing it so the spy can call
+    // into a genuine PostgreSQL transaction rather than a no-op mock.
+    const realTransaction = db.transaction.bind(db);
+
+    // Replace db.transaction for this one call with a function that:
+    //   1. Opens a REAL PostgreSQL transaction via realTransaction()
+    //   2. Executes the first UPDATE (pageA → 99) inside that transaction
+    //   3. Throws before the remaining updates run
+    // Because it is a real transaction, PostgreSQL rolls back the pageA update
+    // when the error propagates — proving the atomic rollback guarantee.
+    vi.spyOn(db, "transaction").mockImplementationOnce(async (_callback: unknown) => {
+      return realTransaction(async (tx) => {
+        await tx
+          .update(landingPagesTable)
+          .set({ sortOrder: 99 })
+          .where(eq(landingPagesTable.id, pageA.id));
+        // Simulate a constraint violation on the second item — rolls back everything
+        throw new Error("simulated DB constraint violation mid-transaction");
+      });
+    });
+
+    const res = await request(app)
+      .patch("/api/admin/landing-pages/reorder")
+      .send([
+        { id: pageA.id, sortOrder: 99 },
+        { id: pageB.id, sortOrder: 100 },
+        { id: pageC.id, sortOrder: 101 },
+      ]);
+
+    // The endpoint must surface the failure as a 500.
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBeDefined();
+
+    // All original sortOrder values must be unchanged — the transaction was rolled back.
+    const [readA] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageA.id));
+    const [readB] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageB.id));
+    const [readC] = await db.select({ sortOrder: landingPagesTable.sortOrder }).from(landingPagesTable).where(eq(landingPagesTable.id, pageC.id));
+
+    expect(readA.sortOrder).toBe(10);
+    expect(readB.sortOrder).toBe(11);
+    expect(readC.sortOrder).toBe(12);
+  });
+});

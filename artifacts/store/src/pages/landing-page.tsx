@@ -11,23 +11,31 @@ import NotFound from "@/pages/not-found";
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function setMetaTag(name: string, content: string) {
-  let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute("name", name);
-    document.head.appendChild(el);
+  const el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (!content) {
+    el?.remove();
+    return;
   }
-  el.setAttribute("content", content);
+  const tag = el ?? document.createElement("meta");
+  if (!el) {
+    tag.setAttribute("name", name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", content);
 }
 
 function setOgTag(property: string, content: string) {
-  let el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute("property", property);
-    document.head.appendChild(el);
+  const el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!content) {
+    el?.remove();
+    return;
   }
-  el.setAttribute("content", content);
+  const tag = el ?? document.createElement("meta");
+  if (!el) {
+    tag.setAttribute("property", property);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", content);
 }
 
 export default function LandingPage() {
@@ -72,15 +80,14 @@ export default function LandingPage() {
     document.title = title;
     setOgTag("og:title", title);
 
-    if (description) {
-      setMetaTag("description", description);
-      setOgTag("og:description", description);
-    }
+    setMetaTag("description", description);
+    setOgTag("og:description", description);
 
     return () => {
       document.title = settings.storeName || "Sriswa Studio";
       setOgTag("og:title", "");
       setOgTag("og:description", "");
+      setMetaTag("description", "");
     };
   }, [page, settings.storeName]);
 

@@ -830,7 +830,7 @@ function HomepageBuilder() {
 }
 
 // ── Landing page builder ────────────────────────────────────────────────────
-function LandingPageBuilder({ page, onBack, navPosition }: { page: LandingPageSummary; onBack: () => void; navPosition?: number }) {
+function LandingPageBuilder({ page, onBack, allPages }: { page: LandingPageSummary; onBack: () => void; allPages: LandingPageSummary[] }) {
   const { toast } = useToast();
   const update = useUpdateLandingPage();
 
@@ -853,6 +853,21 @@ function LandingPageBuilder({ page, onBack, navPosition }: { page: LandingPageSu
   const [addingSection, setAddingSection] = useState(false);
   const [isPublished, setIsPublished] = useState(page.isPublished);
   const [isInNav, setIsInNav] = useState(page.isInNav ?? false);
+
+  const navPosition = (() => {
+    if (!isInNav) return undefined;
+    const sorted = [...allPages].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+    let counter = 0;
+    for (const p of sorted) {
+      const inNav = p.id === page.id ? isInNav : p.isInNav;
+      if (inNav) {
+        counter += 1;
+        if (p.id === page.id) return counter;
+      }
+    }
+    return undefined;
+  })();
+
   const [metaTitle, setMetaTitle] = useState(page.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(page.metaDescription ?? "");
   const [showSeo, setShowSeo] = useState(false);
@@ -1368,18 +1383,6 @@ export default function AdminBuilder() {
     setEditingPage(null);
   };
 
-  const editingNavPosition = (() => {
-    if (!editingPage) return undefined;
-    const sorted = [...allPages].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
-    let counter = 0;
-    for (const p of sorted) {
-      if (p.isInNav) {
-        counter += 1;
-        if (p.id === editingPage.id) return counter;
-      }
-    }
-    return undefined;
-  })();
 
   return (
     <div className="flex flex-col h-full">
@@ -1423,7 +1426,7 @@ export default function AdminBuilder() {
           <MyPagesList onSelect={handleSelectPage} />
         )}
         {editingPage && (
-          <LandingPageBuilder page={editingPage} onBack={handleBackToList} navPosition={editingNavPosition} />
+          <LandingPageBuilder page={editingPage} onBack={handleBackToList} allPages={allPages} />
         )}
       </div>
     </div>

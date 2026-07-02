@@ -79,6 +79,16 @@ export function useUpdateLandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }),
+    onMutate: (vars) => {
+      const { id, sections: _sections, ...patch } = vars;
+      if (Object.keys(patch).length === 0) return;
+      qc.setQueryData<LandingPageSummary[]>(["landing-pages"], (prev) => {
+        if (!prev) return prev;
+        return prev.map((p) =>
+          p.id === id ? { ...p, ...patch } : p
+        );
+      });
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["landing-pages"] });
       qc.invalidateQueries({ queryKey: ["landing-page", vars.id] });

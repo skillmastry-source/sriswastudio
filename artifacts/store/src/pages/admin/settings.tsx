@@ -132,27 +132,22 @@ export default function AdminSettings() {
   };
 
   async function handleQrUpload(file: File) {
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Image too large. Please use an image under 2 MB.", variant: "destructive" });
+      return;
+    }
     setUploadingQr(true);
     try {
-      const urlRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await urlRes.json();
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error("Failed to upload file");
-      const rawPath = objectPath.replace(/^\/objects\//, "");
-      const publicUrl = `${BASE}/api/storage/product-images/${rawPath}`;
-      setValue("upiQrUrl", publicUrl, { shouldDirty: true });
-      toast({ title: "QR image uploaded successfully" });
+      setValue("upiQrUrl", dataUrl, { shouldDirty: true });
+      toast({ title: "QR image ready — click Save Settings to apply" });
     } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
+      toast({ title: "Could not read image file", variant: "destructive" });
     } finally {
       setUploadingQr(false);
     }

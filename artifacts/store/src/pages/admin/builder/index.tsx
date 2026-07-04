@@ -17,26 +17,9 @@ import {
   Eye, EyeOff, Trash2, Plus, ExternalLink,
   LayoutTemplate, Megaphone, Image as ImageIcon, Grid3X3, Users,
   AlignLeft, MessageSquare, Code, Sparkles, X, Star,
-  Home, FileText, Globe, GlobeLock, PencilLine, ChevronLeft, GripVertical,
+  Home, FileText, Globe, GlobeLock, PencilLine, ChevronLeft,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 const BRAND = "#9B0F5F";
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -444,63 +427,61 @@ function SectionEditor({
   }
 }
 
-// ── Sortable section card ──────────────────────────────────────────────────
-function SortableSectionCard({
+// ── Section card with up/down arrow reordering ────────────────────────────
+function SectionCard({
   section,
   isSelected,
   onSelect,
   onToggleVisible,
   onDelete,
-  isDragOverlay,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   section: HomepageSection;
   isSelected: boolean;
   onSelect: () => void;
   onToggleVisible: () => void;
   onDelete: () => void;
-  isDragOverlay?: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: section.id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-    zIndex: isDragging ? 0 : undefined,
-  };
-
   return (
     <div
-      ref={isDragOverlay ? undefined : setNodeRef}
-      style={isDragOverlay ? undefined : style}
       className={`border rounded-lg p-3 transition-colors cursor-pointer ${
-        isDragOverlay
-          ? "border-[#9B0F5F] bg-pink-50/80 shadow-lg rotate-1"
-          : isSelected
+        isSelected
           ? "border-[#9B0F5F] bg-pink-50/50"
           : "border-gray-200 bg-white hover:border-gray-300"
-      } ${!section.isVisible && !isDragOverlay ? "opacity-50" : ""}`}
+      } ${!section.isVisible ? "opacity-50" : ""}`}
       onClick={onSelect}
     >
       <div className="flex items-center gap-2">
-        {/* Drag handle */}
-        <button
-          type="button"
-          {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
-          className="p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
-          onClick={(e) => e.stopPropagation()}
-          title="Drag to reorder"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+        {/* Up/Down reorder arrows */}
+        <div className="flex flex-col gap-0 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            disabled={!canMoveUp}
+            onClick={onMoveUp}
+            className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+            title="Move up"
+            aria-label="Move section up"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            disabled={!canMoveDown}
+            onClick={onMoveDown}
+            className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+            title="Move down"
+            aria-label="Move section down"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <SectionIcon type={section.type} />
         <span className="text-sm font-medium flex-1 truncate">
           <SectionLabel type={section.type} />
@@ -547,25 +528,16 @@ function SectionsEditor({
   setAddingSection: (v: boolean) => void;
 }) {
   const selectedSection = sections.find((s) => s.id === selectedId) ?? null;
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveDragId(null);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const moveSection = (id: string, direction: "up" | "down") => {
     setSections((prev) => {
-      const oldIndex = prev.findIndex((s) => s.id === active.id);
-      const newIndex = prev.findIndex((s) => s.id === over.id);
-      return arrayMove(prev, oldIndex, newIndex).map((s, i) => ({ ...s, order: i }));
+      const idx = prev.findIndex((s) => s.id === id);
+      if (direction === "up" && idx === 0) return prev;
+      if (direction === "down" && idx === prev.length - 1) return prev;
+      const next = [...prev];
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next.map((s, i) => ({ ...s, order: i }));
     });
   };
 
@@ -595,8 +567,6 @@ function SectionsEditor({
     setSections((prev) => prev.map((s) => s.id === id ? { ...s, config } : s));
   };
 
-  const activeSection = activeDragId ? sections.find((s) => s.id === activeDragId) ?? null : null;
-
   return (
     <div className="flex gap-6 flex-1 min-h-0">
       {/* Left: section list */}
@@ -605,46 +575,29 @@ function SectionsEditor({
           <Plus className="h-4 w-4" /> Add Section
         </Button>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2 overflow-y-auto">
-              {sections.map((section) => (
-                <SortableSectionCard
-                  key={section.id}
-                  section={section}
-                  isSelected={selectedId === section.id}
-                  onSelect={() => setSelectedId(selectedId === section.id ? null : section.id)}
-                  onToggleVisible={() => toggleVisible(section.id)}
-                  onDelete={() => deleteSection(section.id)}
-                />
-              ))}
+        <div className="space-y-2 overflow-y-auto">
+          {sections.map((section, idx) => (
+            <SectionCard
+              key={section.id}
+              section={section}
+              isSelected={selectedId === section.id}
+              onSelect={() => setSelectedId(selectedId === section.id ? null : section.id)}
+              onToggleVisible={() => toggleVisible(section.id)}
+              onDelete={() => deleteSection(section.id)}
+              onMoveUp={() => moveSection(section.id, "up")}
+              onMoveDown={() => moveSection(section.id, "down")}
+              canMoveUp={idx > 0}
+              canMoveDown={idx < sections.length - 1}
+            />
+          ))}
 
-              {sections.length === 0 && (
-                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-                  <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
-                </div>
-              )}
+          {sections.length === 0 && (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+              <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No sections yet. Click "Add Section" to get started.</p>
             </div>
-          </SortableContext>
-          <DragOverlay>
-            {activeSection && (
-              <SortableSectionCard
-                section={activeSection}
-                isSelected={false}
-                onSelect={() => {}}
-                onToggleVisible={() => {}}
-                onDelete={() => {}}
-                isDragOverlay
-              />
-            )}
-          </DragOverlay>
-        </DndContext>
+          )}
+        </div>
       </div>
 
       {/* Right: section editor */}
@@ -1122,53 +1075,50 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p
   );
 }
 
-// ── Sortable page row ────────────────────────────────────────────────────────
-function SortablePageRow({
+// ── Page row with up/down arrow reordering ───────────────────────────────────
+function PageRow({
   page,
   navPosition,
   onSelect,
   onDelete,
-  isDragOverlay,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   page: LandingPageSummary;
   navPosition?: number;
   onSelect: () => void;
   onDelete: () => void;
-  isDragOverlay?: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: page.id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-  };
-
   return (
-    <div
-      ref={isDragOverlay ? undefined : setNodeRef}
-      style={isDragOverlay ? undefined : style}
-      className={`border rounded-lg p-4 bg-white transition-all flex items-center gap-3 ${
-        isDragOverlay ? "border-[#9B0F5F] shadow-lg rotate-1 bg-pink-50/80" : "hover:border-gray-300"
-      }`}
-    >
-      <button
-        type="button"
-        {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
-        className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
-        onClick={(e) => e.stopPropagation()}
-        title="Drag to reorder"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+    <div className="border rounded-lg p-4 bg-white transition-all flex items-center gap-3 hover:border-gray-300">
+      <div className="flex flex-col gap-0 flex-shrink-0">
+        <button
+          type="button"
+          disabled={!canMoveUp}
+          onClick={onMoveUp}
+          className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+          title="Move up"
+          aria-label="Move page up"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={!canMoveDown}
+          onClick={onMoveDown}
+          className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+          title="Move down"
+          aria-label="Move page down"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onSelect}>
         <div className="flex items-center gap-2">
           <p className="font-medium text-sm truncate">{page.title}</p>
@@ -1220,34 +1170,23 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [pages, setPages] = useState<LandingPageSummary[]>([]);
-  const [activeDragId, setActiveDragId] = useState<number | null>(null);
-
   useEffect(() => {
     setPages([...rawPages].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title)));
   }, [rawPages]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id as number);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveDragId(null);
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const movePage = (id: number, direction: "up" | "down") => {
     setPages((prev) => {
-      const oldIndex = prev.findIndex((p) => p.id === active.id);
-      const newIndex = prev.findIndex((p) => p.id === over.id);
-      const reordered = arrayMove(prev, oldIndex, newIndex);
-      const items = reordered.map((p, i) => ({ id: p.id, sortOrder: i }));
-      reorder.mutate(items, {
+      const idx = prev.findIndex((p) => p.id === id);
+      if (direction === "up" && idx === 0) return prev;
+      if (direction === "down" && idx === prev.length - 1) return prev;
+      const next = [...prev];
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      const reordered = next.map((p, i) => ({ ...p, sortOrder: i }));
+      reorder.mutate(reordered.map((p) => ({ id: p.id, sortOrder: p.sortOrder })), {
         onError: () => toast({ title: "Failed to save order", variant: "destructive" }),
       });
-      return reordered.map((p, i) => ({ ...p, sortOrder: i }));
+      return reordered;
     });
   };
 
@@ -1257,8 +1196,6 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
       onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
     });
   };
-
-  const activePageDrag = activeDragId !== null ? pages.find((p) => p.id === activeDragId) ?? null : null;
 
   const navPositionMap = new Map<number, number>();
   let navCounter = 0;
@@ -1276,7 +1213,7 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
           <h2 className="font-semibold text-base flex items-center gap-2">
             <FileText className="h-4 w-4 text-[#9B0F5F]" /> Landing Pages
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Create pages with rich sections — drag to set the nav order</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Create pages with rich sections — use arrows to set the nav order</p>
         </div>
         <Button onClick={() => setCreating(true)} size="sm" style={{ background: BRAND }} className="text-white hover:opacity-90 gap-1.5">
           <Plus className="h-3.5 w-3.5" /> New Page
@@ -1299,43 +1236,26 @@ function MyPagesList({ onSelect }: { onSelect: (page: LandingPageSummary) => voi
           </Button>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={pages.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {pages.map((page) => (
-                <SortablePageRow
-                  key={page.id}
-                  page={page}
-                  navPosition={navPositionMap.get(page.id)}
-                  onSelect={() => onSelect(page)}
-                  onDelete={() => setConfirmDelete(page.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-          <DragOverlay>
-            {activePageDrag && (
-              <SortablePageRow
-                page={activePageDrag}
-                navPosition={navPositionMap.get(activePageDrag.id)}
-                onSelect={() => {}}
-                onDelete={() => {}}
-                isDragOverlay
-              />
-            )}
-          </DragOverlay>
-        </DndContext>
+        <div className="space-y-2">
+          {pages.map((page, idx) => (
+            <PageRow
+              key={page.id}
+              page={page}
+              navPosition={navPositionMap.get(page.id)}
+              onSelect={() => onSelect(page)}
+              onDelete={() => setConfirmDelete(page.id)}
+              onMoveUp={() => movePage(page.id, "up")}
+              onMoveDown={() => movePage(page.id, "down")}
+              canMoveUp={idx > 0}
+              canMoveDown={idx < pages.length - 1}
+            />
+          ))}
+        </div>
       )}
 
       {pages.length > 1 && (
         <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
-          <GripVertical className="h-3.5 w-3.5 opacity-50" />
-          Drag pages to control the order they appear in the navigation
+          Use the arrows to control the order pages appear in the navigation
         </p>
       )}
 

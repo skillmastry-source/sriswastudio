@@ -137,10 +137,27 @@ function HeroSection({ config, colors }: { config: Record<string, unknown>; colo
   const subtitle = (config.subtitle as string | undefined) ?? "Anti-tarnish · Waterproof · Skin-friendly";
   const shopButtonText = (config.shopButtonText as string | undefined) ?? "Shop Now";
   const imageUrl = (config.imageUrl as string | undefined) ?? "/brand/hero-banner.png";
+  const [imgFailed, setImgFailed] = useState(false);
 
   return (
     <section className="relative w-full overflow-hidden" style={{ height: "58vh", minHeight: 340, maxHeight: 560 }}>
-      <img src={imageUrl} alt="Hero" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "right center" }} />
+      {imgFailed ? (
+        <div className="absolute inset-0" style={{
+          background: `radial-gradient(ellipse at 70% 50%, ${brand}55 0%, ${dark} 60%)`,
+        }}>
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10">
+            <Gem className="h-64 w-64 text-white" />
+          </div>
+        </div>
+      ) : (
+        <img
+          src={imageUrl}
+          alt="Hero"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: "right center" }}
+          onError={() => setImgFailed(true)}
+        />
+      )}
       <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${dark} 0%, ${dark} 42%, ${dark}55 68%, ${dark}00 100%)` }} />
       <div className="relative h-full flex items-center">
         <div className="container mx-auto px-[30px] md:px-[60px]">
@@ -162,13 +179,23 @@ function HeroSection({ config, colors }: { config: Record<string, unknown>; colo
   );
 }
 
+// ── FALLBACK CATEGORY CARDS (shown when DB has no categories yet) ───────────
+const FALLBACK_CATEGORIES = [
+  { name: "Rings", slug: "rings", icon: Circle, gradient: "linear-gradient(135deg,#9B0F5F 0%,#6b0941 100%)" },
+  { name: "Earrings", slug: "earrings", icon: Gem, gradient: "linear-gradient(135deg,#D4AF37 0%,#a0842a 100%)" },
+  { name: "Bracelets", slug: "bracelets", icon: Layers, gradient: "linear-gradient(135deg,#b5135f 0%,#9B0F5F 100%)" },
+  { name: "Mangalsutra", slug: "mangalsutra", icon: Heart, gradient: "linear-gradient(135deg,#1a0a0f 0%,#3d1a25 100%)" },
+  { name: "Watches", slug: "watches", icon: Clock, gradient: "linear-gradient(135deg,#b08820 0%,#D4AF37 100%)" },
+  { name: "Chain Sets", slug: "chain-sets", icon: Link2, gradient: "linear-gradient(135deg,#6b0941 0%,#9B0F5F 100%)" },
+];
+
 // ── CATEGORY GRID ──────────────────────────────────────────────────────────
 function CategoryGridSection({ config, colors }: { config: Record<string, unknown>; colors: SectionColors }) {
   const { brand, gold, dark } = colors;
   const title = (config.title as string | undefined) ?? "Shop by Category";
   const subtitle = (config.subtitle as string | undefined) ?? "Browse";
 
-  const { data: categoriesData } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
+  const { data: categoriesData, isLoading: catsLoading } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
   const categories = categoriesData ?? [];
 
   const [activeTab, setActiveTab] = useState<string>(() => categories[0]?.slug ?? "");
@@ -178,7 +205,6 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
     return categoriesData.find((c) => c.slug === activeTab)?.id ?? null;
   }, [activeTab, categoriesData]);
 
-  // auto-select first tab once categories load
   useEffect(() => {
     if (!activeTab && categories.length > 0) setActiveTab(categories[0].slug);
   }, [categories.length]);
@@ -189,6 +215,33 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
   );
 
   const { sessionId } = useCartContext();
+
+  // If no categories exist yet, show beautiful fallback category cards
+  if (!catsLoading && categories.length === 0) {
+    return (
+      <section className="py-12 bg-white">
+        <div className="container mx-auto px-[30px]">
+          <div className="text-center mb-8">
+            <p className="text-[10px] tracking-[0.35em] uppercase font-medium mb-1.5" style={{ color: brand }}>{subtitle}</p>
+            <h2 className="font-serif font-bold text-2xl md:text-3xl text-gray-900">{title}</h2>
+            <div className="mt-3 mx-auto h-0.5 w-12" style={{ background: gold }} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {FALLBACK_CATEGORIES.map(({ name, slug, icon: Icon, gradient }) => (
+              <Link key={slug} href={`/shop?category=${slug}`}
+                className="group flex flex-col items-center gap-3 p-5 rounded-sm text-center transition-transform hover:-translate-y-1 hover:shadow-lg"
+                style={{ background: gradient }}>
+                <div className="h-14 w-14 rounded-full flex items-center justify-center bg-white/15">
+                  <Icon className="h-7 w-7 text-white" />
+                </div>
+                <span className="text-white font-bold text-[11px] tracking-[0.18em] uppercase">{name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-10 bg-white">

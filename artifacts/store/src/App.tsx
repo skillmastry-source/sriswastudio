@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { CartProvider } from "@/hooks/use-cart-context";
 import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
-import { publishableKeyFromHost } from "@clerk/react/internal";
 import { useEffect } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
@@ -54,10 +53,7 @@ import LandingPage from "@/pages/landing-page";
 
 const queryClient = new QueryClient();
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 

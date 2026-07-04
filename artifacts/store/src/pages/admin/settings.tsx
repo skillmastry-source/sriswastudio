@@ -6,10 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck, QrCode } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck, QrCode, Upload, Loader2 } from "lucide-react";
 
 interface SettingsForm {
   storeName: string;
@@ -97,7 +97,10 @@ export default function AdminSettings() {
 
   const updateSettings = useUpdateSettings();
 
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<SettingsForm>({
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const qrFileRef = useRef<HTMLInputElement>(null);
+
+  const { register, handleSubmit, reset, setValue, watch, formState: { isDirty } } = useForm<SettingsForm>({
     defaultValues: {
       storeName: "", adminWhatsapp: "", newOrderTemplate: "", statusUpdateTemplate: "",
       upiId: "", upiQrUrl: "",
@@ -127,6 +130,33 @@ export default function AdminSettings() {
       onError: () => toast({ title: "Failed to save settings", variant: "destructive" }),
     });
   };
+
+  async function handleQrUpload(file: File) {
+    setUploadingQr(true);
+    try {
+      const urlRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload file");
+      const rawPath = objectPath.replace(/^\/objects\//, "");
+      const publicUrl = `${BASE}/api/storage/product-images/${rawPath}`;
+      setValue("upiQrUrl", publicUrl, { shouldDirty: true });
+      toast({ title: "QR image uploaded successfully" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingQr(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -219,11 +249,35 @@ export default function AdminSettings() {
               <p className="text-xs text-muted-foreground mt-1">e.g. sriswastudio@ybl — find this in your bank app or PhonePe/GPay settings</p>
             </div>
             <div>
-              <Label>QR Code Image URL</Label>
-              <Input {...register("upiQrUrl")} placeholder="https://..." className="mt-1" />
+              <Label>QR Code Image</Label>
+              <input
+                ref={qrFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleQrUpload(f); e.target.value = ""; }}
+              />
+              <div className="flex gap-2 mt-1">
+                <Input {...register("upiQrUrl")} placeholder="https://..." className="flex-1" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploadingQr}
+                  onClick={() => qrFileRef.current?.click()}
+                  className="shrink-0"
+                >
+                  {uploadingQr ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="ml-1">{uploadingQr ? "Uploading…" : "Upload"}</span>
+                </Button>
+              </div>
+              {watch("upiQrUrl") && (
+                <div className="mt-2 border rounded-lg p-2 inline-block bg-white">
+                  <img src={watch("upiQrUrl")} alt="UPI QR" className="h-32 w-32 object-contain" />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
-                Upload your UPI QR image to Google Drive, WhatsApp, or any image host and paste the direct link here.
-                In Google Drive: right-click image → Share → Copy link, then change <code>?usp=sharing</code> to <code>?export=view</code>.
+                Click <strong>Upload</strong> to pick your QR image from your phone or computer — no URL needed.
               </p>
             </div>
             <p className="text-xs text-muted-foreground border-t pt-3">

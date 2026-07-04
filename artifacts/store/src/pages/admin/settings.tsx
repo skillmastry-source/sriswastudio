@@ -9,13 +9,15 @@ import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck, QrCode } from "lucide-react";
 
 interface SettingsForm {
   storeName: string;
   adminWhatsapp: string;
   newOrderTemplate: string;
   statusUpdateTemplate: string;
+  upiId: string;
+  upiQrUrl: string;
 }
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -98,6 +100,7 @@ export default function AdminSettings() {
   const { register, handleSubmit, reset, formState: { isDirty } } = useForm<SettingsForm>({
     defaultValues: {
       storeName: "", adminWhatsapp: "", newOrderTemplate: "", statusUpdateTemplate: "",
+      upiId: "", upiQrUrl: "",
     },
   });
 
@@ -108,6 +111,8 @@ export default function AdminSettings() {
         adminWhatsapp: settings.adminWhatsapp ?? "",
         newOrderTemplate: settings.newOrderTemplate ?? "",
         statusUpdateTemplate: settings.statusUpdateTemplate ?? "",
+        upiId: (settings as unknown as Record<string, string>).upiId ?? "",
+        upiQrUrl: (settings as unknown as Record<string, string>).upiQrUrl ?? "",
       });
     }
   }, [settings, reset]);
@@ -194,6 +199,36 @@ export default function AdminSettings() {
                 Variables: <code>{"{{customerName}}"}</code>, <code>{"{{orderNumber}}"}</code>, <code>{"{{status}}"}</code>
               </p>
             </div>
+          </CardContent>
+        </Card>
+        {/* UPI QR Payment */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" style={{ color: BRAND }} />
+              UPI / QR Code Payment
+            </CardTitle>
+            <CardDescription>
+              Accept direct UPI transfers. Customers will scan your QR code, pay, and enter their UTR number at checkout.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Your UPI ID</Label>
+              <Input {...register("upiId")} placeholder="yourname@ybl or yourname@okaxis" className="mt-1 font-mono" />
+              <p className="text-xs text-muted-foreground mt-1">e.g. sriswastudio@ybl — find this in your bank app or PhonePe/GPay settings</p>
+            </div>
+            <div>
+              <Label>QR Code Image URL</Label>
+              <Input {...register("upiQrUrl")} placeholder="https://..." className="mt-1" />
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload your UPI QR image to Google Drive, WhatsApp, or any image host and paste the direct link here.
+                In Google Drive: right-click image → Share → Copy link, then change <code>?usp=sharing</code> to <code>?export=view</code>.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground border-t pt-3">
+              When UPI ID is set, the "UPI / Scanner" option appears first at checkout. Orders paid by UPI will show the customer's UTR number for you to verify in the orders list.
+            </p>
           </CardContent>
         </Card>
       </form>

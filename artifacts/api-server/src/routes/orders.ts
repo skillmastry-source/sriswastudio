@@ -36,11 +36,11 @@ router.post("/orders", async (req, res) => {
   const {
     sessionId, customerName, customerPhone, customerEmail,
     shippingAddress, city, state, pincode, notes, paymentMethod = "cod",
-    couponCode,
+    couponCode, paymentReference,
   } = req.body as {
     sessionId?: string; customerName?: string; customerPhone?: string; customerEmail?: string;
     shippingAddress?: string; city?: string; state?: string; pincode?: string; notes?: string;
-    paymentMethod?: string; couponCode?: string;
+    paymentMethod?: string; couponCode?: string; paymentReference?: string;
   };
 
   if (!sessionId || !customerName || !customerPhone || !customerEmail || !shippingAddress || !city || !state || !pincode) {
@@ -161,6 +161,7 @@ router.post("/orders", async (req, res) => {
           orderNumber, status: "pending", customerName, customerPhone, customerEmail,
           shippingAddress, city, state, pincode, notes: notes ?? null,
           subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
+          paymentReference: paymentReference ?? null,
           couponCode: appliedCoupon ? appliedCoupon.code : null,
           discountAmount: String(discountAmount),
         })

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { db } from "@workspace/db";
+import { storeSettingsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -9,6 +11,16 @@ router.get("/payments/status", (_req, res) => {
   res.json({
     razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
     phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY),
+  });
+});
+
+// UPI settings — public endpoint (no secrets, just UPI ID + QR image URL)
+router.get("/payments/upi/settings", async (_req, res) => {
+  const [settings] = await db.select().from(storeSettingsTable);
+  return res.json({
+    upiId: settings?.upiId ?? "",
+    upiQrUrl: settings?.upiQrUrl ?? "",
+    enabled: !!(settings?.upiId),
   });
 });
 

@@ -94,16 +94,20 @@ export default function AdminOrders() {
               <TableHead>Order #</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Customer</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-4">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-4">Loading...</TableCell></TableRow>
             ) : orderData?.orders?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No orders match the current filters.</TableCell></TableRow>
-            ) : orderData?.orders?.map((order) => (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No orders match the current filters.</TableCell></TableRow>
+            ) : orderData?.orders?.map((order) => {
+              const o = order as typeof order & { paymentMethod?: string; paymentReference?: string };
+              const isUpi = o.paymentMethod?.toUpperCase() === "UPI_QR";
+              return (
               <TableRow key={order.id}>
                 <TableCell>
                   <Link href={`/admin/orders/${order.id}`} className="font-medium text-primary hover:underline">
@@ -113,13 +117,29 @@ export default function AdminOrders() {
                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>{order.customerName}</TableCell>
                 <TableCell>
+                  <div className="space-y-0.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                      {o.paymentMethod ?? "COD"}
+                    </span>
+                    {isUpi && o.paymentReference && (
+                      <p className="text-[10px] font-mono text-orange-600 font-semibold">
+                        UTR: {o.paymentReference}
+                      </p>
+                    )}
+                    {isUpi && !o.paymentReference && (
+                      <p className="text-[10px] text-red-500 font-medium">No UTR</p>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${statusColor[order.status] ?? "bg-gray-100 text-gray-800"}`}>
                     {order.status}
                   </span>
                 </TableCell>
                 <TableCell>₹{order.total}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>

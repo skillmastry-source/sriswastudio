@@ -156,7 +156,7 @@ export function Navbar() {
         </Link>
 
         {/* Icons right */}
-        <div className="flex items-center gap-0.5 ml-auto md:ml-0">
+        <div className="flex items-center gap-0.5 ml-auto">
           <Button variant="ghost" size="icon" className="text-gray-600">
             <Search className="h-[18px] w-[18px]" />
           </Button>

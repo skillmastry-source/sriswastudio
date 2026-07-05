@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, CreditCard, Smartphone, Truck, CheckCircle2, Tag, X, Loader2, QrCode, Copy } from "lucide-react";
+import { AlertTriangle, CreditCard, Smartphone, Truck, CheckCircle2, Tag, X, Loader2, QrCode, Copy, LogIn, UserPlus } from "lucide-react";
+import { SignedIn, SignedOut } from "@/lib/clerk-stub";
 
 declare global {
   interface Window {
@@ -61,6 +62,40 @@ function loadRazorpayScript(): Promise<boolean> {
     s.onerror = () => resolve(false);
     document.body.appendChild(s);
   });
+}
+
+function GuestBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="flex-1">
+        <p className="font-semibold text-gray-800 text-sm mb-0.5">Have an account?</p>
+        <p className="text-gray-600 text-sm">Sign in for faster checkout, order tracking, and saved addresses — or continue as a guest below.</p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <Button asChild size="sm" variant="outline" className="gap-2 border-gray-300 bg-white hover:bg-gray-50">
+          <Link href="/sign-in?redirect_url=/checkout">
+            <LogIn className="h-4 w-4" />
+            Sign In
+          </Link>
+        </Button>
+        <Button asChild size="sm" className="gap-2 bg-purple-700 hover:bg-purple-800 text-white">
+          <Link href="/sign-up?redirect_url=/checkout">
+            <UserPlus className="h-4 w-4" />
+            Create Account
+          </Link>
+        </Button>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-700 sm:self-center px-1"
+        >
+          Continue as Guest
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function Checkout() {
@@ -324,6 +359,11 @@ export default function Checkout() {
     <StoreLayout>
       <div className="container mx-auto px-[30px] py-12 max-w-6xl">
         <h1 className="text-3xl font-serif font-bold mb-8">Checkout</h1>
+
+        {/* Sign in / Guest banner — only shown to signed-out users */}
+        <SignedOut>
+          <GuestBanner />
+        </SignedOut>
 
         <div className="flex flex-col lg:flex-row gap-12 lg:items-start">
           {/* Left: Form */}

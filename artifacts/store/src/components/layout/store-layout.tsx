@@ -230,14 +230,14 @@ export function Footer() {
 
   return (
     <footer style={{ background: colors.dark, color: "white" }}>
-      <style>{`@media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
+      <style>{`.footer-logo { height: 48px; } @media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-10">
 
           <div className="flex flex-col gap-4 items-start text-left">
             <img src="/brand/logo-white.png" alt="Sriswa Studio"
-              className="footer-logo w-auto block" style={{ height: 40 }} />
+              className="footer-logo w-auto block" />
             <p className="text-white/60 text-sm leading-relaxed">
               {footer.tagline.split("\n").map((line, i) => (
                 <span key={i}>{line}{i < footer.tagline.split("\n").length - 1 && <br />}</span>

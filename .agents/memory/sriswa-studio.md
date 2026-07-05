@@ -54,5 +54,33 @@ Current safe order: health → categories → products → cart → orders → s
 ## Database Tables
 categories, products, product_images, product_variants, orders, order_items, cart_items, store_settings, landing_pages
 
+## Cart Query Key — CRITICAL
+- `use-cart-context.tsx` MUST use `getGetCartQueryKey({sessionId})` as queryKey (not `['cart', sessionId]`)
+- ProductCard add-to-cart `onSuccess` must call `queryClient.invalidateQueries({queryKey: getGetCartQueryKey({sessionId})})` to refresh badge
+- **Why:** Mismatch between context key and mutation invalidation key meant badge never updated after add-to-cart
+
+## Payment Gateways at Checkout
+- Checkout fetches `GET /api/payments/status` → `{razorpay: bool, phonepe: bool}`
+- Razorpay/PhonePe only shown when keys are configured on VPS; COD always shown
+- UPI shown only when `upiId` is saved in admin settings (`GET /api/payments/upi/settings`)
+- Default paymentMethod starts null; `effectiveMethod = paymentMethod ?? PAYMENT_OPTIONS[0]?.id`
+
+## Product Image Upload — VPS Fallback
+- VPS has no Replit Object Storage — `DEFAULT_OBJECT_STORAGE_BUCKET_ID` not set → presigned URL fails
+- `POST /api/storage/uploads/direct` — multer endpoint, saves to `uploads/` dir in process.cwd()
+- `GET /api/storage/local-files/:filename` — serves those files
+- Product form tries object storage first, falls back to direct upload on failure
+- **Why:** Replit Object Storage is platform-specific; VPS needs a local filesystem fallback
+
+## Editor Role (Second Admin)
+- `requireEditor.ts` middleware — allows ADMIN_EMAILS **or** EDITOR_EMAILS (env var) or role=editor
+- Products and CMS (blog) routes use `requireEditor` instead of `requireAdmin`
+- Admin layout: `VITE_EDITOR_EMAILS` env var — editors see only Products, Categories, CMS nav
+- VPS setup: add `EDITOR_EMAILS=email@example.com` and `VITE_EDITOR_EMAILS=email@example.com` to .env
+
 ## Deployment
-- Deploy via Replit, then point Hostinger domain CNAME to `.replit.app` domain
+- VPS: Hostinger 187.127.155.210, PM2 process: sriswa-api, nginx → port 8080
+- Deploy frontend: build in Replit → tar.gz → user wget to VPS
+- Build command: `VITE_CLERK_PUBLISHABLE_KEY="pk_live_Y2xlcmsuc3Jpc3dhc3R1ZGlvLmNsZXJrLmFjY291bnRzLmRldg" pnpm --filter @workspace/store run build`
+- Package: `tar -czf public/store-dist.tar.gz -C dist/public .`
+- VPS wget base URL: https://29718fb4-03d5-4c09-a4ef-aec0a3594cca-00-3ecf1vpba2py.sisko.replit.dev/

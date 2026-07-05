@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useGetCart } from '@workspace/api-client-react';
+import { useGetCart, getGetCartQueryKey } from '@workspace/api-client-react';
 
 type CartContextType = {
   sessionId: string;
@@ -27,7 +27,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const { data: cart } = useGetCart(
     { sessionId }, 
-    { query: { enabled: !!sessionId, queryKey: ['cart', sessionId] } }
+    { query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }
   );
 
   return (

@@ -142,24 +142,39 @@ export default function AdminProductForm() {
   async function handleFileUpload(file: File) {
     setUploadingImage(true);
     try {
+      // Try Replit Object Storage first
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await urlRes.json();
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
+
+      if (urlRes.ok) {
+        const { uploadURL, objectPath } = await urlRes.json();
+        const uploadRes = await fetch(uploadURL, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!uploadRes.ok) throw new Error("Failed to upload file");
+        const rawPath = objectPath.replace(/^\/objects\//, "");
+        const publicUrl = `/api/storage/product-images/${rawPath}`;
+        setImages((prev) => [...prev, { url: publicUrl, isPrimary: prev.length === 0, displayOrder: prev.length }]);
+        return;
+      }
+
+      // Fallback: direct upload to local filesystem (VPS)
+      const formData = new FormData();
+      formData.append("file", file);
+      const directRes = await fetch("/api/storage/uploads/direct", {
+        method: "POST",
+        body: formData,
       });
-      if (!uploadRes.ok) throw new Error("Failed to upload file");
-      const rawPath = objectPath.replace(/^\/objects\//, "");
-      const publicUrl = `/api/storage/product-images/${rawPath}`;
-      setImages((prev) => [...prev, { url: publicUrl, isPrimary: prev.length === 0, displayOrder: prev.length }]);
+      if (!directRes.ok) throw new Error("Direct upload failed");
+      const { url } = await directRes.json();
+      setImages((prev) => [...prev, { url, isPrimary: prev.length === 0, displayOrder: prev.length }]);
     } catch {
-      toast({ title: "Image upload failed", variant: "destructive" });
+      toast({ title: "Image upload failed", description: "Could not upload image. Try pasting a URL instead.", variant: "destructive" });
     } finally {
       setUploadingImage(false);
     }

@@ -47,6 +47,11 @@ interface UpiSettings {
   enabled: boolean;
 }
 
+interface GatewayStatus {
+  razorpay: boolean;
+  phonepe: boolean;
+}
+
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (window.Razorpay) return resolve(true);
@@ -64,7 +69,7 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi_qr");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [utrNumber, setUtrNumber] = useState("");
   const [utrError, setUtrError] = useState("");
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -84,6 +89,14 @@ export default function Checkout() {
     queryKey: ["upi-settings"],
     queryFn: async () => {
       const res = await fetch(`${BASE}/api/payments/upi/settings`);
+      return res.json();
+    },
+  });
+
+  const { data: gatewayStatus } = useQuery<GatewayStatus>({
+    queryKey: ["gateway-status"],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}/api/payments/status`);
       return res.json();
     },
   });
@@ -135,7 +148,7 @@ export default function Checkout() {
   });
 
   const placeOrder = (data: z.infer<typeof checkoutSchema>, paymentId?: string, paymentRef?: string) => {
-    const pm = paymentId ? "RAZORPAY" : paymentMethod === "phonepe" ? "PHONEPE" : paymentMethod === "upi_qr" ? "UPI_QR" : "COD";
+    const pm = paymentId ? "RAZORPAY" : effectiveMethod === "phonepe" ? "PHONEPE" : effectiveMethod === "upi_qr" ? "UPI_QR" : "COD";
     createOrder.mutate({
       data: {
         ...data,
@@ -261,11 +274,11 @@ export default function Checkout() {
 
   const onSubmit = (data: z.infer<typeof checkoutSchema>) => {
     setError("");
-    if (paymentMethod === "razorpay") {
+    if (effectiveMethod === "razorpay") {
       handleRazorpay(data);
-    } else if (paymentMethod === "phonepe") {
+    } else if (effectiveMethod === "phonepe") {
       handlePhonePe(data);
-    } else if (paymentMethod === "upi_qr") {
+    } else if (effectiveMethod === "upi_qr") {
       handleUpiQr(data);
     } else {
       setProcessing(true);
@@ -299,11 +312,13 @@ export default function Checkout() {
   type PaymentOption = { id: PaymentMethod; label: string; sub: string; Icon: React.ElementType };
   const ALL_PAYMENT_OPTIONS: (PaymentOption & { show: boolean })[] = [
     { id: "upi_qr", label: "UPI / Scanner", sub: "Scan QR code & pay instantly", Icon: QrCode, show: !!upiEnabled },
-    { id: "razorpay", label: "Razorpay", sub: "Cards, UPI, Net Banking, Wallets", Icon: CreditCard, show: true },
-    { id: "phonepe", label: "PhonePe", sub: "UPI & PhonePe Wallet", Icon: Smartphone, show: true },
+    { id: "razorpay", label: "Razorpay", sub: "Cards, UPI, Net Banking, Wallets", Icon: CreditCard, show: !!gatewayStatus?.razorpay },
+    { id: "phonepe", label: "PhonePe", sub: "UPI & PhonePe Wallet", Icon: Smartphone, show: !!gatewayStatus?.phonepe },
     { id: "cod", label: "Cash on Delivery", sub: "Pay when your order arrives", Icon: Truck, show: true },
   ];
   const PAYMENT_OPTIONS: PaymentOption[] = ALL_PAYMENT_OPTIONS.filter((o) => o.show);
+
+  const effectiveMethod = paymentMethod ?? (PAYMENT_OPTIONS[0]?.id ?? "cod");
 
   return (
     <StoreLayout>
@@ -365,21 +380,21 @@ export default function Checkout() {
                           onClick={() => { setPaymentMethod(id); setUtrError(""); }}
                           className="w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all"
                           style={{
-                            borderColor: paymentMethod === id ? "#9B0F5F" : "#e5e7eb",
-                            background: paymentMethod === id ? "#fdf6f9" : "white",
+                            borderColor: effectiveMethod === id ? "#9B0F5F" : "#e5e7eb",
+                            background: effectiveMethod === id ? "#fdf6f9" : "white",
                           }}
                         >
                           <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
-                            style={{ background: paymentMethod === id ? "#9B0F5F" : "#f3f4f6" }}>
-                            <Icon className="h-5 w-5" style={{ color: paymentMethod === id ? "white" : "#6b7280" }} />
+                            style={{ background: effectiveMethod === id ? "#9B0F5F" : "#f3f4f6" }}>
+                            <Icon className="h-5 w-5" style={{ color: effectiveMethod === id ? "white" : "#6b7280" }} />
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold text-sm text-gray-900">{label}</p>
                             <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
                           </div>
                           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                            style={{ borderColor: paymentMethod === id ? "#9B0F5F" : "#d1d5db" }}>
-                            {paymentMethod === id && (
+                            style={{ borderColor: effectiveMethod === id ? "#9B0F5F" : "#d1d5db" }}>
+                            {effectiveMethod === id && (
                               <div className="h-2.5 w-2.5 rounded-full" style={{ background: "#9B0F5F" }} />
                             )}
                           </div>
@@ -389,7 +404,7 @@ export default function Checkout() {
                   </div>
 
                   {/* UPI QR Panel — shown when UPI QR is selected */}
-                  {paymentMethod === "upi_qr" && upiSettings && (
+                  {effectiveMethod === "upi_qr" && upiSettings && (
                     <div className="rounded-xl border-2 p-5 space-y-4" style={{ borderColor: "#f0c4dc", background: "#fdf6f9" }}>
                       <p className="font-semibold text-sm" style={{ color: "#9B0F5F" }}>
                         Step 1 — Scan the QR code or copy the UPI ID below and pay ₹{finalTotal.toFixed(2)}
@@ -468,11 +483,11 @@ export default function Checkout() {
                   >
                     {processing || createOrder.isPending
                       ? "Processing…"
-                      : paymentMethod === "cod"
+                      : effectiveMethod === "cod"
                         ? `Place Order • ₹${finalTotal.toFixed(2)}`
-                        : paymentMethod === "phonepe"
+                        : effectiveMethod === "phonepe"
                           ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
-                          : paymentMethod === "upi_qr"
+                          : effectiveMethod === "upi_qr"
                             ? `Confirm UPI Payment • ₹${finalTotal.toFixed(2)}`
                             : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
                     }

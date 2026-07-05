@@ -1,5 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
@@ -7,7 +10,16 @@ import {
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireEditor } from "../middlewares/requireEditor";
 import { getAuth } from "@clerk/express";
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const localUpload = multer({
+  dest: UPLOADS_DIR,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -166,6 +178,44 @@ router.get("/storage/product-images/*path", async (req: Request, res: Response) 
     req.log.error({ err: error }, "Error serving product image");
     res.status(500).json({ error: "Failed to serve image" });
   }
+});
+
+/**
+ * POST /storage/uploads/direct
+ *
+ * Local filesystem fallback for product image upload when Replit object
+ * storage is not configured (e.g. on VPS). Accepts multipart/form-data
+ * with a single "file" field. Returns a URL to access the saved image.
+ */
+router.post("/storage/uploads/direct", requireEditor, localUpload.single("file"), (req: Request, res: Response) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file provided" });
+    return;
+  }
+  const ext = path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
+  const newName = `${req.file.filename}${ext}`;
+  const newPath = path.join(UPLOADS_DIR, newName);
+  fs.renameSync(req.file.path, newPath);
+  res.json({ url: `/api/storage/local-files/${newName}` });
+});
+
+/**
+ * GET /storage/local-files/:filename
+ *
+ * Serve locally uploaded product images (VPS fallback).
+ */
+router.get("/storage/local-files/:filename", (req: Request, res: Response) => {
+  const filename = (req.params as { filename: string }).filename;
+  if (!filename || filename.includes("..") || filename.includes("/")) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const filePath = path.join(UPLOADS_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.sendFile(filePath);
 });
 
 export default router;

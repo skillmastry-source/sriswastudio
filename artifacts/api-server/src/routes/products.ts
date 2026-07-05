@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, asc, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireEditor } from "../middlewares/requireEditor";
 import { getAuth } from "@clerk/express";
 
 const router = Router();
@@ -99,7 +100,7 @@ router.get("/products/featured", async (req, res) => {
   return res.json(full);
 });
 
-router.get("/admin/products", requireAdmin, async (req, res) => {
+router.get("/admin/products", requireEditor, async (req, res) => {
   const { search: rawSearch, limit = 100, offset = 0 } = req.query;
   const search = qval(rawSearch);
   const conditions = search ? [ilike(productsTable.name, `%${search}%`)] : [];
@@ -158,7 +159,7 @@ router.get("/products/:id", async (req, res) => {
   return res.json(await buildProductResponse(product));
 });
 
-router.post("/products", requireAdmin, async (req, res) => {
+router.post("/products", requireEditor, async (req, res) => {
   const {
     name, slug, description, price, compareAtPrice, categoryId,
     isFeatured = false, isActive = true, stockQuantity = 0, lowStockThreshold = 5,
@@ -175,7 +176,7 @@ router.post("/products", requireAdmin, async (req, res) => {
   return res.status(201).json(await buildProductResponse(product));
 });
 
-router.patch("/products/:id", requireAdmin, async (req, res) => {
+router.patch("/products/:id", requireEditor, async (req, res) => {
   const id = Number(req.params.id);
   const { name, slug, description, price, compareAtPrice, categoryId, isFeatured, isActive, stockQuantity, lowStockThreshold } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -194,13 +195,13 @@ router.patch("/products/:id", requireAdmin, async (req, res) => {
   return res.json(await buildProductResponse(product));
 });
 
-router.delete("/products/:id", requireAdmin, async (req, res) => {
+router.delete("/products/:id", requireEditor, async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(productsTable).where(eq(productsTable.id, id));
   return res.status(204).send();
 });
 
-router.post("/products/:id/variants", requireAdmin, async (req, res) => {
+router.post("/products/:id/variants", requireEditor, async (req, res) => {
   const productId = Number(req.params.id);
   const { name, value, priceModifier = 0 } = req.body;
   if (!name || !value) return res.status(400).json({ error: "name and value required" });
@@ -211,7 +212,7 @@ router.post("/products/:id/variants", requireAdmin, async (req, res) => {
   return res.status(201).json({ ...variant, priceModifier: Number(variant.priceModifier) });
 });
 
-router.post("/products/:id/images", requireAdmin, async (req, res) => {
+router.post("/products/:id/images", requireEditor, async (req, res) => {
   const productId = Number(req.params.id);
   const { url, isPrimary = false, displayOrder = 0 } = req.body;
   if (!url) return res.status(400).json({ error: "url required" });
@@ -222,7 +223,7 @@ router.post("/products/:id/images", requireAdmin, async (req, res) => {
   return res.status(201).json(img);
 });
 
-router.put("/products/:id/images/sync", requireAdmin, async (req, res) => {
+router.put("/products/:id/images/sync", requireEditor, async (req, res) => {
   const productId = Number(req.params.id);
   const images: { url: string }[] = Array.isArray(req.body.images) ? req.body.images : [];
   await db.delete(productImagesTable).where(eq(productImagesTable.productId, productId));
@@ -234,7 +235,7 @@ router.put("/products/:id/images/sync", requireAdmin, async (req, res) => {
   return res.json({ success: true });
 });
 
-router.put("/products/:id/variants/sync", requireAdmin, async (req, res) => {
+router.put("/products/:id/variants/sync", requireEditor, async (req, res) => {
   const productId = Number(req.params.id);
   const variants: { name: string; value: string; priceModifier: number }[] = Array.isArray(req.body.variants) ? req.body.variants : [];
   await db.delete(productVariantsTable).where(eq(productVariantsTable.productId, productId));
@@ -246,7 +247,7 @@ router.put("/products/:id/variants/sync", requireAdmin, async (req, res) => {
   return res.json({ success: true });
 });
 
-router.get("/products/:id/inventory", requireAdmin, async (req, res) => {
+router.get("/products/:id/inventory", requireEditor, async (req, res) => {
   const id = Number(req.params.id);
   const [product] = await db
     .select({ stockQuantity: productsTable.stockQuantity, lowStockThreshold: productsTable.lowStockThreshold })
@@ -256,7 +257,7 @@ router.get("/products/:id/inventory", requireAdmin, async (req, res) => {
   return res.json({ productId: id, ...product });
 });
 
-router.patch("/products/:id/inventory", requireAdmin, async (req, res) => {
+router.patch("/products/:id/inventory", requireEditor, async (req, res) => {
   const id = Number(req.params.id);
   const { stockQuantity, lowStockThreshold } = req.body;
   const updates: Record<string, unknown> = {};

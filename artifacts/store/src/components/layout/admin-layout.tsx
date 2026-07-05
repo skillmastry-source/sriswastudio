@@ -65,6 +65,13 @@ const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? "")
   .map((e: string) => e.trim().toLowerCase())
   .filter(Boolean);
 
+const EDITOR_EMAILS = (import.meta.env.VITE_EDITOR_EMAILS ?? "")
+  .split(",")
+  .map((e: string) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const EDITOR_NAV_HREFS = ["/admin/products", "/admin/categories", "/admin/cms"];
+
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, isLoaded: userLoaded } = useUser();
@@ -74,13 +81,17 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = ADMIN_EMAILS.length > 0
     ? ADMIN_EMAILS.includes(userEmail)
     : (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "admin";
+  const isEditor = EDITOR_EMAILS.length > 0
+    ? EDITOR_EMAILS.includes(userEmail)
+    : (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "editor";
+  const hasAccess = isAdmin || isEditor;
 
   useEffect(() => {
     if (authLoaded && userLoaded) {
       if (!isSignedIn) setLocation("/sign-in?redirect_url=/admin");
-      else if (!isAdmin) setLocation("/");
+      else if (!hasAccess) setLocation("/");
     }
-  }, [authLoaded, userLoaded, isSignedIn, isAdmin, setLocation]);
+  }, [authLoaded, userLoaded, isSignedIn, hasAccess, setLocation]);
 
   if (!authLoaded || !userLoaded) {
     return (
@@ -93,7 +104,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isSignedIn || !isAdmin) return null;
+  if (!isSignedIn || !hasAccess) return null;
+
+  const visibleNavGroups = isAdmin
+    ? NAV_GROUPS
+    : NAV_GROUPS.map(g => ({
+        ...g,
+        items: g.items.filter(item => EDITOR_NAV_HREFS.some(h => item.href === h || item.href.startsWith(h))),
+      })).filter(g => g.items.length > 0);
 
   const isActive = (href: string, exact: boolean) =>
     exact ? location === href : location === href || location.startsWith(href + "/");
@@ -115,7 +133,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav groups */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
-          {NAV_GROUPS.map((group) => (
+          {visibleNavGroups.map((group) => (
             <div key={group.label}>
               <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-400">
                 {group.label}
@@ -181,7 +199,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </div>
         <span className="font-bold text-gray-900 text-sm">Sriswa Admin</span>
         <div className="ml-auto flex items-center gap-1">
-          {NAV_GROUPS.flatMap(g => g.items).map(({ href, icon: Icon, label, exact }) => {
+          {visibleNavGroups.flatMap(g => g.items).map(({ href, icon: Icon, label, exact }) => {
             const active = isActive(href, exact);
             return (
               <Link key={href} href={href}

@@ -4,8 +4,9 @@ import {
   useListProducts, getListProductsQueryKey,
   useGetFeaturedProducts, getGetFeaturedProductsQueryKey,
   useListCategories, getListCategoriesQueryKey,
-  useAddToCart,
+  useAddToCart, getGetCartQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -48,6 +49,7 @@ function ProductCard({ product, sessionId, brand, dark }: { product: CardProduct
   const addToCart = useAddToCart();
   const { openCart } = useCartContext();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const outOfStock = product.stockQuantity <= 0;
 
@@ -58,7 +60,11 @@ function ProductCard({ product, sessionId, brand, dark }: { product: CardProduct
     addToCart.mutate(
       { data: { sessionId, productId: product.id, quantity: 1 } },
       {
-        onSuccess: () => { toast({ title: "Added to cart!", description: `${product.name} added.` }); openCart(); },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          toast({ title: "Added to cart!", description: `${product.name} added.` });
+          openCart();
+        },
         onError: () => toast({ title: "Error", description: "Could not add to cart.", variant: "destructive" }),
         onSettled: () => setAdding(false),
       }

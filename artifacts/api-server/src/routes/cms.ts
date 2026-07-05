@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { cmsPagesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireEditor } from "../middlewares/requireEditor";
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.get("/cms/pages/:slug", async (req, res) => {
 
 /* ── Admin routes ── */
 
-router.get("/admin/cms/pages", requireAdmin, async (_req, res) => {
+router.get("/admin/cms/pages", requireEditor, async (_req, res) => {
   try {
     const pages = await db
       .select()
@@ -61,7 +62,7 @@ router.get("/admin/cms/pages", requireAdmin, async (_req, res) => {
 
 const VALID_TYPES = ["blog", "faq", "policy"];
 
-router.post("/admin/cms/pages", requireAdmin, async (req, res) => {
+router.post("/admin/cms/pages", requireEditor, async (req, res) => {
   try {
     const { type, slug, title, content, metaTitle, metaDescription, isPublished } = req.body;
     if (!type || !slug || !title) {
@@ -95,7 +96,7 @@ router.post("/admin/cms/pages", requireAdmin, async (req, res) => {
   }
 });
 
-router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
+router.patch("/admin/cms/pages/:id", requireEditor, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
@@ -139,7 +140,7 @@ router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
   }
 });
 
-router.delete("/admin/cms/pages/:id", requireAdmin, async (req, res) => {
+router.delete("/admin/cms/pages/:id", requireEditor, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });

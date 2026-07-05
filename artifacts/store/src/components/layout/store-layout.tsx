@@ -125,9 +125,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
-      <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
+      <style>{`.navbar-logo { height: 50px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 84 }}>
+      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 100 }}>
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -230,7 +230,7 @@ export function Footer() {
 
   return (
     <footer style={{ background: colors.dark, color: "white" }}>
-      <style>{`.footer-logo { height: 48px; } @media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
+      <style>{`.footer-logo { height: 60px; } @media (min-width: 768px) { .footer-logo { height: ${footer.logoSize}px; } }`}</style>
 
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-10">

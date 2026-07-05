@@ -125,9 +125,9 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
-      <style>{`.navbar-logo { height: 28px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
+      <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 72 }}>
+      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 84 }}>
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -137,7 +137,7 @@ export function Navbar() {
 
         <Link href="/" className="flex items-center flex-shrink-0">
           <img
-            src="/brand/logo-color.png"
+            src="/brand/logo-transparent.png"
             alt="Sriswa Studio"
             className="navbar-logo w-auto block"
           />

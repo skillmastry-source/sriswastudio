@@ -104,7 +104,7 @@ export const DEFAULT_HOMEPAGE_SECTIONS: HomepageSection[] = [
 
 export const DEFAULT_SITE_DESIGN = {
   header: {
-    logoSize: 56,
+    logoSize: 80,
     announcementText: "✦ Anti-Tarnish  |  Waterproof  |  Skin-Friendly  |  Free Shipping above ₹999",
     announcementBgColor: "#9B0F5F",
     showAnnouncement: true,

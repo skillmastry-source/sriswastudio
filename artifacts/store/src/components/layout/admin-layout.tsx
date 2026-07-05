@@ -77,6 +77,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
+  // If Clerk hasn't loaded in 10s, redirect to sign-in to break infinite spinner
+  useEffect(() => {
+    if (authLoaded && userLoaded) return;
+    const t = setTimeout(() => {
+      window.location.href = "/sign-in?redirect_url=/admin";
+    }, 10000);
+    return () => clearTimeout(t);
+  }, [authLoaded, userLoaded]);
+
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
   const isAdmin = ADMIN_EMAILS.length > 0
     ? ADMIN_EMAILS.includes(userEmail)

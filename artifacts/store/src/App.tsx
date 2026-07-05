@@ -100,7 +100,7 @@ function Router() {
           const redirectUrl = params.get("redirect_url") ?? "/";
           return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-              <SignIn routing="path" path={`${basePath}/sign-in`} afterSignInUrl={redirectUrl} />
+              <SignIn routing="path" path={`${basePath}/sign-in`} fallbackRedirectUrl={redirectUrl} />
             </div>
           );
         }}

@@ -47,7 +47,7 @@ export default function LandingPage() {
   useEffect(() => {
     if (!page) return;
 
-    const title = page.metaTitle || page.title || settings.storeName || "Sriswa Studio";
+    const title = page.metaTitle || page.title || "Sriswa Studio";
     const description = page.metaDescription || "";
 
     document.title = title;
@@ -57,12 +57,12 @@ export default function LandingPage() {
     setOgTag("og:description", description);
 
     return () => {
-      document.title = settings.storeName || "Sriswa Studio";
+      document.title = "Sriswa Studio";
       setOgTag("og:title", "");
       setOgTag("og:description", "");
       setMetaTag("description", "");
     };
-  }, [page, settings.storeName]);
+  }, [page]);
 
   if (isLoading) {
     return (

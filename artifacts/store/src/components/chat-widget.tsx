@@ -113,7 +113,11 @@ export function ChatWidget() {
   }, [open]);
 
   useEffect(() => {
-    if (!open) { const t = setTimeout(() => setBadge(true), 4000); return () => clearTimeout(t); }
+    if (!open) {
+      const t = setTimeout(() => setBadge(true), 4000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
   }, [open]);
 
   function pick(label: string, action: string) {

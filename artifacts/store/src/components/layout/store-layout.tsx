@@ -125,9 +125,11 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
-      <style>{`.navbar-logo { height: 50px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
+      <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 100 }}>
+      {/* Row 1 — Logo centered + icons right */}
+      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 80 }}>
+        {/* Mobile: hamburger left */}
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -135,7 +137,8 @@ export function Navbar() {
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        <Link href="/" className="flex items-center flex-shrink-0">
+        {/* Desktop: logo centered absolutely */}
+        <Link href="/" className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2">
           <img
             src="/brand/logo-transparent.png"
             alt="Sriswa Studio"
@@ -143,25 +146,17 @@ export function Navbar() {
           />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7 text-[12.5px] font-medium tracking-[0.08em] uppercase">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              style={{
-                color: isLinkActive(link.href) ? colors.brand : "#4b5563",
-                borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
-                paddingBottom: "2px",
-                transition: "color 0.15s, border-color 0.15s",
-              }}
-              className="transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {/* Mobile: logo centered */}
+        <Link href="/" className="md:hidden flex items-center">
+          <img
+            src="/brand/logo-transparent.png"
+            alt="Sriswa Studio"
+            className="navbar-logo w-auto block"
+          />
+        </Link>
 
-        <div className="flex items-center gap-0.5">
+        {/* Icons right */}
+        <div className="flex items-center gap-0.5 ml-auto md:ml-0">
           <Button variant="ghost" size="icon" className="text-gray-600">
             <Search className="h-[18px] w-[18px]" />
           </Button>
@@ -187,6 +182,25 @@ export function Navbar() {
             )}
           </Button>
         </div>
+      </div>
+
+      {/* Row 2 — Nav links centered (desktop only) */}
+      <div className="hidden md:flex items-center justify-center gap-7 text-[12px] font-medium tracking-[0.08em] uppercase border-t border-gray-100 py-2.5">
+        {navLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            style={{
+              color: isLinkActive(link.href) ? colors.brand : "#4b5563",
+              borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
+              paddingBottom: "2px",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            className="transition-colors whitespace-nowrap"
+          >
+            {link.label}
+          </Link>
+        ))}
       </div>
 
       {mobileMenuOpen && (

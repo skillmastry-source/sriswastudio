@@ -128,7 +128,7 @@ export function Navbar() {
       <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
       {/* Row 1 — Logo centered + icons right */}
-      <div className="container mx-auto px-[30px] flex items-center justify-between" style={{ height: 80 }}>
+      <div className="container mx-auto px-[30px] flex items-center justify-between relative" style={{ height: 80 }}>
         {/* Mobile: hamburger left */}
         <button
           className="md:hidden p-2 -ml-2 text-gray-700"

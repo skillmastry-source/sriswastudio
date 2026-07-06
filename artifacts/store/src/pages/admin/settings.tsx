@@ -18,6 +18,7 @@ interface SettingsForm {
   adminWhatsapp: string;
   newOrderTemplate: string;
   statusUpdateTemplate: string;
+  customerOrderTemplate: string;
   upiId: string;
   upiQrUrl: string;
 }
@@ -148,7 +149,7 @@ export default function AdminSettings() {
   const { register, handleSubmit, reset, setValue, watch, formState: { isDirty } } = useForm<SettingsForm>({
     defaultValues: {
       storeName: "", adminWhatsapp: "", newOrderTemplate: "", statusUpdateTemplate: "",
-      upiId: "", upiQrUrl: "",
+      customerOrderTemplate: "", upiId: "", upiQrUrl: "",
     },
   });
 
@@ -159,6 +160,7 @@ export default function AdminSettings() {
         adminWhatsapp: settings.adminWhatsapp ?? "",
         newOrderTemplate: settings.newOrderTemplate ?? "",
         statusUpdateTemplate: settings.statusUpdateTemplate ?? "",
+        customerOrderTemplate: (settings as unknown as Record<string, string>).customerOrderTemplate ?? "",
         upiId: (settings as unknown as Record<string, string>).upiId ?? "",
         upiQrUrl: (settings as unknown as Record<string, string>).upiQrUrl ?? "",
       });
@@ -185,39 +187,23 @@ export default function AdminSettings() {
     try {
       const token = await getToken();
       const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-
-      // Try object storage first
-      const urlRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        credentials: "include",
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
-      });
-
-      if (urlRes.ok) {
-        const { uploadURL, objectPath } = await urlRes.json();
-        const uploadRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        const rawPath = objectPath.replace(/^\/objects\//, "");
-        setValue("upiQrUrl", `/api/storage/product-images/${rawPath}`, { shouldDirty: true });
-        toast({ title: "QR uploaded — click Save Settings to apply" });
-        return;
-      }
-
-      // Fallback: direct upload to VPS filesystem
       const formData = new FormData();
       formData.append("file", file);
-      const directRes = await fetch(`${BASE}/api/storage/uploads/direct`, {
+      const res = await fetch(`${BASE}/api/storage/uploads/server`, {
         method: "POST",
-        headers: { ...authHeader },
+        headers: authHeader,
         credentials: "include",
         body: formData,
       });
-      if (!directRes.ok) throw new Error("Direct upload failed");
-      const { url } = await directRes.json() as { url: string };
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? `Upload failed (${res.status})`);
+      }
+      const { url } = await res.json() as { url: string };
       setValue("upiQrUrl", url, { shouldDirty: true });
       toast({ title: "QR uploaded — click Save Settings to apply" });
-    } catch {
+    } catch (err) {
+      console.error("QR upload error:", err);
       toast({ title: "Could not upload QR image. Try using a URL instead.", variant: "destructive" });
     } finally {
       setUploadingQr(false);
@@ -293,6 +279,15 @@ export default function AdminSettings() {
                 className="mt-1 text-sm font-mono resize-none" rows={3} />
               <p className="text-xs text-muted-foreground mt-1">
                 Variables: <code>{"{{customerName}}"}</code>, <code>{"{{orderNumber}}"}</code>, <code>{"{{status}}"}</code>
+              </p>
+            </div>
+            <div>
+              <Label>Customer Order Confirmation Template</Label>
+              <Textarea {...register("customerOrderTemplate")}
+                placeholder="Hi {{customerName}}, your order {{orderNumber}} has been placed for ₹{{total}}. We'll keep you updated!"
+                className="mt-1 text-sm font-mono resize-none" rows={3} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Sent to customer on WhatsApp when order is placed. Variables: <code>{"{{customerName}}"}</code>, <code>{"{{orderNumber}}"}</code>, <code>{"{{total}}"}</code>
               </p>
             </div>
           </CardContent>

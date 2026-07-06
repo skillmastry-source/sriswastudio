@@ -28,7 +28,7 @@ export default function AdminOrders() {
     limit: 100,
   };
 
-  const { data: orderData, isLoading } = useListOrders(params, {
+  const { data: orderData, isLoading, isError } = useListOrders(params, {
     query: { queryKey: getListOrdersQueryKey(params) }
   });
 
@@ -102,6 +102,8 @@ export default function AdminOrders() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={6} className="text-center py-4">Loading...</TableCell></TableRow>
+            ) : isError ? (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-destructive">Failed to load orders. Please refresh the page.</TableCell></TableRow>
             ) : orderData?.orders?.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No orders match the current filters.</TableCell></TableRow>
             ) : orderData?.orders?.map((order) => {

@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
+import { sendTransactionalEmail, orderConfirmationHtml } from "../lib/email";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { clerkClient, getAuth } from "@clerk/express";
 
@@ -193,11 +194,49 @@ router.post("/orders", async (req, res) => {
   }
 
   const [settings] = await db.select().from(storeSettingsTable);
+
+  // 1. Notify admin via WhatsApp
   if (settings?.adminWhatsapp) {
     const msg = renderTemplate(settings.newOrderTemplate, {
       orderNumber, customerName, total: total.toFixed(2), phone: customerPhone,
     });
-    await sendWhatsApp(settings.adminWhatsapp, msg);
+    sendWhatsApp(settings.adminWhatsapp, msg).catch(() => {});
+  }
+
+  // 2. Notify customer via WhatsApp
+  if (customerPhone) {
+    const customerTemplate = settings?.customerOrderTemplate ??
+      "Hi {{customerName}}, your order {{orderNumber}} has been placed at Sriswa Studio for ₹{{total}}. We'll keep you updated!";
+    const msg = renderTemplate(customerTemplate, {
+      customerName, orderNumber, total: total.toFixed(2),
+    });
+    sendWhatsApp(customerPhone, msg).catch(() => {});
+  }
+
+  // 3. Send confirmation email to customer
+  if (customerEmail) {
+    const fullOrder = await buildOrderResponse(order);
+    const emailItems = fullOrder.items.map((i) => ({
+      name: i.productName ?? "Item",
+      qty: i.quantity,
+      price: i.price.toFixed(2),
+      variantLabel: i.variantLabel,
+    }));
+    const html = orderConfirmationHtml({
+      storeName: settings?.storeName ?? "Sriswa Studio",
+      customerName, orderNumber, total: total.toFixed(2),
+      items: emailItems,
+      shippingAddress: shippingAddress ?? "",
+      city: city ?? "", state: state ?? "", pincode: pincode ?? "",
+      paymentMethod: paymentMethod ?? "",
+    });
+    sendTransactionalEmail({
+      siteDesign: settings?.siteDesign,
+      storeName: settings?.storeName ?? "Sriswa Studio",
+      to: customerEmail,
+      subject: `Order Confirmed: ${orderNumber} — ${settings?.storeName ?? "Sriswa Studio"}`,
+      html,
+    }).catch(() => {});
   }
 
   return res.status(201).json(await buildOrderResponse(order));

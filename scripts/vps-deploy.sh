@@ -30,6 +30,12 @@ echo "🚀 Copying frontend to web root..."
 rm -rf "$WEB_ROOT"/*
 cp -r artifacts/store/dist/public/. "$WEB_ROOT/"
 
+echo "🗄️  Applying database migrations..."
+set -a; source "$ENV_FILE"; set +a
+for sql_file in "$REPO_DIR"/lib/db/drizzle/*.sql; do
+  psql "$DATABASE_URL" -f "$sql_file" 2>/dev/null || true
+done
+
 echo "🔁 Restarting API server..."
 pm2 restart sriswa-api
 

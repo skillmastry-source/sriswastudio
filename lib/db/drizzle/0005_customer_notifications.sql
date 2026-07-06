@@ -1,0 +1,1 @@
+ALTER TABLE "store_settings" ADD COLUMN IF NOT EXISTS "customer_order_template" text NOT NULL DEFAULT 'Hi {{customerName}}, your order {{orderNumber}} has been placed at Sriswa Studio for ₹{{total}}. We''ll keep you updated!';

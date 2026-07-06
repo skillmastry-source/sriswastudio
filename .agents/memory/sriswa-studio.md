@@ -20,11 +20,21 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 ## Clerk Express v2 Auth — CRITICAL
 - **NEVER use `(req as any).auth?.userId`** — this is the v1 pattern and always returns undefined in v2
 - **Always use `getAuth(req)` from `@clerk/express`** to read the auth state
-- `clerkMiddleware` callback must explicitly include `secretKey: process.env.CLERK_SECRET_KEY` — without it the middleware cannot verify JWTs even if `CLERK_SECRET_KEY` is in the environment
-- `customFetch` (api-client-react) must set `credentials: "include"` so session cookies are sent
-- `AuthTokenSync` component in App.tsx uses `useAuth().getToken()` via `setAuthTokenGetter` to attach Bearer tokens
+- `clerkMiddleware` in `app.ts` must use `process.env.CLERK_PUBLISHABLE_KEY ?? process.env.VITE_CLERK_PUBLISHABLE_KEY` as publishable key — VPS .env only has `VITE_CLERK_PUBLISHABLE_KEY`; using `publishableKeyFromHost` alone can generate wrong keys in proxy environments
+- `clerkMiddleware` must explicitly include `secretKey: process.env.CLERK_SECRET_KEY`
+- `AuthTokenSync` component in App.tsx uses `useAuth().getToken()` via `setAuthTokenGetter` to attach Bearer tokens for api-client-react calls
+- **ALL raw `fetch` calls to admin endpoints MUST include `Authorization: Bearer <token>`** — cookies alone are unreliable in cross-origin/proxy setups. Pattern: `const token = await getToken(); headers: { Authorization: \`Bearer \${token}\` }`
+- Affected files fixed so far: `design.tsx` (LogoUploadField), `use-site-settings.tsx` (useUpdateSiteSettings), `cms/index.tsx` (fetch + delete), `builder/index.tsx`
 
-**Why:** `@clerk/express` v2 changed auth access from `req.auth` property injection to `getAuth(req)` helper. Using the old pattern silently returns undefined → all admin routes 401.
+**Why:** `@clerk/express` v2 changed auth access from `req.auth` property injection to `getAuth(req)` helper. Cookie-based auth is unreliable in dev (Vite proxy strips/mangles cookies). Bearer token is the only reliable auth mechanism.
+
+## VPS Deploy — CRITICAL RULES
+- Deploy script: `bash /var/www/sriswastudio/scripts/vps-deploy.sh`
+- **NEVER add `--update-env` to `pm2 restart`** — this strips env vars (PORT, DATABASE_URL, etc.) from the running process, causing PM2 crash-loop and all pages to hang
+- Plain `pm2 restart sriswa-api` keeps the existing env vars the process was started with
+- VPS .env has `VITE_CLERK_PUBLISHABLE_KEY` (not `CLERK_PUBLISHABLE_KEY`) — app.ts must check both
+
+**Why:** PM2's `--update-env` reloads env from ecosystem config (not from shell), wiping all vars not in the config file. This caused the API server to crash on startup (PORT undefined), making every API request hang forever.
 
 ## Backend Routes
 - GET/POST `/api/categories`, `/api/products`, `/api/cart`, `/api/orders`

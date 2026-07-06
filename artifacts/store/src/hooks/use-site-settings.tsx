@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 
 export type HomepageSection = {
   id: string;
@@ -193,11 +194,17 @@ export function useSiteSettings(): SiteDesign {
 
 export function useUpdateSiteSettings() {
   const qc = useQueryClient();
+  const { getToken } = useAuth();
   return useMutation({
     mutationFn: async (design: Partial<SiteDesign>) => {
+      const token = await getToken();
       const res = await fetch("/api/admin/site-design", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify(design),
       });
       if (!res.ok) throw new Error("Failed to save design settings");

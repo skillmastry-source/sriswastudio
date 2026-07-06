@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,28 +30,34 @@ const TYPE_COLORS: Record<string, string> = {
   policy: "bg-amber-100 text-amber-800",
 };
 
-async function fetchPages(): Promise<CmsPage[]> {
-  const res = await fetch("/api/admin/cms/pages", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to load pages");
-  return res.json();
-}
-
-async function deletePage(id: number): Promise<void> {
-  const res = await fetch(`/api/admin/cms/pages/${id}`, { method: "DELETE", credentials: "include" });
-  if (!res.ok) throw new Error("Delete failed");
-}
-
 export default function AdminCMS() {
   const queryClient = useQueryClient();
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const { getToken } = useAuth();
 
   const { data: pages = [], isLoading } = useQuery<CmsPage[]>({
     queryKey: ["/api/admin/cms/pages"],
-    queryFn: fetchPages,
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch("/api/admin/cms/pages", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to load pages");
+      return res.json();
+    },
   });
 
   const del = useMutation({
-    mutationFn: deletePage,
+    mutationFn: async (id: number) => {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/cms/pages/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Delete failed");
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/pages"] });
       setConfirmId(null);

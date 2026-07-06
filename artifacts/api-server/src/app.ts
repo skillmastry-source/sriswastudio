@@ -36,8 +36,8 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Resolve the Clerk publishable key with multiple fallbacks:
 // 1. CLERK_PUBLISHABLE_KEY (explicit, preferred)

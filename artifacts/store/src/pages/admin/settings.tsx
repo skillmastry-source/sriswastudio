@@ -182,16 +182,42 @@ export default function AdminSettings() {
     }
     setUploadingQr(true);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      const token = await getToken();
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
+      // Try object storage first
+      const urlRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        credentials: "include",
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
-      setValue("upiQrUrl", dataUrl, { shouldDirty: true });
-      toast({ title: "QR image ready — click Save Settings to apply" });
+
+      if (urlRes.ok) {
+        const { uploadURL, objectPath } = await urlRes.json();
+        const uploadRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const rawPath = objectPath.replace(/^\/objects\//, "");
+        setValue("upiQrUrl", `/api/storage/product-images/${rawPath}`, { shouldDirty: true });
+        toast({ title: "QR uploaded — click Save Settings to apply" });
+        return;
+      }
+
+      // Fallback: direct upload to VPS filesystem
+      const formData = new FormData();
+      formData.append("file", file);
+      const directRes = await fetch(`${BASE}/api/storage/uploads/direct`, {
+        method: "POST",
+        headers: { ...authHeader },
+        credentials: "include",
+        body: formData,
+      });
+      if (!directRes.ok) throw new Error("Direct upload failed");
+      const { url } = await directRes.json() as { url: string };
+      setValue("upiQrUrl", url, { shouldDirty: true });
+      toast({ title: "QR uploaded — click Save Settings to apply" });
     } catch {
-      toast({ title: "Could not read image file", variant: "destructive" });
+      toast({ title: "Could not upload QR image. Try using a URL instead.", variant: "destructive" });
     } finally {
       setUploadingQr(false);
     }

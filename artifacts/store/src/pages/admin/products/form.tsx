@@ -19,6 +19,7 @@ import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Upload, Library } from "lu
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { MediaPicker } from "@/components/media-picker";
+import { useAuth } from "@clerk/react";
 
 const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -45,6 +46,7 @@ export default function AdminProductForm() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getToken } = useAuth();
 
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
 
@@ -142,10 +144,14 @@ export default function AdminProductForm() {
   async function handleFileUpload(file: File) {
     setUploadingImage(true);
     try {
+      const token = await getToken();
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
       // Try Replit Object Storage first
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
+        credentials: "include",
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
 
@@ -168,6 +174,8 @@ export default function AdminProductForm() {
       formData.append("file", file);
       const directRes = await fetch("/api/storage/uploads/direct", {
         method: "POST",
+        headers: { ...authHeader },
+        credentials: "include",
         body: formData,
       });
       if (!directRes.ok) throw new Error("Direct upload failed");

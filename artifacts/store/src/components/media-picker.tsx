@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useAuth } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ interface MediaPickerProps {
 
 export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
@@ -61,7 +63,11 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
   const loadFiles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/media", { credentials: "include" });
+      const token = await getToken();
+      const res = await fetch("/api/admin/media", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to load media");
       setFiles(await res.json());
     } catch {
@@ -69,7 +75,7 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, getToken]);
 
   useEffect(() => {
     if (open) loadFiles();
@@ -78,9 +84,12 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
   async function uploadFile(file: File) {
     setUploading(true);
     try {
+      const token = await getToken();
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         credentials: "include",
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
@@ -99,7 +108,7 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
 
       const recordRes = await fetch("/api/admin/media", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         credentials: "include",
         body: JSON.stringify({
           filename: file.name,

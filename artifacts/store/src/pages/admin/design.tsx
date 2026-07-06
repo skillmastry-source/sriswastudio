@@ -185,8 +185,8 @@ function LogoUploadField({
         if (!putRes.ok) throw new Error("PUT failed");
         const rawPath = objectPath.replace(/^\/objects\//, "");
         publicUrl = `/api/storage/product-images/${rawPath}`;
-      } else if (urlRes.status === 401) {
-        // Fallback: direct multipart upload (VPS / no object storage)
+      } else {
+        // Fallback: direct multipart upload (VPS / object storage not configured)
         const form = new FormData();
         form.append("file", file);
         const directRes = await fetch("/api/storage/uploads/direct", {
@@ -201,8 +201,6 @@ function LogoUploadField({
         }
         const { url } = await directRes.json() as { url: string };
         publicUrl = url;
-      } else {
-        throw new Error("Upload service unavailable");
       }
 
       // Record in media library

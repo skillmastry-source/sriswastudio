@@ -30,8 +30,8 @@ echo "🚀 Copying frontend to web root..."
 rm -rf "$WEB_ROOT"/*
 cp -r artifacts/store/dist/public/. "$WEB_ROOT/"
 
-echo "🔁 Restarting API server with environment..."
-pm2 restart sriswa-api --update-env
+echo "🔁 Restarting API server..."
+pm2 restart sriswa-api
 
 echo ""
 echo "✅ Deploy complete! sriswastudio.com is live."

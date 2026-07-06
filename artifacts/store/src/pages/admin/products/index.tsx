@@ -27,9 +27,10 @@ export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: productData, isLoading } = useQuery({
+  const { data: productData, isLoading, isError } = useQuery({
     queryKey: ["admin-products", search],
     queryFn: () => fetchAdminProducts(search),
+    retry: 1,
   });
 
   const deleteProduct = useDeleteProduct();
@@ -84,6 +85,10 @@ export default function AdminProducts() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">Loading products...</TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-destructive">Failed to load products — please refresh the page.</TableCell>
               </TableRow>
             ) : productData?.products?.length === 0 ? (
               <TableRow>

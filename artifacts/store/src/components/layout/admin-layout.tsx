@@ -5,7 +5,7 @@ import {
   ChevronRight, FileText, Tag, Image, LayoutTemplate,
   BarChart2, Megaphone, Send, Zap, GitBranch, Mail, Instagram,
 } from "lucide-react";
-import { useUser, useAuth } from "@/lib/clerk-stub";
+import { useUser, useAuth, useClerk } from "@/lib/clerk-stub";
 import { useEffect, useState } from "react";
 
 const NAV_GROUPS = [
@@ -76,6 +76,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { signOut } = useClerk();
 
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
   const isAdmin = ADMIN_EMAILS.length > 0
@@ -205,7 +206,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               View Store
             </div>
           </Link>
-          <div className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
+          <div
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+          >
             <LogOut className="h-4 w-4" />
             Sign Out
           </div>

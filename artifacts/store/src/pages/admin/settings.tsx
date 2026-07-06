@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck, QrCode, Upload, Loader2 } from "lucide-react";
+import { useAuth } from "@clerk/react";
 
 interface SettingsForm {
   storeName: string;
@@ -82,6 +84,7 @@ const GATEWAY_INFO = [
 export default function AdminSettings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getToken } = useAuth();
 
   const { data: settings, isLoading } = useGetSettings({
     query: { queryKey: getGetSettingsQueryKey() },
@@ -91,8 +94,49 @@ export default function AdminSettings() {
     queryKey: ["payment-status"],
     queryFn: async () => {
       const res = await fetch(`${BASE}/api/payments/status`);
-      return res.json() as Promise<{ razorpay: boolean; phonepe: boolean }>;
+      return res.json() as Promise<{ razorpay: boolean; phonepe: boolean; cod: boolean }>;
     },
+  });
+
+  const { data: methodsData, refetch: refetchMethods } = useQuery({
+    queryKey: ["admin-payment-methods"],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${BASE}/api/admin/payments/methods`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return { enabled: { razorpay: true, phonepe: true, cod: true }, keysPresent: { razorpay: false, phonepe: false, cod: true } };
+      return res.json() as Promise<{ enabled: Record<string, boolean>; keysPresent: Record<string, boolean> }>;
+    },
+  });
+
+  const [localEnabled, setLocalEnabled] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (methodsData?.enabled) setLocalEnabled(methodsData.enabled);
+  }, [methodsData]);
+
+  const saveMethodsMutation = useMutation({
+    mutationFn: async (enabled: Record<string, boolean>) => {
+      const token = await getToken();
+      const res = await fetch(`${BASE}/api/admin/payments/methods`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify(enabled),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Payment methods updated" });
+      refetchMethods();
+      queryClient.invalidateQueries({ queryKey: ["payment-status"] });
+    },
+    onError: () => toast({ title: "Failed to save payment methods", variant: "destructive" }),
   });
 
   const updateSettings = useUpdateSettings();
@@ -163,9 +207,9 @@ export default function AdminSettings() {
     );
   }
 
-  const activeStatus: Record<string, boolean> = {
-    razorpay: gatewayStatus?.razorpay ?? false,
-    phonepe: gatewayStatus?.phonepe ?? false,
+  const keysPresent: Record<string, boolean> = {
+    razorpay: methodsData?.keysPresent?.razorpay ?? false,
+    phonepe: methodsData?.keysPresent?.phonepe ?? false,
     cod: true,
   };
 
@@ -282,73 +326,110 @@ export default function AdminSettings() {
         </Card>
       </form>
 
-      {/* ── Payment Gateways (read-only config, keys set via Replit Secrets) ── */}
+      {/* ── Payment Gateways ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Payment Gateways</CardTitle>
-          <CardDescription>
-            Payment methods available at checkout. Add API keys in the <strong>Secrets</strong> tab to activate a gateway.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Payment Methods</CardTitle>
+              <CardDescription className="mt-1">
+                Enable or disable payment methods shown at checkout.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={saveMethodsMutation.isPending}
+              style={{ background: BRAND }}
+              className="text-white hover:opacity-90"
+              onClick={() => saveMethodsMutation.mutate(localEnabled)}
+            >
+              {saveMethodsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Save
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {GATEWAY_INFO.map(({ id, name, desc, Icon, keys, docsUrl, docsLabel, steps }) => {
-            const active = activeStatus[id] ?? false;
+            const isOn = localEnabled[id] ?? true;
+            const hasKeys = keysPresent[id] ?? false;
+            const canEnable = keys.length === 0 || hasKeys;
+            const liveAtCheckout = (keys.length === 0 ? isOn : hasKeys && isOn);
+
             return (
-              <div key={id} className="border rounded-lg p-4" style={{ borderColor: active ? "#d1fae5" : "#f3f4f6", background: active ? "#f0fdf4" : "white" }}>
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: active ? "#9B0F5F" : "#f3f4f6" }}>
-                    <Icon className="h-5 w-5" style={{ color: active ? "white" : "#9ca3af" }} />
+              <div
+                key={id}
+                className="border rounded-xl p-4 transition-colors"
+                style={{
+                  borderColor: liveAtCheckout ? "#d1fae5" : "#f3f4f6",
+                  background: liveAtCheckout ? "#f0fdf4" : "white",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: liveAtCheckout ? BRAND : "#f3f4f6" }}
+                  >
+                    <Icon className="h-5 w-5" style={{ color: liveAtCheckout ? "white" : "#9ca3af" }} />
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-semibold text-sm text-gray-900">{name}</p>
-                      <GatewayBadge active={active} />
+                      {liveAtCheckout ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                          <CheckCircle2 className="h-3 w-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          <XCircle className="h-3 w-3" /> Inactive
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 mb-2">{desc}</p>
+                    <p className="text-xs text-gray-500">{desc}</p>
 
-                    {keys.length > 0 && !active && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-semibold text-gray-700">How to set up:</p>
-                        <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
-                          {steps.map((step, i) => (
-                            <li key={i}>{step}</li>
-                          ))}
-                        </ol>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
+                    {keys.length > 0 && !hasKeys && (
+                      <div className="mt-2 space-y-1.5">
+                        <p className="text-xs text-amber-700 font-medium">API keys required to activate:</p>
+                        <div className="flex flex-wrap gap-1.5">
                           {keys.map((k) => (
                             <code key={k} className="text-[10px] px-2 py-0.5 rounded font-mono" style={{ background: "#fdf6f9", color: "#9B0F5F", border: "1px solid #f0c4dc" }}>{k}</code>
                           ))}
                         </div>
                         {docsUrl && (
                           <a href={docsUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-medium mt-1"
+                            className="inline-flex items-center gap-1 text-xs font-medium"
                             style={{ color: "#9B0F5F" }}>
                             {docsLabel} <ExternalLink className="h-3 w-3" />
                           </a>
                         )}
                       </div>
                     )}
+                  </div>
 
-                    {keys.length > 0 && active && (
-                      <p className="text-xs text-green-600 font-medium mt-1">
-                        ✓ API keys are configured and this gateway is live at checkout.
-                      </p>
-                    )}
-
-                    {keys.length === 0 && (
-                      <p className="text-xs text-green-600 font-medium">
-                        ✓ Always available — no configuration needed.
-                      </p>
-                    )}
+                  {/* Toggle */}
+                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <Switch
+                      checked={isOn}
+                      disabled={!canEnable}
+                      onCheckedChange={(val) => setLocalEnabled((prev) => ({ ...prev, [id]: val }))}
+                      style={isOn && canEnable ? { backgroundColor: BRAND } : {}}
+                    />
+                    <span className="text-[10px] text-gray-400">{isOn ? "On" : "Off"}</span>
                   </div>
                 </div>
+
+                {keys.length > 0 && hasKeys && (
+                  <p className="text-xs text-green-600 font-medium mt-2 pl-[52px]">
+                    ✓ API keys configured{isOn ? " — live at checkout" : " — currently disabled"}
+                  </p>
+                )}
               </div>
             );
           })}
 
           <p className="text-xs text-muted-foreground pt-1 border-t">
-            To add API keys: go to the <strong>Secrets</strong> tab (🔒) in the left sidebar of your Replit workspace and add the keys listed above.
+            Razorpay &amp; PhonePe require API keys — add them in the <strong>Secrets</strong> tab of your Replit workspace first.
           </p>
         </CardContent>
       </Card>

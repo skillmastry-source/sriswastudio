@@ -1,17 +1,78 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { storeSettingsTable } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router = Router();
 
-// Payment gateway status (safe — no keys exposed)
-router.get("/payments/status", (_req, res) => {
+type PaymentMethodsEnabled = {
+  razorpay: boolean;
+  phonepe: boolean;
+  cod: boolean;
+};
+
+const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, cod: true };
+
+async function ensurePaymentMethodsColumn() {
+  try {
+    await db.execute(sql`ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS payment_methods_enabled jsonb DEFAULT '{}'::jsonb`);
+  } catch {
+    // column may already exist — ignore
+  }
+}
+ensurePaymentMethodsColumn();
+
+async function getPaymentMethodsEnabled(): Promise<PaymentMethodsEnabled> {
+  const [settings] = await db.select().from(storeSettingsTable);
+  const stored = (settings as unknown as Record<string, unknown>)?.payment_methods_enabled as Partial<PaymentMethodsEnabled> | null ?? {};
+  return {
+    razorpay: stored.razorpay ?? DEFAULT_ENABLED.razorpay,
+    phonepe: stored.phonepe ?? DEFAULT_ENABLED.phonepe,
+    cod: stored.cod ?? DEFAULT_ENABLED.cod,
+  };
+}
+
+// Payment gateway status — combines keys present + admin toggle
+router.get("/payments/status", async (_req, res) => {
+  const enabled = await getPaymentMethodsEnabled();
   res.json({
+    razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) && enabled.razorpay,
+    phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY) && enabled.phonepe,
+    cod: enabled.cod,
+  });
+});
+
+// Admin: get current enabled states
+router.get("/admin/payments/methods", requireAdmin, async (_req: Request, res: Response) => {
+  const enabled = await getPaymentMethodsEnabled();
+  const keysPresent = {
     razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
     phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY),
-  });
+    cod: true,
+  };
+  return res.json({ enabled, keysPresent });
+});
+
+// Admin: update enabled states
+router.patch("/admin/payments/methods", requireAdmin, async (req: Request, res: Response) => {
+  const { razorpay, phonepe, cod } = req.body as Partial<PaymentMethodsEnabled>;
+  const current = await getPaymentMethodsEnabled();
+  const updated: PaymentMethodsEnabled = {
+    razorpay: razorpay ?? current.razorpay,
+    phonepe: phonepe ?? current.phonepe,
+    cod: cod ?? current.cod,
+  };
+
+  const [existing] = await db.select().from(storeSettingsTable);
+  if (!existing) {
+    await db.insert(storeSettingsTable).values({ payment_methods_enabled: updated } as unknown as typeof storeSettingsTable.$inferInsert);
+  } else {
+    await db.execute(sql`UPDATE store_settings SET payment_methods_enabled = ${JSON.stringify(updated)}::jsonb WHERE id = ${existing.id}`);
+  }
+  return res.json({ enabled: updated });
 });
 
 // UPI settings — public endpoint (no secrets, just UPI ID + QR image URL)

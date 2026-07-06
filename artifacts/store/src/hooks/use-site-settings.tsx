@@ -104,7 +104,13 @@ export const DEFAULT_HOMEPAGE_SECTIONS: HomepageSection[] = [
 
 export const DEFAULT_SITE_DESIGN = {
   header: {
+    logoUrl: "",
     logoSize: 90,
+    logoAlign: "center" as "left" | "center" | "right",
+    logoPaddingX: 0,
+    logoPaddingY: 0,
+    logoMarginTop: 0,
+    logoMarginBottom: 0,
     announcementText: "✦ Anti-Tarnish  |  Waterproof  |  Skin-Friendly  |  Free Shipping above ₹999",
     announcementBgColor: "#9B0F5F",
     showAnnouncement: true,
@@ -144,10 +150,19 @@ export const DEFAULT_SITE_DESIGN = {
     { name: "Divya R.", city: "Hyderabad", rating: 5, text: "Was skeptical at first but the quality is amazing. 100% worth every rupee!" },
   ],
   footer: {
+    logoUrl: "",
     logoSize: 90,
+    logoAlign: "left" as "left" | "center" | "right",
+    logoPaddingX: 0,
+    logoPaddingY: 0,
+    logoMarginTop: 0,
+    logoMarginBottom: 0,
     tagline: "Timeless Beauty, Everyday Shine.\nPremium anti-tarnish jewellery\ncrafted for the modern woman.",
     instagramUrl: "https://www.instagram.com/sriswa_studio",
     facebookUrl: "https://facebook.com/sriswastudio",
+  },
+  brand: {
+    faviconUrl: "",
   },
   homepageSections: DEFAULT_HOMEPAGE_SECTIONS,
   homepageMetaTitle: "",

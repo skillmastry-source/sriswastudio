@@ -7,6 +7,7 @@ import { CartProvider } from "@/hooks/use-cart-context";
 import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
 import { useEffect } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
 // Pages
 import Home from "@/pages/home";
@@ -63,6 +64,22 @@ function AuthTokenSync() {
     setAuthTokenGetter(() => getToken());
     return () => { setAuthTokenGetter(null); };
   }, [getToken]);
+  return null;
+}
+
+function FaviconUpdater() {
+  const settings = useSiteSettings();
+  const faviconUrl = settings.brand?.faviconUrl;
+  useEffect(() => {
+    if (!faviconUrl) return;
+    let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = faviconUrl;
+  }, [faviconUrl]);
   return null;
 }
 
@@ -227,6 +244,7 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <AuthTokenSync />
+        <FaviconUpdater />
         <TooltipProvider>
           <CartProvider>
             <WouterRouter base={basePath}>

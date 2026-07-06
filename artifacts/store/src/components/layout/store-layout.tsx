@@ -127,7 +127,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
       <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      {/* Row 1 — Logo centered + icons right */}
+      {/* Row 1 — Logo + icons right */}
       <div className="container mx-auto px-[30px] flex items-center justify-between relative" style={{ height: 80 }}>
         {/* Mobile: hamburger left */}
         <button
@@ -137,19 +137,34 @@ export function Navbar() {
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        {/* Desktop: logo centered absolutely */}
-        <Link href="/" className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2">
+        {/* Desktop: logo position based on align setting */}
+        <Link
+          href="/"
+          className={[
+            "hidden md:flex items-center",
+            header.logoAlign === "center" ? "absolute left-1/2 -translate-x-1/2" :
+            header.logoAlign === "right" ? "absolute right-[80px]" : "",
+          ].join(" ")}
+        >
           <img
-            src="/brand/logo-transparent.png"
+            src={header.logoUrl || "/brand/logo-transparent.png"}
             alt="Sriswa Studio"
             className="navbar-logo w-auto block"
+            style={{
+              paddingLeft: header.logoPaddingX,
+              paddingRight: header.logoPaddingX,
+              paddingTop: header.logoPaddingY,
+              paddingBottom: header.logoPaddingY,
+              marginTop: header.logoMarginTop,
+              marginBottom: header.logoMarginBottom,
+            }}
           />
         </Link>
 
         {/* Mobile: logo centered */}
         <Link href="/" className="md:hidden flex items-center">
           <img
-            src="/brand/logo-transparent.png"
+            src={header.logoUrl || "/brand/logo-transparent.png"}
             alt="Sriswa Studio"
             className="navbar-logo w-auto block"
           />
@@ -249,9 +264,20 @@ export function Footer() {
       <div className="container mx-auto px-[30px] pt-12 md:pt-16 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-10">
 
-          <div className="flex flex-col gap-4 items-start text-left">
-            <img src="/brand/logo-white.png" alt="Sriswa Studio"
-              className="footer-logo w-auto block" />
+          <div className={`flex flex-col gap-4 text-left ${footer.logoAlign === "center" ? "items-center" : footer.logoAlign === "right" ? "items-end" : "items-start"}`}>
+            <img
+              src={footer.logoUrl || "/brand/logo-white.png"}
+              alt="Sriswa Studio"
+              className="footer-logo w-auto block"
+              style={{
+                paddingLeft: footer.logoPaddingX,
+                paddingRight: footer.logoPaddingX,
+                paddingTop: footer.logoPaddingY,
+                paddingBottom: footer.logoPaddingY,
+                marginTop: footer.logoMarginTop,
+                marginBottom: footer.logoMarginBottom,
+              }}
+            />
             <p className="text-white/60 text-sm leading-relaxed">
               {footer.tagline.split("\n").map((line, i) => (
                 <span key={i}>{line}{i < footer.tagline.split("\n").length - 1 && <br />}</span>

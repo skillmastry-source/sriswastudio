@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
-import { clerkClient, getAuth } from "@clerk/express";
+import { getAuth } from "@clerk/express";
+import { resolveUser } from "../lib/clerkUserCache";
 
 const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "")
   .split(",").map((s) => s.trim()).filter(Boolean);
@@ -9,25 +10,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? process.env.VITE_ADMIN_EMAILS 
 
 const EDITOR_EMAILS = (process.env.EDITOR_EMAILS ?? process.env.VITE_EDITOR_EMAILS ?? "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-
-interface CachedUser { email: string; role: string; expiresAt: number }
-const userCache = new Map<string, CachedUser>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-async function resolveUser(userId: string): Promise<CachedUser> {
-  const now = Date.now();
-  const cached = userCache.get(userId);
-  if (cached && cached.expiresAt > now) return cached;
-
-  const user = await clerkClient.users.getUser(userId);
-  const entry: CachedUser = {
-    email: user.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "",
-    role: (user.publicMetadata as { role?: string })?.role ?? "",
-    expiresAt: now + CACHE_TTL_MS,
-  };
-  userCache.set(userId, entry);
-  return entry;
-}
 
 export const requireEditor: RequestHandler = async (req, res, next) => {
   const auth = getAuth(req);

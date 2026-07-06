@@ -33,6 +33,8 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 - **NEVER add `--update-env` to `pm2 restart`** — this strips env vars (PORT, DATABASE_URL, etc.) from the running process, causing PM2 crash-loop and all pages to hang
 - Plain `pm2 restart sriswa-api` keeps the existing env vars the process was started with
 - VPS .env has `VITE_CLERK_PUBLISHABLE_KEY` (not `CLERK_PUBLISHABLE_KEY`) — app.ts must check both
+- **A generic "failed with status code 500" in pino-http logs means no Express error middleware exists** — the real exception (message+stack) is swallowed. Express 5 forwards async route throws to the final 4-arg error handler; always register one after the router that logs `err.stack` via pino. Without it, production 500s are undebuggable from PM2 logs.
+- **Legacy production rows can crash response builders that dev data never hits** (e.g. null created_at → `.toISOString()` TypeError → 500 on the whole list endpoint). Guard date/nullable conversions in serializers.
 - **"Everything reset to old" symptom = stale code from a silently failed deploy.** With `set -e`, a git pull conflict (from manual VPS edits) or pnpm install failure aborts before rebuild — site keeps serving old code with no visible error. Script now has an ERR trap ("STILL RUNNING OLD CODE"), auto-stashes local edits (`git stash push -u`), and prints the deployed commit hash at the end so the user can verify what's live.
 
 **Why:** PM2's `--update-env` reloads env from ecosystem config (not from shell), wiping all vars not in the config file. This caused the API server to crash on startup (PORT undefined), making every API request hang forever.

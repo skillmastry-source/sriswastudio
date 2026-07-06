@@ -28,8 +28,8 @@ async function buildOrderResponse(order: typeof ordersTable.$inferSelect) {
     total: Number(order.total),
     discountAmount: Number(order.discountAmount ?? 0),
     items: items.map((i) => ({ ...i, price: Number(i.price) })),
-    createdAt: order.createdAt.toISOString(),
-    updatedAt: order.updatedAt.toISOString(),
+    createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : null,
+    updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : null,
   };
 }
 

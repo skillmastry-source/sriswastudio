@@ -1,4 +1,9 @@
-import express, { type Express } from "express";
+import express, {
+  type Express,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -57,5 +62,20 @@ app.use(
 );
 
 app.use("/api", router);
+
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  logger.error(
+    {
+      err,
+      method: req.method,
+      url: req.originalUrl?.split("?")[0],
+      stack: err instanceof Error ? err.stack : undefined,
+      message: err instanceof Error ? err.message : String(err),
+    },
+    "Unhandled request error",
+  );
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;

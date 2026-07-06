@@ -123,101 +123,103 @@ export function Navbar() {
     return location === hrefPath;
   };
 
+  const iconStyle = "text-gray-600 hover:text-gray-900";
+
+  const logoImg = (
+    <img
+      src={header.logoUrl || "/brand/logo-transparent.png"}
+      alt="Sriswa Studio"
+      className="navbar-logo w-auto block"
+      style={{
+        paddingLeft: header.logoPaddingX,
+        paddingRight: header.logoPaddingX,
+        paddingTop: header.logoPaddingY,
+        paddingBottom: header.logoPaddingY,
+        marginTop: header.logoMarginTop,
+        marginBottom: header.logoMarginBottom,
+      }}
+    />
+  );
+
+  const cartIcon = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={`relative ${iconStyle}`}
+      onClick={openCart}
+    >
+      <ShoppingBag className="h-[18px] w-[18px]" />
+      {itemCount > 0 && (
+        <span
+          className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+          style={{ background: colors.brand }}
+        >
+          {itemCount}
+        </span>
+      )}
+    </Button>
+  );
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white" style={{ borderBottom: `2px solid ${colors.gold}` }}>
-      <style>{`.navbar-logo { height: 44px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
+      <style>{`.navbar-logo { height: 40px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
-      {/* Row 1 — Logo + icons right */}
-      <div className="container mx-auto px-[30px] flex items-center justify-between relative" style={{ height: 80 }}>
-        {/* Mobile: hamburger left */}
-        <button
-          className="md:hidden p-2 -ml-2 text-gray-700"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+      {/* ── Desktop: single row — logo | nav | icons ── */}
+      <div className="hidden md:grid container mx-auto px-6" style={{ gridTemplateColumns: "1fr auto 1fr", height: 72, alignItems: "center" }}>
 
-        {/* Desktop: logo position based on align setting */}
-        <Link
-          href="/"
-          className={[
-            "hidden md:flex items-center",
-            header.logoAlign === "center" ? "absolute left-1/2 -translate-x-1/2" :
-            header.logoAlign === "right" ? "absolute right-[80px]" : "",
-          ].join(" ")}
-        >
-          <img
-            src={header.logoUrl || "/brand/logo-transparent.png"}
-            alt="Sriswa Studio"
-            className="navbar-logo w-auto block"
-            style={{
-              paddingLeft: header.logoPaddingX,
-              paddingRight: header.logoPaddingX,
-              paddingTop: header.logoPaddingY,
-              paddingBottom: header.logoPaddingY,
-              marginTop: header.logoMarginTop,
-              marginBottom: header.logoMarginBottom,
-            }}
-          />
+        {/* Left — Logo */}
+        <Link href="/" className="flex items-center justify-self-start">
+          {logoImg}
         </Link>
 
-        {/* Mobile: logo centered */}
-        <Link href="/" className="md:hidden flex items-center">
-          <img
-            src={header.logoUrl || "/brand/logo-transparent.png"}
-            alt="Sriswa Studio"
-            className="navbar-logo w-auto block"
-          />
-        </Link>
+        {/* Center — Category nav */}
+        <nav className="flex items-center gap-5 text-[11.5px] font-medium tracking-[0.08em] uppercase">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="whitespace-nowrap transition-colors"
+              style={{
+                color: isLinkActive(link.href) ? colors.brand : "#4b5563",
+                borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
+                paddingBottom: "2px",
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
 
-        {/* Icons right */}
-        <div className="flex items-center gap-0.5 ml-auto">
-          <Button variant="ghost" size="icon" className="text-gray-600">
+        {/* Right — Search, Account, Cart */}
+        <div className="flex items-center gap-0.5 justify-self-end">
+          <Button variant="ghost" size="icon" className={iconStyle}>
             <Search className="h-[18px] w-[18px]" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-600" asChild>
+          <Button variant="ghost" size="icon" className={iconStyle} asChild>
             <Link href="/account">
               <User className="h-[18px] w-[18px]" />
             </Link>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative text-gray-600"
-            onClick={openCart}
-          >
-            <ShoppingBag className="h-[18px] w-[18px]" />
-            {itemCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
-                style={{ background: colors.brand }}
-              >
-                {itemCount}
-              </span>
-            )}
-          </Button>
+          {cartIcon}
         </div>
       </div>
 
-      {/* Row 2 — Nav links centered (desktop only) */}
-      <div className="hidden md:flex items-center justify-center gap-7 text-[12px] font-medium tracking-[0.08em] uppercase border-t border-gray-100 py-2.5">
-        {navLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            style={{
-              color: isLinkActive(link.href) ? colors.brand : "#4b5563",
-              borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
-              paddingBottom: "2px",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-            className="transition-colors whitespace-nowrap"
-          >
-            {link.label}
-          </Link>
-        ))}
+      {/* ── Mobile: hamburger | logo | cart ── */}
+      <div className="flex md:hidden items-center justify-between px-4" style={{ height: 60 }}>
+        <button className="p-2 -ml-2 text-gray-700" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+        <Link href="/" className="flex items-center">
+          <img
+            src={header.logoUrl || "/brand/logo-transparent.png"}
+            alt="Sriswa Studio"
+            className="navbar-logo w-auto block"
+          />
+        </Link>
+        {cartIcon}
       </div>
 
+      {/* Mobile drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t bg-white px-4 py-5">
           <nav className="flex flex-col gap-5 text-sm font-medium uppercase tracking-widest text-gray-700">

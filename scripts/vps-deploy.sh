@@ -30,10 +30,18 @@ echo "🚀 Copying frontend to web root..."
 rm -rf "$WEB_ROOT"/*
 cp -r artifacts/store/dist/public/. "$WEB_ROOT/"
 
-echo "🗄️  Applying database migrations..."
+echo "🗄️  Applying new database migrations..."
 set -a; source "$ENV_FILE"; set +a
-for sql_file in "$REPO_DIR"/lib/db/drizzle/*.sql; do
-  psql "$DATABASE_URL" -f "$sql_file" 2>/dev/null || true
+psql "$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS _applied_migrations (filename text PRIMARY KEY, applied_at timestamptz DEFAULT now());" 2>/dev/null || true
+for sql_file in "$REPO_DIR"/lib/db/drizzle/[0-9]*.sql; do
+  fname=$(basename "$sql_file")
+  count=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM _applied_migrations WHERE filename='$fname'" 2>/dev/null || echo "0")
+  if [ "$count" = "0" ]; then
+    echo "   → Applying $fname"
+    if psql "$DATABASE_URL" -f "$sql_file" 2>/dev/null; then
+      psql "$DATABASE_URL" -c "INSERT INTO _applied_migrations(filename) VALUES('$fname');" 2>/dev/null || true
+    fi
+  fi
 done
 
 echo "🔁 Restarting API server..."

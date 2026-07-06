@@ -110,7 +110,7 @@ router.get("/admin/settings", async (req, res) => {
 });
 
 router.patch("/admin/settings", async (req, res) => {
-  const { storeName, adminWhatsapp, newOrderTemplate, statusUpdateTemplate, upiId, upiQrUrl } = req.body;
+  const { storeName, adminWhatsapp, newOrderTemplate, statusUpdateTemplate, customerOrderTemplate, upiId, upiQrUrl } = req.body;
   let [settings] = await db.select().from(storeSettingsTable);
   if (!settings) {
     [settings] = await db.insert(storeSettingsTable).values({}).returning();
@@ -120,6 +120,7 @@ router.patch("/admin/settings", async (req, res) => {
   if (adminWhatsapp !== undefined) updates.adminWhatsapp = adminWhatsapp;
   if (newOrderTemplate !== undefined) updates.newOrderTemplate = newOrderTemplate;
   if (statusUpdateTemplate !== undefined) updates.statusUpdateTemplate = statusUpdateTemplate;
+  if (customerOrderTemplate !== undefined) updates.customerOrderTemplate = customerOrderTemplate;
   if (upiId !== undefined) updates.upiId = upiId;
   if (upiQrUrl !== undefined) updates.upiQrUrl = upiQrUrl;
   const [updated] = await db.update(storeSettingsTable).set(updates).where(eq(storeSettingsTable.id, settings.id)).returning();

@@ -79,6 +79,17 @@ const GATEWAY_INFO = [
     docsLabel: "",
     steps: [],
   },
+  {
+    id: "upi" as const,
+    name: "UPI / QR Code",
+    desc: "Customers scan your QR code or pay via UPI ID. Configure your UPI ID in the settings above.",
+    Icon: QrCode,
+    keys: [],
+    docsUrl: "",
+    docsLabel: "",
+    steps: [],
+    requiresUpiId: true,
+  },
 ];
 
 export default function AdminSettings() {
@@ -113,7 +124,7 @@ export default function AdminSettings() {
 
   const [localEnabled, setLocalEnabled] = useState<Record<string, boolean>>({});
   useEffect(() => {
-    if (methodsData?.enabled) setLocalEnabled(methodsData.enabled);
+    if (methodsData?.enabled) setLocalEnabled({ upi: true, ...methodsData.enabled });
   }, [methodsData]);
 
   const saveMethodsMutation = useMutation({
@@ -376,11 +387,12 @@ export default function AdminSettings() {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {GATEWAY_INFO.map(({ id, name, desc, Icon, keys, docsUrl, docsLabel, steps }) => {
+          {GATEWAY_INFO.map(({ id, name, desc, Icon, keys, docsUrl, docsLabel, steps, requiresUpiId }) => {
             const isOn = localEnabled[id] ?? true;
             const hasKeys = keysPresent[id] ?? false;
-            const canEnable = keys.length === 0 || hasKeys;
-            const liveAtCheckout = (keys.length === 0 ? isOn : hasKeys && isOn);
+            const hasUpiId = requiresUpiId ? !!(settings?.upiId) : true;
+            const canEnable = (keys.length === 0 || hasKeys) && hasUpiId;
+            const liveAtCheckout = (keys.length === 0 ? isOn && hasUpiId : hasKeys && isOn);
 
             return (
               <div
@@ -430,6 +442,11 @@ export default function AdminSettings() {
                           </a>
                         )}
                       </div>
+                    )}
+                    {requiresUpiId && !hasUpiId && (
+                      <p className="mt-2 text-xs text-amber-700 font-medium">
+                        Enter a UPI ID in the "UPI / QR Code Payment" section above to activate this.
+                      </p>
                     )}
                   </div>
 

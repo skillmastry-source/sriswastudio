@@ -12,9 +12,10 @@ type PaymentMethodsEnabled = {
   razorpay: boolean;
   phonepe: boolean;
   cod: boolean;
+  upi: boolean;
 };
 
-const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, cod: true };
+const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, cod: true, upi: true };
 
 async function ensurePaymentMethodsColumn() {
   try {
@@ -32,6 +33,7 @@ async function getPaymentMethodsEnabled(): Promise<PaymentMethodsEnabled> {
     razorpay: stored.razorpay ?? DEFAULT_ENABLED.razorpay,
     phonepe: stored.phonepe ?? DEFAULT_ENABLED.phonepe,
     cod: stored.cod ?? DEFAULT_ENABLED.cod,
+    upi: stored.upi ?? DEFAULT_ENABLED.upi,
   };
 }
 
@@ -58,12 +60,13 @@ router.get("/admin/payments/methods", requireAdmin, async (_req: Request, res: R
 
 // Admin: update enabled states
 router.patch("/admin/payments/methods", requireAdmin, async (req: Request, res: Response) => {
-  const { razorpay, phonepe, cod } = req.body as Partial<PaymentMethodsEnabled>;
+  const { razorpay, phonepe, cod, upi } = req.body as Partial<PaymentMethodsEnabled>;
   const current = await getPaymentMethodsEnabled();
   const updated: PaymentMethodsEnabled = {
     razorpay: razorpay ?? current.razorpay,
     phonepe: phonepe ?? current.phonepe,
     cod: cod ?? current.cod,
+    upi: upi ?? current.upi,
   };
 
   const [existing] = await db.select().from(storeSettingsTable);
@@ -78,10 +81,11 @@ router.patch("/admin/payments/methods", requireAdmin, async (req: Request, res: 
 // UPI settings — public endpoint (no secrets, just UPI ID + QR image URL)
 router.get("/payments/upi/settings", async (_req, res) => {
   const [settings] = await db.select().from(storeSettingsTable);
+  const methodsEnabled = await getPaymentMethodsEnabled();
   return res.json({
     upiId: settings?.upiId ?? "",
     upiQrUrl: settings?.upiQrUrl ?? "",
-    enabled: !!(settings?.upiId),
+    enabled: !!(settings?.upiId) && methodsEnabled.upi,
   });
 });
 

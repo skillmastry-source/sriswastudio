@@ -159,27 +159,54 @@ function LogoUploadField({
   async function handleFile(file: File) {
     setUploading(true);
     try {
+      let publicUrl = "";
+
+      // Try presigned URL upload (Replit Object Storage)
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
-      if (!urlRes.ok) throw new Error();
-      const { uploadURL, objectPath } = await urlRes.json();
-      await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      const rawPath = objectPath.replace(/^\/objects\//, "");
-      const publicUrl = `/api/storage/product-images/${rawPath}`;
+
+      if (urlRes.ok) {
+        const { uploadURL, objectPath } = await urlRes.json();
+        const putRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+        if (!putRes.ok) throw new Error("PUT failed");
+        const rawPath = objectPath.replace(/^\/objects\//, "");
+        publicUrl = `/api/storage/product-images/${rawPath}`;
+      } else if (urlRes.status === 401) {
+        throw new Error("Not signed in — please sign in to upload images.");
+      } else {
+        // Fallback: direct multipart upload (VPS / no object storage)
+        const form = new FormData();
+        form.append("file", file);
+        const directRes = await fetch("/api/storage/uploads/direct", {
+          method: "POST",
+          credentials: "include",
+          body: form,
+        });
+        if (!directRes.ok) {
+          const err = await directRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error ?? "Direct upload failed");
+        }
+        const { url } = await directRes.json() as { url: string };
+        publicUrl = url;
+      }
+
+      // Record in media library
       await fetch("/api/admin/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ filename: file.name, url: publicUrl, folder: "Brand", mimeType: file.type, sizeBytes: file.size }),
       });
+
       onUpload(publicUrl);
       toast({ title: `${label} uploaded` });
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      toast({ title: msg, variant: "destructive" });
     } finally {
       setUploading(false);
     }

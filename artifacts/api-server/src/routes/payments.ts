@@ -11,11 +11,10 @@ const router = Router();
 type PaymentMethodsEnabled = {
   razorpay: boolean;
   phonepe: boolean;
-  cod: boolean;
   upi: boolean;
 };
 
-const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, cod: true, upi: true };
+const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, upi: true };
 
 async function ensurePaymentMethodsColumn() {
   try {
@@ -32,7 +31,6 @@ async function getPaymentMethodsEnabled(): Promise<PaymentMethodsEnabled> {
   return {
     razorpay: stored.razorpay ?? DEFAULT_ENABLED.razorpay,
     phonepe: stored.phonepe ?? DEFAULT_ENABLED.phonepe,
-    cod: stored.cod ?? DEFAULT_ENABLED.cod,
     upi: stored.upi ?? DEFAULT_ENABLED.upi,
   };
 }
@@ -43,7 +41,6 @@ router.get("/payments/status", async (_req, res) => {
   res.json({
     razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) && enabled.razorpay,
     phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY) && enabled.phonepe,
-    cod: enabled.cod,
   });
 });
 
@@ -53,19 +50,17 @@ router.get("/admin/payments/methods", requireAdmin, async (_req: Request, res: R
   const keysPresent = {
     razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
     phonepe: !!(process.env.PHONEPE_MERCHANT_ID && process.env.PHONEPE_SALT_KEY),
-    cod: true,
   };
   return res.json({ enabled, keysPresent });
 });
 
 // Admin: update enabled states
 router.patch("/admin/payments/methods", requireAdmin, async (req: Request, res: Response) => {
-  const { razorpay, phonepe, cod, upi } = req.body as Partial<PaymentMethodsEnabled>;
+  const { razorpay, phonepe, upi } = req.body as Partial<PaymentMethodsEnabled>;
   const current = await getPaymentMethodsEnabled();
   const updated: PaymentMethodsEnabled = {
     razorpay: razorpay ?? current.razorpay,
     phonepe: phonepe ?? current.phonepe,
-    cod: cod ?? current.cod,
     upi: upi ?? current.upi,
   };
 

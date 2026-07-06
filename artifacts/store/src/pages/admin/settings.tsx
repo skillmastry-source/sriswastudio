@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, Truck, QrCode, Upload, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, CreditCard, Smartphone, QrCode, Upload, Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/react";
 
 interface SettingsForm {
@@ -68,16 +68,6 @@ const GATEWAY_INFO = [
       "Get Merchant ID, Salt Key and Salt Index from dashboard",
       "Add them as secrets: PHONEPE_MERCHANT_ID, PHONEPE_SALT_KEY, PHONEPE_SALT_INDEX",
     ],
-  },
-  {
-    id: "cod" as const,
-    name: "Cash on Delivery",
-    desc: "Always available — no setup required. Customer pays on delivery.",
-    Icon: Truck,
-    keys: [],
-    docsUrl: "",
-    docsLabel: "",
-    steps: [],
   },
   {
     id: "upi" as const,

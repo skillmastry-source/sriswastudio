@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, CreditCard, Smartphone, Truck, CheckCircle2, Tag, X, Loader2, QrCode, Copy, LogIn, UserPlus } from "lucide-react";
+import { AlertTriangle, CreditCard, Smartphone, CheckCircle2, Tag, X, Loader2, QrCode, Copy, LogIn, UserPlus } from "lucide-react";
 import { SignedIn, SignedOut } from "@/lib/clerk-stub";
 
 declare global {
@@ -33,7 +33,7 @@ const checkoutSchema = z.object({
   notes: z.string().optional(),
 });
 
-type PaymentMethod = "razorpay" | "phonepe" | "upi_qr" | "cod";
+type PaymentMethod = "razorpay" | "phonepe" | "upi_qr";
 
 interface CouponResult {
   discount: number;
@@ -183,7 +183,7 @@ export default function Checkout() {
   });
 
   const placeOrder = (data: z.infer<typeof checkoutSchema>, paymentId?: string, paymentRef?: string) => {
-    const pm = paymentId ? "RAZORPAY" : effectiveMethod === "phonepe" ? "PHONEPE" : effectiveMethod === "upi_qr" ? "UPI_QR" : "COD";
+    const pm = paymentId ? "RAZORPAY" : effectiveMethod === "phonepe" ? "PHONEPE" : "UPI_QR";
     createOrder.mutate({
       data: {
         ...data,
@@ -218,7 +218,7 @@ export default function Checkout() {
 
     const keyRes = await fetch(`${BASE}/api/payments/razorpay/key`);
     if (!keyRes.ok) {
-      setError("Razorpay is not configured yet. Please use COD or UPI.");
+      setError("Razorpay is not configured yet. Please use UPI.");
       setProcessing(false);
       return;
     }
@@ -283,7 +283,7 @@ export default function Checkout() {
 
     if (!res.ok) {
       const err = await res.json() as { error?: string };
-      setError(err.error ?? "PhonePe is not configured yet. Please use COD or UPI.");
+      setError(err.error ?? "PhonePe is not configured yet. Please use UPI.");
       setProcessing(false);
       return;
     }
@@ -349,11 +349,10 @@ export default function Checkout() {
     { id: "upi_qr", label: "UPI / Scanner", sub: "Scan QR code & pay instantly", Icon: QrCode, show: !!upiEnabled },
     { id: "razorpay", label: "Razorpay", sub: "Cards, UPI, Net Banking, Wallets", Icon: CreditCard, show: !!gatewayStatus?.razorpay },
     { id: "phonepe", label: "PhonePe", sub: "UPI & PhonePe Wallet", Icon: Smartphone, show: !!gatewayStatus?.phonepe },
-    { id: "cod", label: "Cash on Delivery", sub: "Pay when your order arrives", Icon: Truck, show: true },
   ];
   const PAYMENT_OPTIONS: PaymentOption[] = ALL_PAYMENT_OPTIONS.filter((o) => o.show);
 
-  const effectiveMethod = paymentMethod ?? (PAYMENT_OPTIONS[0]?.id ?? "cod");
+  const effectiveMethod = paymentMethod ?? PAYMENT_OPTIONS[0]?.id;
 
   return (
     <StoreLayout>

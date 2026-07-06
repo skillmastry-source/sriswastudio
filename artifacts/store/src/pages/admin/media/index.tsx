@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useAuth } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,7 @@ function ImageDimensions({ url }: { url: string }) {
 
 export default function AdminMediaLibrary() {
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
@@ -84,7 +86,11 @@ export default function AdminMediaLibrary() {
   const loadFiles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/media", { credentials: "include" });
+      const token = await getToken();
+      const res = await fetch("/api/admin/media", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to load media");
       const data: MediaFile[] = await res.json();
       setFiles(data);
@@ -93,16 +99,18 @@ export default function AdminMediaLibrary() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, getToken]);
 
   useEffect(() => { loadFiles(); }, [loadFiles]);
 
   async function uploadFile(file: File, folder: string) {
     setUploading(true);
     try {
+      const token = await getToken();
+      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         credentials: "include",
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
       });
@@ -121,7 +129,7 @@ export default function AdminMediaLibrary() {
 
       const recordRes = await fetch("/api/admin/media", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         credentials: "include",
         body: JSON.stringify({
           filename: file.name,
@@ -158,9 +166,11 @@ export default function AdminMediaLibrary() {
 
   async function deleteFile(id: number) {
     try {
+      const token = await getToken();
       const res = await fetch(`/api/admin/media/${id}`, {
         method: "DELETE",
         credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Delete failed");
       setFiles((prev) => prev.filter((f) => f.id !== id));

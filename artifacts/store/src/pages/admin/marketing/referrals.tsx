@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,26 +26,29 @@ interface Coupon {
   isReferral?: boolean;
 }
 
-async function getCoupons(): Promise<Coupon[]> {
-  const res = await fetch("/api/admin/coupons", { credentials: "include" });
+async function getCoupons(token?: string | null): Promise<Coupon[]> {
+  const res = await fetch("/api/admin/coupons", {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed");
   return res.json();
 }
 
-async function createCoupon(data: Partial<Coupon>) {
+async function createCoupon(data: Partial<Coupon>, token?: string | null) {
   const res = await fetch("/api/admin/coupons", {
     method: "POST", credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(data),
   });
   if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Failed"); }
   return res.json();
 }
 
-async function toggleCoupon(id: number, isActive: boolean) {
+async function toggleCoupon(id: number, isActive: boolean, token?: string | null) {
   const res = await fetch(`/api/admin/coupons/${id}`, {
     method: "PATCH", credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ isActive }),
   });
   if (!res.ok) throw new Error("Failed");
@@ -59,8 +63,9 @@ function generateReferralCode(name: string) {
 export default function AdminReferrals() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { getToken } = useAuth();
 
-  const { data: allCoupons = [], isLoading } = useQuery({ queryKey: ["/api/admin/coupons"], queryFn: getCoupons });
+  const { data: allCoupons = [], isLoading } = useQuery({ queryKey: ["/api/admin/coupons"], queryFn: async () => getCoupons(await getToken()) });
 
   const referralCoupons = allCoupons.filter(c => c.code.startsWith("REF-"));
 
@@ -72,14 +77,14 @@ export default function AdminReferrals() {
   const generatedCode = name ? generateReferralCode(name) : "REF-FRIEND";
 
   const create = useMutation({
-    mutationFn: () => createCoupon({
+    mutationFn: async () => createCoupon({
       code: generatedCode,
       type: discountType,
       value: Number(value),
       minOrderAmount: minOrder ? Number(minOrder) : null,
       maxUses: null,
       isActive: true,
-    }),
+    }, await getToken()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/admin/coupons"] });
       toast({ title: "Referral code created!", description: `Code ${generatedCode} is ready to share.` });
@@ -89,7 +94,7 @@ export default function AdminReferrals() {
   });
 
   const toggle = useMutation({
-    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => toggleCoupon(id, isActive),
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => toggleCoupon(id, isActive, await getToken()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/coupons"] }),
   });
 

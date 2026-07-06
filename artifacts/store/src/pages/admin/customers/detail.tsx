@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { useParams, Link } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -52,16 +53,19 @@ type CustomerDetail = {
   }[];
 };
 
-async function fetchCustomer(email: string): Promise<CustomerDetail> {
-  const res = await fetch(`/api/admin/customers/${encodeURIComponent(email)}`, { credentials: "include" });
+async function fetchCustomer(email: string, token?: string | null): Promise<CustomerDetail> {
+  const res = await fetch(`/api/admin/customers/${encodeURIComponent(email)}`, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Customer not found");
   return res.json();
 }
 
-async function addNote(email: string, note: string) {
+async function addNote(email: string, note: string, token?: string | null) {
   const res = await fetch(`/api/admin/customers/${encodeURIComponent(email)}/notes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     credentials: "include",
     body: JSON.stringify({ note }),
   });
@@ -69,18 +73,19 @@ async function addNote(email: string, note: string) {
   return res.json();
 }
 
-async function deleteNote(email: string, noteId: number) {
+async function deleteNote(email: string, noteId: number, token?: string | null) {
   const res = await fetch(`/api/admin/customers/${encodeURIComponent(email)}/notes/${noteId}`, {
     method: "DELETE",
     credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Failed to delete note");
 }
 
-async function updateNote(email: string, noteId: number, note: string) {
+async function updateNote(email: string, noteId: number, note: string, token?: string | null) {
   const res = await fetch(`/api/admin/customers/${encodeURIComponent(email)}/notes/${noteId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     credentials: "include",
     body: JSON.stringify({ note }),
   });
@@ -93,6 +98,7 @@ export default function CustomerDetail() {
   const email = decodeURIComponent(encodedEmail ?? "");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getToken } = useAuth();
 
   const [newNote,    setNewNote]    = useState("");
   const [editId,     setEditId]     = useState<number | null>(null);
@@ -101,26 +107,26 @@ export default function CustomerDetail() {
 
   const { data: customer, isLoading, isError } = useQuery<CustomerDetail>({
     queryKey: ["/api/admin/customers", email],
-    queryFn: () => fetchCustomer(email),
+    queryFn: async () => fetchCustomer(email, await getToken()),
     enabled: Boolean(email),
   });
 
   const qk = ["/api/admin/customers", email];
 
   const addMutation = useMutation({
-    mutationFn: () => addNote(email, newNote),
+    mutationFn: async () => addNote(email, newNote, await getToken()),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: qk }); setNewNote(""); },
     onError: () => toast({ title: "Failed to add note", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (noteId: number) => deleteNote(email, noteId),
+    mutationFn: async (noteId: number) => deleteNote(email, noteId, await getToken()),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: qk }); setConfirmDel(null); },
     onError: () => toast({ title: "Failed to delete note", variant: "destructive" }),
   });
 
   const editMutation = useMutation({
-    mutationFn: (noteId: number) => updateNote(email, noteId, editText),
+    mutationFn: async (noteId: number) => updateNote(email, noteId, editText, await getToken()),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: qk }); setEditId(null); },
     onError: () => toast({ title: "Failed to update note", variant: "destructive" }),
   });

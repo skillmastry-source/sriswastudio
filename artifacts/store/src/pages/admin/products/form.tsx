@@ -129,14 +129,18 @@ export default function AdminProductForm() {
   };
 
   async function syncImagesAndVariants(productId: number) {
+    const token = await getToken();
+    const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
     await fetch(`/api/products/${productId}/images/sync`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
+      credentials: "include",
       body: JSON.stringify({ images: images.map((img, i) => ({ url: img.url, isPrimary: i === 0, displayOrder: i })) }),
     });
     await fetch(`/api/products/${productId}/variants/sync`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
+      credentials: "include",
       body: JSON.stringify({ variants }),
     });
   }
@@ -145,7 +149,7 @@ export default function AdminProductForm() {
     setUploadingImage(true);
     try {
       const token = await getToken();
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       // Try Replit Object Storage first
       const urlRes = await fetch("/api/storage/uploads/request-url", {

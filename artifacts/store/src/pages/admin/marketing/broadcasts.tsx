@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,18 @@ import { Link } from "wouter";
 
 const BRAND = "#9B0F5F";
 
-async function getStats() {
-  const res = await fetch("/api/admin/marketing/broadcast/stats", { credentials: "include" });
+async function getStats(token?: string | null) {
+  const res = await fetch("/api/admin/marketing/broadcast/stats", {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed");
   return res.json() as Promise<{ whatsappRecipients: number; emailRecipients: number }>;
 }
 
 export default function AdminBroadcasts() {
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const [waMessage, setWaMessage] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -26,14 +31,15 @@ export default function AdminBroadcasts() {
   const [waResult, setWaResult] = useState<{ sent: number; failed: number } | null>(null);
   const [emailResult, setEmailResult] = useState<{ sent: number; failed: number } | null>(null);
 
-  const { data: stats } = useQuery({ queryKey: ["broadcast-stats"], queryFn: getStats });
+  const { data: stats } = useQuery({ queryKey: ["broadcast-stats"], queryFn: async () => getStats(await getToken()) });
 
   const sendWA = useMutation({
     mutationFn: async () => {
+      const token = await getToken();
       const res = await fetch("/api/admin/marketing/broadcast/whatsapp", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ message: waMessage }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Failed"); }
@@ -49,10 +55,11 @@ export default function AdminBroadcasts() {
 
   const sendEmail = useMutation({
     mutationFn: async () => {
+      const token = await getToken();
       const res = await fetch("/api/admin/marketing/broadcast/email", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ subject: emailSubject, html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">${emailBody.replace(/\n/g, "<br>")}</div>` }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Failed"); }

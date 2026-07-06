@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 
 interface AdminProduct {
   id: number; name: string; slug: string; price: number; compareAtPrice: number | null;
@@ -15,21 +16,24 @@ interface AdminProduct {
   images: { url: string; isPrimary: boolean }[];
 }
 
-async function fetchAdminProducts(search: string): Promise<{ products: AdminProduct[]; total: number }> {
-  const params = new URLSearchParams({ limit: "100" });
-  if (search) params.set("search", search);
-  const res = await fetch(`/api/admin/products?${params}`);
-  if (!res.ok) throw new Error("Failed to fetch products");
-  return res.json();
-}
-
 export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   const { data: productData, isLoading, isError } = useQuery({
     queryKey: ["admin-products", search],
-    queryFn: () => fetchAdminProducts(search),
+    queryFn: async () => {
+      const token = await getToken();
+      const params = new URLSearchParams({ limit: "100" });
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/admin/products?${params}`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      return res.json() as Promise<{ products: AdminProduct[]; total: number }>;
+    },
     retry: 1,
   });
 

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -49,23 +50,29 @@ type Lead = {
   createdAt: string;
 };
 
-async function fetchCustomers(search: string, segment: Segment, page: number) {
+async function fetchCustomers(search: string, segment: Segment, page: number, token?: string | null) {
   const params = new URLSearchParams({ search, segment, page: String(page), limit: "20" });
-  const res = await fetch(`/api/admin/customers?${params}`, { credentials: "include" });
+  const res = await fetch(`/api/admin/customers?${params}`, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed");
   return res.json() as Promise<{ customers: Customer[]; total: number; page: number; limit: number }>;
 }
 
-async function fetchLeads() {
-  const res = await fetch("/api/admin/leads", { credentials: "include" });
+async function fetchLeads(token?: string | null) {
+  const res = await fetch("/api/admin/leads", {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed");
   return res.json() as Promise<Lead[]>;
 }
 
-async function updateLeadStatus(id: number, status: string) {
+async function updateLeadStatus(id: number, status: string, token?: string | null) {
   const res = await fetch(`/api/admin/leads/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     credentials: "include",
     body: JSON.stringify({ status }),
   });
@@ -79,21 +86,22 @@ export default function AdminCustomers() {
   const [segment, setSegment] = useState<Segment>("all");
   const [page, setPage]       = useState(1);
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/admin/customers", search, segment, page],
-    queryFn: () => fetchCustomers(search, segment, page),
+    queryFn: async () => fetchCustomers(search, segment, page, await getToken()),
     enabled: tab === "customers",
   });
 
   const { data: leadsData = [], isLoading: leadsLoading } = useQuery({
     queryKey: ["/api/admin/leads"],
-    queryFn: fetchLeads,
+    queryFn: async () => fetchLeads(await getToken()),
     enabled: tab === "leads",
   });
 
   const updateLead = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) => updateLeadStatus(id, status),
+    mutationFn: async ({ id, status }: { id: number; status: string }) => updateLeadStatus(id, status, await getToken()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/leads"] }),
   });
 

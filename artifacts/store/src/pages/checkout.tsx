@@ -522,13 +522,11 @@ export default function Checkout() {
                   >
                     {processing || createOrder.isPending
                       ? "Processing…"
-                      : effectiveMethod === "cod"
-                        ? `Place Order • ₹${finalTotal.toFixed(2)}`
-                        : effectiveMethod === "phonepe"
-                          ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
-                          : effectiveMethod === "upi_qr"
-                            ? `Confirm UPI Payment • ₹${finalTotal.toFixed(2)}`
-                            : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
+                      : effectiveMethod === "phonepe"
+                        ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
+                        : effectiveMethod === "upi_qr"
+                          ? `Confirm UPI Payment • ₹${finalTotal.toFixed(2)}`
+                          : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
                     }
                   </Button>
                 </form>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,10 +27,10 @@ async function getSiteDesign(): Promise<SiteDesign> {
   return res.json();
 }
 
-async function patchSiteDesign(patch: Partial<SiteDesign>) {
+async function patchSiteDesign(patch: Partial<SiteDesign>, token?: string | null) {
   const res = await fetch("/api/admin/site-design", {
     method: "PATCH", credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error("Failed to save");
@@ -88,6 +89,7 @@ function CountdownPreview({ endTime, title, subtitle, bgColor }: { endTime: stri
 export default function AdminFlashSale() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { getToken } = useAuth();
 
   const { data: design, isLoading } = useQuery({ queryKey: ["/api/site-design"], queryFn: getSiteDesign });
 
@@ -110,13 +112,13 @@ export default function AdminFlashSale() {
   }, [design]);
 
   const save = useMutation({
-    mutationFn: () => patchSiteDesign({
+    mutationFn: async () => patchSiteDesign({
       flashSale: {
         enabled, title, subtitle,
         endTime: endTime ? new Date(endTime).toISOString() : undefined,
         bgColor, link,
       },
-    }),
+    }, await getToken()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/site-design"] });
       toast({ title: "Saved!", description: "Flash sale settings updated." });

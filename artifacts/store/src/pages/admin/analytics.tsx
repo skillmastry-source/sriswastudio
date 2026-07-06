@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IndianRupee, ShoppingCart, Users, TrendingUp, Package } from "lucide-react";
 import { useState } from "react";
@@ -19,8 +20,11 @@ const PIE_COLORS: Record<string, string> = {
 type Period = "daily" | "weekly" | "monthly";
 type TopView = "revenue" | "units";
 
-async function fetchAdmin(path: string) {
-  const res = await fetch(path, { credentials: "include" });
+async function fetchAdmin(path: string, token?: string | null) {
+  const res = await fetch(path, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed");
   return res.json();
 }
@@ -53,25 +57,26 @@ function Empty({ msg }: { msg: string }) {
 export default function AdminAnalytics() {
   const [period, setPeriod]   = useState<Period>("monthly");
   const [topView, setTopView] = useState<TopView>("revenue");
+  const { getToken } = useAuth();
 
   const { data: dashboard } = useQuery({
     queryKey: ["/api/admin/dashboard"],
-    queryFn: () => fetchAdmin("/api/admin/dashboard"),
+    queryFn: async () => fetchAdmin("/api/admin/dashboard", await getToken()),
   });
 
   const { data: overview } = useQuery({
     queryKey: ["/api/admin/analytics/overview"],
-    queryFn: () => fetchAdmin("/api/admin/analytics/overview"),
+    queryFn: async () => fetchAdmin("/api/admin/analytics/overview", await getToken()),
   });
 
   const { data: revenue = [] } = useQuery({
     queryKey: ["/api/admin/analytics/revenue", period],
-    queryFn: () => fetchAdmin(`/api/admin/analytics/revenue?period=${period}`),
+    queryFn: async () => fetchAdmin(`/api/admin/analytics/revenue?period=${period}`, await getToken()),
   });
 
   const { data: topProducts = [] } = useQuery({
     queryKey: ["/api/admin/analytics/top-products", topView],
-    queryFn: () => fetchAdmin(`/api/admin/analytics/top-products?sortBy=${topView}`),
+    queryFn: async () => fetchAdmin(`/api/admin/analytics/top-products?sortBy=${topView}`, await getToken()),
   });
 
   const pieData = (dashboard?.ordersByStatus ?? []).map((s: any) => ({

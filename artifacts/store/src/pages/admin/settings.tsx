@@ -184,7 +184,7 @@ export default function AdminSettings() {
     setUploadingQr(true);
     try {
       const token = await getToken();
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       // Try object storage first
       const urlRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
@@ -380,7 +380,7 @@ export default function AdminSettings() {
           {GATEWAY_INFO.map(({ id, name, desc, Icon, keys, docsUrl, docsLabel, steps, requiresUpiId }) => {
             const isOn = localEnabled[id] ?? true;
             const hasKeys = keysPresent[id] ?? false;
-            const hasUpiId = requiresUpiId ? !!(settings?.upiId) : true;
+            const hasUpiId = requiresUpiId ? !!((settings as unknown as Record<string, unknown>)?.upiId) : true;
             const canEnable = (keys.length === 0 || hasKeys) && hasUpiId;
             const liveAtCheckout = (keys.length === 0 ? isOn && hasUpiId : hasKeys && isOn);
 

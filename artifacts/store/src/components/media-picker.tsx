@@ -85,7 +85,7 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
     setUploading(true);
     try {
       const token = await getToken();
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",

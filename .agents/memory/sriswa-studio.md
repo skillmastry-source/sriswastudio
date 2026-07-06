@@ -89,8 +89,7 @@ categories, products, product_images, product_variants, orders, order_items, car
 - VPS setup: add `EDITOR_EMAILS=email@example.com` and `VITE_EDITOR_EMAILS=email@example.com` to .env
 
 ## Deployment
-- VPS: Hostinger 187.127.155.210, PM2 process: sriswa-api, nginx → port 8080
+- VPS: Hostinger, PM2 process: sriswa-api, nginx → port 8080
 - Deploy frontend: build in Replit → tar.gz → user wget to VPS
-- Build command: `VITE_CLERK_PUBLISHABLE_KEY="pk_live_Y2xlcmsuc3Jpc3dhc3R1ZGlvLmNsZXJrLmFjY291bnRzLmRldg" pnpm --filter @workspace/store run build`
+- Build command: set `VITE_CLERK_PUBLISHABLE_KEY` to the live pk_live_ key from Clerk dashboard, then run `pnpm --filter @workspace/store run build`
 - Package: `tar -czf public/store-dist.tar.gz -C dist/public .`
-- VPS wget base URL: https://29718fb4-03d5-4c09-a4ef-aec0a3594cca-00-3ecf1vpba2py.sisko.replit.dev/

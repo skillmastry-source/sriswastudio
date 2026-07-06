@@ -13,6 +13,7 @@ import { ArrowLeft, Save, Eye, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { MediaPicker } from "@/components/media-picker";
+import { useAuth } from "@clerk/react";
 
 const BRAND = "#9B0F5F";
 
@@ -57,8 +58,11 @@ function MarkdownPreview({ content }: { content: string }) {
   );
 }
 
-async function fetchPage(id: string): Promise<CmsPage> {
-  const res = await fetch(`/api/admin/cms/pages`, { credentials: "include" });
+async function fetchPage(id: string, token: string | null): Promise<CmsPage> {
+  const res = await fetch(`/api/admin/cms/pages`, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed to load pages");
   const pages: CmsPage[] = await res.json();
   const page = pages.find((p) => p.id === Number(id));
@@ -66,13 +70,16 @@ async function fetchPage(id: string): Promise<CmsPage> {
   return page;
 }
 
-async function savePage(data: Partial<CmsPage> & { id?: number }) {
+async function savePage(data: Partial<CmsPage> & { id?: number }, token: string | null) {
   const { id, ...body } = data;
   const url  = id ? `/api/admin/cms/pages/${id}` : "/api/admin/cms/pages";
   const method = id ? "PATCH" : "POST";
   const res = await fetch(url, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     credentials: "include",
     body: JSON.stringify(body),
   });
@@ -88,11 +95,12 @@ export default function AdminCmsForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
   const isEdit = Boolean(params.id);
 
   const { data: existing, isLoading } = useQuery<CmsPage>({
     queryKey: ["/api/admin/cms/pages", params.id],
-    queryFn: () => fetchPage(params.id!),
+    queryFn: async () => fetchPage(params.id!, await getToken()),
     enabled: isEdit,
   });
 
@@ -127,7 +135,7 @@ export default function AdminCmsForm() {
   }, [slugManual]);
 
   const mutation = useMutation({
-    mutationFn: savePage,
+    mutationFn: async (data: Partial<CmsPage> & { id?: number }) => savePage(data, await getToken()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/pages"] });
       toast({ title: isEdit ? "Page updated" : "Page created", description: `"${title}" has been saved.` });

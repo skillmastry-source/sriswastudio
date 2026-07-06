@@ -14,7 +14,7 @@ type PaymentMethodsEnabled = {
   upi: boolean;
 };
 
-const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: true, phonepe: true, upi: true };
+const DEFAULT_ENABLED: PaymentMethodsEnabled = { razorpay: false, phonepe: false, upi: true };
 
 async function ensurePaymentMethodsColumn() {
   try {

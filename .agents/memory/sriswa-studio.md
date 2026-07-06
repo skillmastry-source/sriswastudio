@@ -24,7 +24,7 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 - `clerkMiddleware` must explicitly include `secretKey: process.env.CLERK_SECRET_KEY`
 - `AuthTokenSync` component in App.tsx uses `useAuth().getToken()` via `setAuthTokenGetter` to attach Bearer tokens for api-client-react calls
 - **ALL raw `fetch` calls to admin endpoints MUST include `Authorization: Bearer <token>`** — cookies alone are unreliable in cross-origin/proxy setups. Pattern: `const token = await getToken(); headers: { Authorization: \`Bearer \${token}\` }`
-- Affected files fixed so far: `design.tsx` (LogoUploadField), `use-site-settings.tsx` (useUpdateSiteSettings), `cms/index.tsx` (fetch + delete), `builder/index.tsx`
+- Affected files fixed so far: `design.tsx` (LogoUploadField), `use-site-settings.tsx` (useUpdateSiteSettings), `cms/index.tsx` (fetch + delete), `builder/index.tsx`, `dashboard.tsx` (fetchAnalytics), `cms/form.tsx` (fetchPage/savePage)
 
 **Why:** `@clerk/express` v2 changed auth access from `req.auth` property injection to `getAuth(req)` helper. Cookie-based auth is unreliable in dev (Vite proxy strips/mangles cookies). Bearer token is the only reliable auth mechanism.
 
@@ -33,6 +33,7 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 - **NEVER add `--update-env` to `pm2 restart`** — this strips env vars (PORT, DATABASE_URL, etc.) from the running process, causing PM2 crash-loop and all pages to hang
 - Plain `pm2 restart sriswa-api` keeps the existing env vars the process was started with
 - VPS .env has `VITE_CLERK_PUBLISHABLE_KEY` (not `CLERK_PUBLISHABLE_KEY`) — app.ts must check both
+- **"Everything reset to old" symptom = stale code from a silently failed deploy.** With `set -e`, a git pull conflict (from manual VPS edits) or pnpm install failure aborts before rebuild — site keeps serving old code with no visible error. Script now has an ERR trap ("STILL RUNNING OLD CODE"), auto-stashes local edits (`git stash push -u`), and prints the deployed commit hash at the end so the user can verify what's live.
 
 **Why:** PM2's `--update-env` reloads env from ecosystem config (not from shell), wiping all vars not in the config file. This caused the API server to crash on startup (PORT undefined), making every API request hang forever.
 
@@ -71,7 +72,8 @@ categories, products, product_images, product_variants, orders, order_items, car
 
 ## Payment Gateways at Checkout
 - Checkout fetches `GET /api/payments/status` → `{razorpay: bool, phonepe: bool}`
-- Razorpay/PhonePe only shown when keys are configured on VPS; COD always shown
+- **DEFAULT_ENABLED in payments.ts is now `{razorpay:false, phonepe:false, upi:true}`** — gateways with env keys present do NOT show at checkout unless the admin explicitly enables them via the settings toggles. **Why:** VPS had Razorpay keys in .env, so Razorpay appeared at checkout even though the store only uses UPI; opt-in is the safe default.
+- Razorpay/PhonePe shown only when keys configured AND admin-enabled; COD always shown
 - UPI shown only when `upiId` is saved in admin settings (`GET /api/payments/upi/settings`)
 - Default paymentMethod starts null; `effectiveMethod = paymentMethod ?? PAYMENT_OPTIONS[0]?.id`
 

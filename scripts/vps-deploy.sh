@@ -5,9 +5,16 @@ REPO_DIR="/var/www/sriswastudio"
 WEB_ROOT="/var/www/sriswastudio/html"
 ENV_FILE="$REPO_DIR/.env"
 
+trap 'echo ""; echo "❌❌❌ DEPLOY FAILED — the website is STILL RUNNING THE OLD CODE. Read the error above, fix it, and run this script again. ❌❌❌"' ERR
+
 cd "$REPO_DIR"
 
 echo "🔄 Pulling latest from GitHub..."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "⚠️  Local file edits detected on the VPS — stashing them so the deploy can proceed."
+  echo "    (Never edit files directly on the VPS; make changes in Replit and deploy instead.)"
+  git stash push -u -m "vps-deploy auto-stash $(date +%F_%T)"
+fi
 git pull origin main
 
 echo "📦 Installing dependencies..."
@@ -49,3 +56,4 @@ pm2 restart sriswa-api
 
 echo ""
 echo "✅ Deploy complete! sriswastudio.com is live."
+echo "📌 Deployed commit: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"

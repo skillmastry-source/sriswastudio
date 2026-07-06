@@ -1,5 +1,6 @@
 import { useGetAdminDashboard, getGetAdminDashboardQueryKey } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShoppingCart, IndianRupee, AlertTriangle, Users, TrendingUp } from "lucide-react";
@@ -30,8 +31,11 @@ const PIE_COLORS: Record<string, string> = {
 type Period = "daily" | "weekly" | "monthly";
 type TopView = "revenue" | "units";
 
-async function fetchAnalytics(path: string) {
-  const res = await fetch(path, { credentials: "include" });
+async function fetchAnalytics(path: string, token: string | null) {
+  const res = await fetch(path, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed to fetch analytics");
   return res.json();
 }
@@ -39,27 +43,28 @@ async function fetchAnalytics(path: string) {
 export default function AdminDashboard() {
   const [period, setPeriod]   = useState<Period>("monthly");
   const [topView, setTopView] = useState<TopView>("revenue");
+  const { getToken } = useAuth();
 
   const { data: dashboard, isLoading: dashLoading } = useGetAdminDashboard({
     query: { queryKey: getGetAdminDashboardQueryKey() }
   });
 
-  const { data: revenue, isLoading: revLoading } = useQuery({
+  const { data: revenue } = useQuery({
     queryKey: ["/api/admin/analytics/revenue", period],
-    queryFn: () => fetchAnalytics(`/api/admin/analytics/revenue?period=${period}`),
+    queryFn: async () => fetchAnalytics(`/api/admin/analytics/revenue?period=${period}`, await getToken()),
   });
 
   const { data: topProducts } = useQuery({
     queryKey: ["/api/admin/analytics/top-products", topView],
-    queryFn: () => fetchAnalytics(`/api/admin/analytics/top-products?sortBy=${topView}`),
+    queryFn: async () => fetchAnalytics(`/api/admin/analytics/top-products?sortBy=${topView}`, await getToken()),
   });
 
   const { data: overview } = useQuery({
     queryKey: ["/api/admin/analytics/overview"],
-    queryFn: () => fetchAnalytics("/api/admin/analytics/overview"),
+    queryFn: async () => fetchAnalytics("/api/admin/analytics/overview", await getToken()),
   });
 
-  if (dashLoading || revLoading) {
+  if (dashLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: BRAND }} />

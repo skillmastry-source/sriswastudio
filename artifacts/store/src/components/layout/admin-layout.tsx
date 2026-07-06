@@ -6,7 +6,7 @@ import {
   BarChart2, Megaphone, Send, Zap, GitBranch, Mail, Instagram,
 } from "lucide-react";
 import { useUser, useAuth } from "@/lib/clerk-stub";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const NAV_GROUPS = [
   {
@@ -73,18 +73,9 @@ const EDITOR_EMAILS = (import.meta.env.VITE_EDITOR_EMAILS ?? "")
 const EDITOR_NAV_HREFS = ["/admin/products", "/admin/categories", "/admin/cms"];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
-
-  // If Clerk hasn't loaded in 10s, redirect to sign-in to break infinite spinner
-  useEffect(() => {
-    if (authLoaded && userLoaded) return;
-    const t = setTimeout(() => {
-      window.location.href = "/sign-in?redirect_url=/admin";
-    }, 10000);
-    return () => clearTimeout(t);
-  }, [authLoaded, userLoaded]);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
   const isAdmin = ADMIN_EMAILS.length > 0
@@ -95,19 +86,39 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     : (user?.publicMetadata as Record<string, unknown> | undefined)?.role === "editor";
   const hasAccess = isAdmin || isEditor;
 
+  // One-shot timer — runs once on mount, never resets regardless of Clerk state changes
+  const [authTimedOut, setAuthTimedOut] = useState(false);
   useEffect(() => {
-    if (authLoaded && userLoaded) {
-      if (!isSignedIn) setLocation("/sign-in?redirect_url=/admin");
-      else if (!hasAccess) setLocation("/");
+    const t = setTimeout(() => setAuthTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Redirect once Clerk is ready or timed out
+  useEffect(() => {
+    if (authTimedOut && (!authLoaded || !userLoaded || !isSignedIn)) {
+      window.location.href = "/sign-in?redirect_url=/admin";
+      return;
     }
-  }, [authLoaded, userLoaded, isSignedIn, hasAccess, setLocation]);
+    if (authLoaded && userLoaded) {
+      if (!isSignedIn) window.location.href = "/sign-in?redirect_url=/admin";
+      else if (!hasAccess) window.location.href = "/";
+    }
+  }, [authTimedOut, authLoaded, userLoaded, isSignedIn, hasAccess]);
 
   if (!authLoaded || !userLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-8">
           <div className="h-8 w-8 rounded-full border-2 border-[#9B0F5F] border-t-transparent animate-spin" />
-          <p className="text-sm text-gray-500">Loading…</p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-gray-500">Loading…</p>
+            <a
+              href="/sign-in?redirect_url=/admin"
+              className="text-xs underline text-[#9B0F5F]"
+            >
+              Sign in instead
+            </a>
+          </div>
         </div>
       </div>
     );

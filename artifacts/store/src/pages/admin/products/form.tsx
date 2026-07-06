@@ -150,43 +150,23 @@ export default function AdminProductForm() {
     try {
       const token = await getToken();
       const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-
-      // Try Replit Object Storage first
-      const urlRes = await fetch("/api/storage/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        credentials: "include",
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
-      });
-
-      if (urlRes.ok) {
-        const { uploadURL, objectPath } = await urlRes.json();
-        const uploadRes = await fetch(uploadURL, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        if (!uploadRes.ok) throw new Error("Failed to upload file");
-        const rawPath = objectPath.replace(/^\/objects\//, "");
-        const publicUrl = `/api/storage/product-images/${rawPath}`;
-        setImages((prev) => [...prev, { url: publicUrl, isPrimary: prev.length === 0, displayOrder: prev.length }]);
-        return;
-      }
-
-      // Fallback: direct upload to local filesystem (VPS)
       const formData = new FormData();
       formData.append("file", file);
-      const directRes = await fetch("/api/storage/uploads/direct", {
+      const res = await fetch("/api/storage/uploads/server", {
         method: "POST",
-        headers: { ...authHeader },
+        headers: authHeader,
         credentials: "include",
         body: formData,
       });
-      if (!directRes.ok) throw new Error("Direct upload failed");
-      const { url } = await directRes.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `Upload failed (${res.status})`);
+      }
+      const { url } = await res.json();
       setImages((prev) => [...prev, { url, isPrimary: prev.length === 0, displayOrder: prev.length }]);
-    } catch {
-      toast({ title: "Image upload failed", description: "Could not upload image. Try pasting a URL instead.", variant: "destructive" });
+    } catch (err) {
+      console.error("Image upload error:", err);
+      toast({ title: "Image upload failed", description: String(err instanceof Error ? err.message : err), variant: "destructive" });
     } finally {
       setUploadingImage(false);
     }

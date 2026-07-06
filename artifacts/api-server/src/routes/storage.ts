@@ -2,12 +2,13 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
 import path from "path";
 import fs from "fs";
+import { randomUUID } from "crypto";
 import multer from "multer";
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
-import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { requireEditor } from "../middlewares/requireEditor";
@@ -18,6 +19,11 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const localUpload = multer({
   dest: UPLOADS_DIR,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
@@ -178,6 +184,54 @@ router.get("/storage/product-images/*path", async (req: Request, res: Response) 
     req.log.error({ err: error }, "Error serving product image");
     res.status(500).json({ error: "Failed to serve image" });
   }
+});
+
+/**
+ * POST /storage/uploads/server
+ *
+ * Server-side image upload — avoids browser CORS issues with signed URLs.
+ * Tries Replit Object Storage first (server-to-GCS, no CORS), then falls
+ * back to local filesystem. Returns { url, objectPath }.
+ */
+router.post("/storage/uploads/server", requireAdmin, memoryUpload.single("file"), async (req: Request, res: Response) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file provided" });
+    return;
+  }
+
+  const privateDir = process.env.PRIVATE_OBJECT_DIR ?? "";
+
+  if (privateDir) {
+    try {
+      const parts = privateDir.replace(/^\//, "").split("/");
+      const bucketName = parts[0];
+      const dirPath = parts.slice(1).join("/");
+      const objectId = randomUUID();
+      const objectName = dirPath ? `${dirPath}/uploads/${objectId}` : `uploads/${objectId}`;
+
+      const bucket = objectStorageClient.bucket(bucketName);
+      const gcsFile = bucket.file(objectName);
+      await gcsFile.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+        resumable: false,
+      });
+
+      res.json({
+        url: `/api/storage/product-images/uploads/${objectId}`,
+        objectPath: `/objects/uploads/${objectId}`,
+      });
+      return;
+    } catch (err) {
+      req.log.warn({ err }, "GCS server-side upload failed, falling back to local filesystem");
+    }
+  }
+
+  // Fallback: local filesystem
+  const ext = path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
+  const newName = `${randomUUID()}${ext}`;
+  const destPath = path.join(UPLOADS_DIR, newName);
+  fs.writeFileSync(destPath, req.file.buffer);
+  res.json({ url: `/api/storage/local-files/${newName}`, objectPath: null });
 });
 
 /**

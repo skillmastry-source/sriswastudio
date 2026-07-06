@@ -87,24 +87,19 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
       const token = await getToken();
       const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const urlRes = await fetch("/api/storage/uploads/request-url", {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch("/api/storage/uploads/server", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
+        headers: authHeader,
         credentials: "include",
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+        body: formData,
       });
-      if (!urlRes.ok) throw new Error("Upload URL error");
-      const { uploadURL, objectPath } = await urlRes.json();
-
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error("Upload error");
-
-      const rawPath = objectPath.replace(/^\/objects\//, "");
-      const publicUrl = `/api/storage/product-images/${rawPath}`;
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error ?? `Upload failed (${uploadRes.status})`);
+      }
+      const { url: publicUrl } = await uploadRes.json();
 
       const recordRes = await fetch("/api/admin/media", {
         method: "POST",
@@ -123,8 +118,9 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
       const newFile: MediaFile = await recordRes.json();
       setFiles((prev) => [newFile, ...prev]);
       toast({ title: "Uploaded", description: file.name });
-    } catch {
-      toast({ title: "Upload failed", variant: "destructive" });
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast({ title: "Upload failed", description: String(err instanceof Error ? err.message : err), variant: "destructive" });
     } finally {
       setUploading(false);
     }

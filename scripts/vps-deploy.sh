@@ -48,8 +48,19 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 if [ -z "$DATABASE_URL" ]; then
-  echo "❌ DATABASE_URL is not set in $ENV_FILE — migrations cannot run."
-  exit 1
+  echo "⚠️  DATABASE_URL not found in $ENV_FILE — trying to recover it from the running PM2 process..."
+  DATABASE_URL=$(pm2 jlist 2>/dev/null | grep -o '"DATABASE_URL":"[^"]*"' | head -1 | cut -d'"' -f4)
+  if [ -n "$DATABASE_URL" ]; then
+    echo "   ✓ Recovered DATABASE_URL from PM2 — saving it to .env so future deploys just work"
+    echo "" >> "$ENV_FILE"
+    echo "DATABASE_URL=$DATABASE_URL" >> "$ENV_FILE"
+  else
+    echo "❌ DATABASE_URL is not set in $ENV_FILE and could not be recovered from PM2."
+    echo "   Find your PostgreSQL connection string and add it:"
+    echo "   echo 'DATABASE_URL=postgres://USER:PASSWORD@localhost:5432/DBNAME' >> $ENV_FILE"
+    echo "   Then re-run this script."
+    exit 1
+  fi
 fi
 
 psql "$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS _applied_migrations (filename text PRIMARY KEY, applied_at timestamptz DEFAULT now());"

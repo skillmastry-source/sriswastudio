@@ -23,8 +23,8 @@ export default function AdminOrders() {
 
   const params = {
     status: (statusFilter as ListOrdersStatus) || undefined,
-    dateFrom: dateFrom || null,
-    dateTo: dateTo || null,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
     limit: 100,
   };
 

@@ -286,9 +286,11 @@ router.get("/orders/track", async (req, res) => {
 router.get("/orders", requireAdmin, async (req, res) => {
   const { status, dateFrom, dateTo, limit = 20, offset = 0 } = req.query;
   const conditions: ReturnType<typeof eq>[] = [];
-  if (status) conditions.push(eq(ordersTable.status, String(status)));
-  if (dateFrom) conditions.push(gte(ordersTable.createdAt, new Date(String(dateFrom))));
-  if (dateTo) conditions.push(lte(ordersTable.createdAt, new Date(String(dateTo))));
+  if (status && status !== "null") conditions.push(eq(ordersTable.status, String(status)));
+  const fromDate = dateFrom ? new Date(String(dateFrom)) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) conditions.push(gte(ordersTable.createdAt, fromDate));
+  const toDate = dateTo ? new Date(String(dateTo)) : null;
+  if (toDate && !Number.isNaN(toDate.getTime())) conditions.push(lte(ordersTable.createdAt, toDate));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

@@ -7,7 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
 import { sendWhatsApp, sendAdminWhatsApp, renderTemplate } from "../lib/whatsapp";
-import { sendTransactionalEmail, orderConfirmationHtml } from "../lib/email";
+import { sendTransactionalEmail, orderConfirmationHtml, newOrderAdminAlertHtml, getStoreEmail } from "../lib/email";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { clerkClient, getAuth } from "@clerk/express";
 
@@ -236,6 +236,33 @@ router.post("/orders", async (req, res) => {
       to: customerEmail,
       subject: `Order Confirmed: ${orderNumber} — ${settings?.storeName ?? "Sriswa Studio"}`,
       html,
+    }).catch(() => {});
+  }
+
+  // 4. New-order alert email to the store's own inbox
+  const storeEmail = getStoreEmail(settings?.siteDesign);
+  if (storeEmail) {
+    const fullOrder = await buildOrderResponse(order);
+    const alertItems = fullOrder.items.map((i) => ({
+      name: i.productName ?? "Item",
+      qty: i.quantity,
+      price: i.price.toFixed(2),
+      variantLabel: i.variantLabel,
+    }));
+    const alertHtml = newOrderAdminAlertHtml({
+      storeName: settings?.storeName ?? "Sriswa Studio",
+      orderNumber, customerName, customerPhone: customerPhone ?? "",
+      total: total.toFixed(2),
+      items: alertItems,
+      city: city ?? "", state: state ?? "",
+      paymentMethod: paymentMethod ?? "",
+    });
+    sendTransactionalEmail({
+      siteDesign: settings?.siteDesign,
+      storeName: settings?.storeName ?? "Sriswa Studio",
+      to: storeEmail,
+      subject: `🛍️ New Order ${orderNumber} — ₹${total.toFixed(2)} from ${customerName}`,
+      html: alertHtml,
     }).catch(() => {});
   }
 

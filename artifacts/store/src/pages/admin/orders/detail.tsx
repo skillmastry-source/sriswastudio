@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package, MessageCircle } from "lucide-react";
+import { ArrowLeft, Package, MessageCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface StoreSettings {
@@ -308,6 +308,37 @@ export default function AdminOrderDetail() {
                 <p className="text-xs text-muted-foreground pt-1">
                   Opens WhatsApp with the message pre-filled from your templates — review and tap send.
                 </p>
+                {order.items.some((i) => i.imageUrl) && (
+                  <div className="pt-3 border-t mt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      Product images — tap to open, then save &amp; attach in WhatsApp 📎
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {order.items
+                        .filter((i) => i.imageUrl)
+                        .map((i) => (
+                          <a
+                            key={i.id}
+                            href={i.imageUrl!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="relative group"
+                            title={`Open image: ${i.productName}`}
+                          >
+                            <img
+                              src={i.imageUrl!}
+                              alt={i.productName}
+                              className="h-16 w-16 rounded-md object-cover border bg-muted"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Download className="h-5 w-5 text-white" />
+                            </span>
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

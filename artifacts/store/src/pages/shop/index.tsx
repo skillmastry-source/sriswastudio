@@ -36,7 +36,7 @@ export default function Shop() {
   const { data: productData, isLoading } = useListProducts(
     {
       categoryId,
-      search: search || null,
+      search: search || undefined,
       sortBy: sortBy as "newest" | "price_asc" | "price_desc" | "name",
       minPrice: minPriceNum,
       maxPrice: maxPriceNum,

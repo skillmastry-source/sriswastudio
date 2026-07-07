@@ -1,4 +1,5 @@
 import { useParams, Link } from "wouter";
+import { useAuth } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,11 +52,15 @@ export default function AdminOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   const { data: order, isLoading, isError } = useQuery<Order>({
     queryKey: ["admin-order", id],
     queryFn: async () => {
-      const res = await fetch(`/api/orders/${id}`);
+      const token = await getToken();
+      const res = await fetch(`/api/orders/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("Order not found");
       return res.json() as Promise<Order>;
     },
@@ -64,9 +69,13 @@ export default function AdminOrderDetail() {
 
   const updateStatus = useMutation({
     mutationFn: async (status: string) => {
+      const token = await getToken();
       const res = await fetch(`/api/orders/${id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update status");

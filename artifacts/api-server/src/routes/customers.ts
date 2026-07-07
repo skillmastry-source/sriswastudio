@@ -97,15 +97,15 @@ router.get("/admin/customers/:email", async (req, res) => {
       customerPhone: orders[0].customerPhone,
       orderCount,
       totalSpend,
-      lastOrderAt:   orders[0].createdAt.toISOString(),
+      lastOrderAt:   orders[0].createdAt ? new Date(orders[0].createdAt).toISOString() : null,
       segment:       seg,
       orders:        orders.map((o) => ({
         ...o,
         total:        Number(o.total),
         subtotal:     Number(o.subtotal),
         shippingCost: Number(o.shippingCost),
-        createdAt:    o.createdAt.toISOString(),
-        updatedAt:    o.updatedAt.toISOString(),
+        createdAt:    o.createdAt ? new Date(o.createdAt).toISOString() : null,
+        updatedAt:    o.updatedAt ? new Date(o.updatedAt).toISOString() : null,
       })),
       notes,
     });

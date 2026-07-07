@@ -56,8 +56,8 @@ router.get("/admin/dashboard", async (req, res) => {
         shippingCost: Number(order.shippingCost),
         total: Number(order.total),
         items: items.map((i) => ({ ...i, price: Number(i.price) })),
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
+        createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : null,
+        updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : null,
       };
     })
   );

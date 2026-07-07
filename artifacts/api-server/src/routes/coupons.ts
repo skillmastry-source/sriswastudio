@@ -18,8 +18,8 @@ function serializeCoupon(c: typeof couponsTable.$inferSelect) {
     ...c,
     value: Number(c.value),
     minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : 0,
-    expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
-    createdAt: c.createdAt.toISOString(),
+    expiresAt: c.expiresAt ? new Date(c.expiresAt).toISOString() : null,
+    createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : null,
   };
 }
 

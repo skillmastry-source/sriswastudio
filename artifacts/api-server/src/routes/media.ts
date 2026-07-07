@@ -7,7 +7,7 @@ import { requireAdmin } from "../middlewares/requireAdmin";
 const router = Router();
 
 function serializeFile(f: typeof mediaFilesTable.$inferSelect) {
-  return { ...f, uploadedAt: f.uploadedAt.toISOString() };
+  return { ...f, uploadedAt: f.uploadedAt ? new Date(f.uploadedAt).toISOString() : null };
 }
 
 // ── List media (with optional folder + search filters) ─────────────────────

@@ -77,6 +77,9 @@ done
 echo "🔎 Verifying database schema is up to date..."
 SCHEMA_OK=1
 psql "$DATABASE_URL" -tAc "SELECT coupon_code FROM orders LIMIT 0" >/dev/null 2>&1 || { echo "❌ orders.coupon_code missing (migration 0003 did not apply) — Orders page WILL FAIL"; SCHEMA_OK=0; }
+psql "$DATABASE_URL" -tAc "SELECT payment_reference FROM orders LIMIT 0" >/dev/null 2>&1 || { echo "❌ orders.payment_reference missing (migration 0006 did not apply) — Orders page WILL FAIL"; SCHEMA_OK=0; }
+psql "$DATABASE_URL" -tAc "SELECT upi_id, upi_qr_url, site_design FROM store_settings LIMIT 0" >/dev/null 2>&1 || { echo "❌ store_settings upi/site_design columns missing (migration 0006 did not apply) — Settings/Design saves WILL FAIL"; SCHEMA_OK=0; }
+psql "$DATABASE_URL" -tAc "SELECT 1 FROM landing_pages LIMIT 0" >/dev/null 2>&1 || { echo "❌ landing_pages table missing (migration 0006 did not apply) — Page Builder WILL FAIL"; SCHEMA_OK=0; }
 psql "$DATABASE_URL" -tAc "SELECT customer_order_template FROM store_settings LIMIT 0" >/dev/null 2>&1 || { echo "❌ store_settings.customer_order_template missing (migration 0005 did not apply) — Settings save WILL FAIL"; SCHEMA_OK=0; }
 psql "$DATABASE_URL" -tAc "SELECT 1 FROM media_files LIMIT 0" >/dev/null 2>&1 || { echo "❌ media_files table missing (migration 0004 did not apply) — Media Library WILL FAIL"; SCHEMA_OK=0; }
 psql "$DATABASE_URL" -tAc "SELECT site_design FROM store_settings LIMIT 0" >/dev/null 2>&1 || { echo "⚠️  store_settings.site_design missing — will be auto-created when the API starts"; }

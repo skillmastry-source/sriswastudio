@@ -5,8 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, Package, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface StoreSettings {
+  customerOrderTemplate: string | null;
+  statusUpdateTemplate: string | null;
+}
+
+function renderTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+}
+
+function waLink(phone: string, message: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const full = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${full}?text=${encodeURIComponent(message)}`;
+}
 
 interface OrderItem {
   id: number;
@@ -65,6 +80,18 @@ export default function AdminOrderDetail() {
       return res.json() as Promise<Order>;
     },
     enabled: !!id,
+  });
+
+  const { data: settings } = useQuery<StoreSettings>({
+    queryKey: ["admin-settings"],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/settings`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to load settings");
+      return res.json() as Promise<StoreSettings>;
+    },
   });
 
   const updateStatus = useMutation({
@@ -219,6 +246,71 @@ export default function AdminOrderDetail() {
               <p className="text-muted-foreground">{order.customerPhone}</p>
             </CardContent>
           </Card>
+
+          {order.customerPhone && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp Customer
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start border-green-200 text-green-700 hover:bg-green-50"
+                  asChild
+                >
+                  <a
+                    href={waLink(
+                      order.customerPhone,
+                      renderTemplate(
+                        settings?.customerOrderTemplate ||
+                          "Hi {{customerName}}, your order {{orderNumber}} has been placed at Sriswa Studio for ₹{{total}}. We'll keep you updated!",
+                        {
+                          customerName: order.customerName,
+                          orderNumber: order.orderNumber,
+                          total: order.total.toFixed(2),
+                        }
+                      )
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" /> Send Order Confirmation
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start border-green-200 text-green-700 hover:bg-green-50"
+                  asChild
+                >
+                  <a
+                    href={waLink(
+                      order.customerPhone,
+                      renderTemplate(
+                        settings?.statusUpdateTemplate ||
+                          "Hi {{customerName}}, your order {{orderNumber}} status is now: {{status}}. — Sriswa Studio",
+                        {
+                          customerName: order.customerName,
+                          orderNumber: order.orderNumber,
+                          status: order.status,
+                        }
+                      )
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" /> Send Status Update
+                  </a>
+                </Button>
+                <p className="text-xs text-muted-foreground pt-1">
+                  Opens WhatsApp with the message pre-filled from your templates — review and tap send.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-3">

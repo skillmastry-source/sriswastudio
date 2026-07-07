@@ -6,7 +6,7 @@ import {
   couponsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
-import { sendWhatsApp, renderTemplate } from "../lib/whatsapp";
+import { sendWhatsApp, sendAdminWhatsApp, renderTemplate } from "../lib/whatsapp";
 import { sendTransactionalEmail, orderConfirmationHtml } from "../lib/email";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { clerkClient, getAuth } from "@clerk/express";
@@ -200,7 +200,7 @@ router.post("/orders", async (req, res) => {
     const msg = renderTemplate(settings.newOrderTemplate, {
       orderNumber, customerName, total: total.toFixed(2), phone: customerPhone,
     });
-    sendWhatsApp(settings.adminWhatsapp, msg).catch(() => {});
+    sendAdminWhatsApp(settings.adminWhatsapp, msg).catch(() => {});
   }
 
   // 2. Notify customer via WhatsApp

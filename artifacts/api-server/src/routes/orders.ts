@@ -206,7 +206,7 @@ router.post("/orders", async (req, res) => {
   // 2. Notify customer via WhatsApp
   if (customerPhone) {
     const customerTemplate = settings?.customerOrderTemplate ??
-      "Hi {{customerName}}, your order {{orderNumber}} has been placed at Sriswa Studio for ₹{{total}}. We'll keep you updated!";
+      "✨ *SRISWA STUDIO* ✨\n\nHi {{customerName}} 💖\n\nThank you for your order!\n\n🧾 Order: *{{orderNumber}}*\n💰 Total: *₹{{total}}*\n\nYour anti-tarnish jewellery is being\nprepared with love and care 💍\n\nWe'll message you as soon as it ships 📦\n\n🌐 sriswastudio.com\n— Team Sriswa Studio";
     const msg = renderTemplate(customerTemplate, {
       customerName, orderNumber, total: total.toFixed(2),
     });

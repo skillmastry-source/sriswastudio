@@ -266,7 +266,7 @@ export default function AdminOrderDetail() {
                       order.customerPhone,
                       renderTemplate(
                         settings?.customerOrderTemplate ||
-                          "Hi {{customerName}}, your order {{orderNumber}} has been placed at Sriswa Studio for ₹{{total}}. We'll keep you updated!",
+                          "✨ *SRISWA STUDIO* ✨\n\nHi {{customerName}} 💖\n\nThank you for your order!\n\n🧾 Order: *{{orderNumber}}*\n💰 Total: *₹{{total}}*\n\nYour anti-tarnish jewellery is being\nprepared with love and care 💍\n\nWe'll message you as soon as it ships 📦\n\n🌐 sriswastudio.com\n— Team Sriswa Studio",
                         {
                           customerName: order.customerName,
                           orderNumber: order.orderNumber,
@@ -291,7 +291,7 @@ export default function AdminOrderDetail() {
                       order.customerPhone,
                       renderTemplate(
                         settings?.statusUpdateTemplate ||
-                          "Hi {{customerName}}, your order {{orderNumber}} status is now: {{status}}. — Sriswa Studio",
+                          "✨ *SRISWA STUDIO* ✨\n\nHi {{customerName}} 💖\n\nUpdate on your order *{{orderNumber}}*:\n\n📦 Status: *{{status}}*\n\nThank you for shopping with us!\n\n🌐 sriswastudio.com\n— Team Sriswa Studio",
                         {
                           customerName: order.customerName,
                           orderNumber: order.orderNumber,

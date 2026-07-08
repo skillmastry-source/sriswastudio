@@ -143,7 +143,7 @@ function HeroSection({ config, colors }: { config: Record<string, unknown>; colo
   const titleGold = (config.titleGold as string | undefined) ?? "Lasts Forever";
   const subtitle = (config.subtitle as string | undefined) ?? "Anti-tarnish · Waterproof · Skin-friendly";
   const shopButtonText = (config.shopButtonText as string | undefined) ?? "Shop Now";
-  const imageUrl = (config.imageUrl as string | undefined) ?? "/brand/hero-banner.png";
+  const imageUrl = (config.imageUrl as string | undefined) ?? "/brand/hero-banner.webp";
   const [imgFailed, setImgFailed] = useState(false);
 
   return (

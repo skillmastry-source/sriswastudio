@@ -154,7 +154,7 @@ export default function ProductDetail() {
           <div className="space-y-4">
             <div className="aspect-square rounded-lg overflow-hidden bg-muted border">
               {currentImage ? (
-                <img src={currentImage} alt={product.name} className="w-full h-full object-cover" />
+                <img src={currentImage} alt={product.name} fetchPriority="high" decoding="async" width={800} height={800} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
               )}
@@ -167,7 +167,7 @@ export default function ProductDetail() {
                     className={`aspect-square rounded-md overflow-hidden border-2 transition-colors ${currentImage === img.url ? "border-primary" : "border-transparent"}`}
                     onClick={() => setSelectedImage(img.url)}
                   >
-                    <img src={img.url} alt="Thumbnail" className="w-full h-full object-cover" />
+                    <img src={img.url} alt="Thumbnail" loading="lazy" decoding="async" width={200} height={200} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

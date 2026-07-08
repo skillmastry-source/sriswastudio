@@ -77,7 +77,7 @@ export default function Cart() {
                   <div className="col-span-1 sm:col-span-6 flex gap-4">
                     <div className="h-24 w-24 bg-muted rounded-md overflow-hidden flex-shrink-0">
                       {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-cover" />
+                        <img src={item.imageUrl} alt={item.productName} loading="lazy" decoding="async" width={96} height={96} className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No image</div>
                       )}

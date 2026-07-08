@@ -156,7 +156,7 @@ function AccountDashboard() {
                         {order.items.map((item) => (
                           <div key={item.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                             {item.imageUrl && (
-                              <img src={item.imageUrl} alt={item.productName} className="h-8 w-8 rounded object-cover bg-muted" />
+                              <img src={item.imageUrl} alt={item.productName} loading="lazy" decoding="async" width={32} height={32} className="h-8 w-8 rounded object-cover bg-muted" />
                             )}
                             <span>{item.productName} ×{item.quantity}</span>
                           </div>

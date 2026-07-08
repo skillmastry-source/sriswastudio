@@ -208,7 +208,7 @@ export default function TrackOrder() {
                     {trackingResult.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-3">
                         {item.imageUrl && (
-                          <img src={item.imageUrl} alt={item.productName} className="h-10 w-10 rounded object-cover bg-muted" />
+                          <img src={item.imageUrl} alt={item.productName} loading="lazy" decoding="async" width={40} height={40} className="h-10 w-10 rounded object-cover bg-muted" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{item.productName}</p>

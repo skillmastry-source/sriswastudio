@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "pretypecheck": "tsc -p ../../lib/db/tsconfig.json && tsc -p ../../lib/api-zod/tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "compress-uploads": "node ./scripts/compress-uploads.mjs"
   },
   "dependencies": {
     "@clerk/express": "^2.1.32",
@@ -29,6 +30,7 @@
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",
     "razorpay": "^2.9.6",
+    "sharp": "^0.35.3",
     "twilio": "^6.0.2"
   },
   "devDependencies": {

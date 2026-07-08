@@ -216,6 +216,10 @@ export default function Shop() {
                         <img
                           src={product.images[0].url}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                          width={600}
+                          height={800}
                           className="w-full h-full object-cover"
                           style={{ transition: "transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)" }}
                           onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}

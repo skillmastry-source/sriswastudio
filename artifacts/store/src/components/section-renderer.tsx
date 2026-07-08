@@ -76,6 +76,7 @@ function ProductCard({ product, sessionId, brand, dark }: { product: CardProduct
       <div className="relative overflow-hidden mb-3 rounded-sm" style={{ aspectRatio: "3/4", background: "#fdf6f9" }}>
         {product.images?.[0] ? (
           <img src={product.images[0].url} alt={product.name}
+            loading="lazy" decoding="async" width={600} height={800}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -159,6 +160,8 @@ function HeroSection({ config, colors }: { config: Record<string, unknown>; colo
         <img
           src={imageUrl}
           alt="Hero"
+          fetchPriority="high"
+          decoding="async"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ objectPosition: "right center" }}
           onError={() => setImgFailed(true)}
@@ -467,7 +470,7 @@ function TextImageSection({ config, colors }: { config: Record<string, unknown>;
 
   const imageCol = imageUrl ? (
     <div className="aspect-[4/3] md:aspect-auto overflow-hidden rounded-sm">
-      <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+      <img src={imageUrl} alt={title} loading="lazy" decoding="async" width={800} height={600} className="w-full h-full object-cover" />
     </div>
   ) : (
     <div className="aspect-[4/3] rounded-sm flex items-center justify-center" style={{ background: "#fdf6f9" }}>

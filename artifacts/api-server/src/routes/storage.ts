@@ -9,6 +9,7 @@ import {
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "../lib/objectStorage";
+import { optimizeImage } from "../lib/imageOptimize";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { requireEditor } from "../middlewares/requireEditor";
@@ -170,6 +171,8 @@ router.get("/storage/product-images/*path", async (req: Request, res: Response) 
     const response = await objectStorageService.downloadObject(objectFile);
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+    // Object IDs are UUIDs — content never changes for a given name, safe to cache long-term.
+    res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
       nodeStream.pipe(res);
@@ -201,6 +204,14 @@ router.post("/storage/uploads/server", requireAdmin, memoryUpload.single("file")
 
   const privateDir = process.env.PRIVATE_OBJECT_DIR ?? "";
 
+  const opt = await optimizeImage(req.file.buffer, req.file.mimetype);
+  if (opt.optimized) {
+    req.log.info(
+      { before: req.file.buffer.length, after: opt.buffer.length },
+      "Image compressed on upload",
+    );
+  }
+
   if (privateDir) {
     try {
       const parts = privateDir.replace(/^\//, "").split("/");
@@ -211,8 +222,8 @@ router.post("/storage/uploads/server", requireAdmin, memoryUpload.single("file")
 
       const bucket = objectStorageClient.bucket(bucketName);
       const gcsFile = bucket.file(objectName);
-      await gcsFile.save(req.file.buffer, {
-        contentType: req.file.mimetype,
+      await gcsFile.save(opt.buffer, {
+        contentType: opt.contentType,
         resumable: false,
       });
 
@@ -227,10 +238,12 @@ router.post("/storage/uploads/server", requireAdmin, memoryUpload.single("file")
   }
 
   // Fallback: local filesystem
-  const ext = path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
+  const ext = opt.optimized
+    ? opt.ext
+    : path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
   const newName = `${randomUUID()}${ext}`;
   const destPath = path.join(UPLOADS_DIR, newName);
-  fs.writeFileSync(destPath, req.file.buffer);
+  fs.writeFileSync(destPath, opt.buffer);
   res.json({ url: `/api/storage/local-files/${newName}`, objectPath: null });
 });
 
@@ -241,16 +254,34 @@ router.post("/storage/uploads/server", requireAdmin, memoryUpload.single("file")
  * storage is not configured (e.g. on VPS). Accepts multipart/form-data
  * with a single "file" field. Returns a URL to access the saved image.
  */
-router.post("/storage/uploads/direct", requireEditor, localUpload.single("file"), (req: Request, res: Response) => {
+router.post("/storage/uploads/direct", requireEditor, localUpload.single("file"), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ error: "No file provided" });
     return;
   }
-  const ext = path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
-  const newName = `${req.file.filename}${ext}`;
-  const newPath = path.join(UPLOADS_DIR, newName);
-  fs.renameSync(req.file.path, newPath);
-  res.json({ url: `/api/storage/local-files/${newName}` });
+  try {
+    const buffer = fs.readFileSync(req.file.path);
+    const opt = await optimizeImage(buffer, req.file.mimetype);
+    if (opt.optimized) {
+      req.log.info(
+        { before: buffer.length, after: opt.buffer.length },
+        "Image compressed on upload",
+      );
+    }
+    const ext = opt.optimized
+      ? opt.ext
+      : path.extname(req.file.originalname || "").toLowerCase() || ".jpg";
+    const newName = `${req.file.filename}${ext}`;
+    const newPath = path.join(UPLOADS_DIR, newName);
+    fs.writeFileSync(newPath, opt.buffer);
+    res.json({ url: `/api/storage/local-files/${newName}` });
+  } catch (error) {
+    req.log.error({ err: error }, "Error processing uploaded image");
+    res.status(500).json({ error: "Failed to process uploaded image" });
+  } finally {
+    // Always remove the multer temp file, success or failure (ignore ENOENT).
+    fs.promises.unlink(req.file.path).catch(() => {});
+  }
 });
 
 /**
@@ -269,6 +300,8 @@ router.get("/storage/local-files/:filename", (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
+  // Filenames are UUIDs — content never changes for a given name, safe to cache long-term.
+  res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
   res.sendFile(filePath);
 });
 

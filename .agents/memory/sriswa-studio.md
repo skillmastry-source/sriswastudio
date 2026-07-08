@@ -81,6 +81,14 @@ categories, products, product_images, product_variants, orders, order_items, car
 - UPI shown only when `upiId` is saved in admin settings (`GET /api/payments/upi/settings`)
 - Default paymentMethod starts null; `effectiveMethod = paymentMethod ?? PAYMENT_OPTIONS[0]?.id`
 
+## Image Performance
+- All uploads auto-compressed via sharp (max 1600px, WebP q80) in `imageOptimize.ts`; falls back to original if not smaller
+- One-time VPS script `pnpm --filter @workspace/api-server run compress-uploads` compresses existing uploads **in place keeping the same filename+extension** (DB URLs must keep working); originals backed up to `uploads_originals/`
+- nginx caching: `scripts/enable-nginx-caching.sh` (one-time on VPS) — snippet uses negative lookahead `^/(?!api/)` because nginx regex locations outrank the `/api` prefix proxy and would otherwise 404 API-served images
+- Image routes send `Cache-Control: immutable` — safe because filenames are UUIDs
+
+**Why:** PageSpeed mobile was 55 (LCP 21s) from multi-MB uploaded photos, no caching, 6.4MB payload.
+
 ## Product Image Upload — VPS Fallback
 - VPS has no Replit Object Storage — `DEFAULT_OBJECT_STORAGE_BUCKET_ID` not set → presigned URL fails
 - `POST /api/storage/uploads/direct` — multer endpoint, saves to `uploads/` dir in process.cwd()

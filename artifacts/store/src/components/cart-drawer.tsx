@@ -87,7 +87,7 @@ export function CartDrawer() {
               <div key={item.id} className="flex gap-3 py-3 border-b last:border-b-0">
                 <div className="h-20 w-20 flex-shrink-0 rounded-md overflow-hidden border bg-muted">
                   {item.imageUrl && (
-                    <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-cover" />
+                    <img src={item.imageUrl} alt={item.productName} loading="lazy" decoding="async" width={80} height={80} className="h-full w-full object-cover" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

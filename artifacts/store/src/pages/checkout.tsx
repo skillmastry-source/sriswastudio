@@ -140,7 +140,9 @@ export default function Checkout() {
 
   const cartTotal = Number(cart?.total ?? 0);
   const discountAmount = couponResult?.discount ?? 0;
-  const finalTotal = Math.max(0, cartTotal - discountAmount);
+  const isFreeShippingCoupon = couponResult?.type === "free-shipping";
+  const shippingCost = (isFreeShippingCoupon || cartTotal >= 1000) ? 0 : 60;
+  const finalTotal = Math.max(0, cartTotal - discountAmount) + shippingCost;
 
   async function applyCoupon() {
     const code = couponInput.trim().toUpperCase();
@@ -616,8 +618,15 @@ export default function Checkout() {
                   </div>
                 )}
                 <div className="flex justify-between text-gray-600">
-                  <span>Shipping</span><span className="font-medium text-green-600">Free</span>
+                  <span>Shipping</span>
+                  {shippingCost === 0
+                    ? <span className="font-medium text-green-600">Free</span>
+                    : <span className="font-medium text-gray-900">₹{shippingCost.toFixed(2)}</span>
+                  }
                 </div>
+                {shippingCost > 0 && (
+                  <p className="text-xs text-gray-400">Free shipping on orders ₹1,000 & above</p>
+                )}
               </div>
 
               <div className="flex justify-between font-serif font-bold text-xl border-t pt-4">

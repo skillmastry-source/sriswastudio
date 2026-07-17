@@ -119,7 +119,9 @@ router.post("/orders", async (req, res) => {
     }
   }
 
-  const total = Math.max(0, subtotal - discountAmount);
+  const isFreeShippingCoupon = appliedCoupon?.type === "free-shipping";
+  const shippingCost = (subtotal >= 1000 || isFreeShippingCoupon) ? 0 : 60;
+  const total = Math.max(0, subtotal - discountAmount) + shippingCost;
   const orderNumber = generateOrderNumber();
 
   // Execute order creation, stock decrement, coupon consumption, and cart clear
@@ -161,7 +163,7 @@ router.post("/orders", async (req, res) => {
         .values({
           orderNumber, status: "pending", customerName, customerPhone, customerEmail,
           shippingAddress, city, state, pincode, notes: notes ?? null,
-          subtotal: String(subtotal), shippingCost: "0", total: String(total), paymentMethod,
+          subtotal: String(subtotal), shippingCost: String(shippingCost), total: String(total), paymentMethod,
           paymentReference: paymentReference ?? null,
           couponCode: appliedCoupon ? appliedCoupon.code : null,
           discountAmount: String(discountAmount),

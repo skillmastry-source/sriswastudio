@@ -90,10 +90,13 @@ fi
 echo "   ✓ Schema OK"
 
 echo "🔁 Restarting API server..."
-pm2 restart sriswa-api
+set -a; source "$ENV_FILE"; set +a
+pm2 delete sriswa-api 2>/dev/null || true
+pm2 start "$REPO_DIR/artifacts/api-server/dist/index.mjs" --name sriswa-api
+pm2 save
 
 echo "🔎 Checking API is responding..."
-sleep 3
+sleep 5
 if curl -sf http://localhost:8080/api/payments/status >/dev/null; then
   echo "   ✓ API OK"
 else

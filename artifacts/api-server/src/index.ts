@@ -2,6 +2,14 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedBrandLogos } from "./lib/seedBrandLogos";
 
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception — keeping process alive");
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection");
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

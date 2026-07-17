@@ -8,6 +8,7 @@ import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
 import { useEffect, lazy, Suspense } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { useSiteSettings } from "@/hooks/use-site-settings";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Critical pages — loaded immediately (needed on first visit)
 import Home from "@/pages/home";
@@ -226,6 +227,7 @@ function Router() {
 
 function App() {
   return (
+    <ErrorBoundary>
     <ClerkProvider
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
@@ -265,6 +267,7 @@ function App() {
         </TooltipProvider>
       </QueryClientProvider>
     </ClerkProvider>
+    </ErrorBoundary>
   );
 }
 

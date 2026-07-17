@@ -380,7 +380,7 @@ export default function Checkout() {
               )}
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FormField control={form.control} name="customerName" render={({ field }) => (
                       <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Jane Doe" {...field} /></FormControl><FormMessage /></FormItem>
@@ -517,22 +517,6 @@ export default function Checkout() {
                     </div>
                   )}
 
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full h-14 text-base font-bold tracking-wide"
-                    disabled={processing || createOrder.isPending}
-                    style={{ background: "#9B0F5F" }}
-                  >
-                    {processing || createOrder.isPending
-                      ? "Processing…"
-                      : effectiveMethod === "phonepe"
-                        ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
-                        : effectiveMethod === "upi_qr"
-                          ? `Confirm UPI Payment • ₹${finalTotal.toFixed(2)}`
-                          : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
-                    }
-                  </Button>
                 </form>
               </Form>
             </div>
@@ -639,6 +623,24 @@ export default function Checkout() {
                 <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                 Secure checkout — your data is protected
               </div>
+
+              <Button
+                type="submit"
+                form="checkout-form"
+                size="lg"
+                className="w-full h-14 text-base font-bold tracking-wide mt-4"
+                disabled={processing || createOrder.isPending}
+                style={{ background: "#9B0F5F" }}
+              >
+                {processing || createOrder.isPending
+                  ? "Processing…"
+                  : effectiveMethod === "phonepe"
+                    ? `Pay with PhonePe • ₹${finalTotal.toFixed(2)}`
+                    : effectiveMethod === "upi_qr"
+                      ? `Confirm UPI Payment • ₹${finalTotal.toFixed(2)}`
+                      : `Pay with Razorpay • ₹${finalTotal.toFixed(2)}`
+                }
+              </Button>
             </div>
           </div>
         </div>

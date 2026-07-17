@@ -410,39 +410,41 @@ export default function Checkout() {
                     <FormItem><FormLabel>Order Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Special delivery instructions" className="resize-none" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
 
-                  {/* Payment Method Selection */}
-                  <div className="pt-2">
-                    <h3 className="font-serif font-bold text-lg mb-4">Payment Method</h3>
-                    <div className="space-y-3">
-                      {PAYMENT_OPTIONS.map(({ id, label, sub, Icon }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => { setPaymentMethod(id); setUtrError(""); }}
-                          className="w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all"
-                          style={{
-                            borderColor: effectiveMethod === id ? "#9B0F5F" : "#e5e7eb",
-                            background: effectiveMethod === id ? "#fdf6f9" : "white",
-                          }}
-                        >
-                          <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
-                            style={{ background: effectiveMethod === id ? "#9B0F5F" : "#f3f4f6" }}>
-                            <Icon className="h-5 w-5" style={{ color: effectiveMethod === id ? "white" : "#6b7280" }} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm text-gray-900">{label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
-                          </div>
-                          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                            style={{ borderColor: effectiveMethod === id ? "#9B0F5F" : "#d1d5db" }}>
-                            {effectiveMethod === id && (
-                              <div className="h-2.5 w-2.5 rounded-full" style={{ background: "#9B0F5F" }} />
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                  {/* Payment Method Selection — only show if multiple options available */}
+                  {PAYMENT_OPTIONS.length > 1 && (
+                    <div className="pt-2">
+                      <h3 className="font-serif font-bold text-lg mb-4">Payment Method</h3>
+                      <div className="space-y-3">
+                        {PAYMENT_OPTIONS.map(({ id, label, sub, Icon }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => { setPaymentMethod(id); setUtrError(""); }}
+                            className="w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all"
+                            style={{
+                              borderColor: effectiveMethod === id ? "#9B0F5F" : "#e5e7eb",
+                              background: effectiveMethod === id ? "#fdf6f9" : "white",
+                            }}
+                          >
+                            <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
+                              style={{ background: effectiveMethod === id ? "#9B0F5F" : "#f3f4f6" }}>
+                              <Icon className="h-5 w-5" style={{ color: effectiveMethod === id ? "white" : "#6b7280" }} />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-gray-900">{label}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
+                            </div>
+                            <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                              style={{ borderColor: effectiveMethod === id ? "#9B0F5F" : "#d1d5db" }}>
+                              {effectiveMethod === id && (
+                                <div className="h-2.5 w-2.5 rounded-full" style={{ background: "#9B0F5F" }} />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* UPI QR Panel — shown when UPI QR is selected */}
                   {effectiveMethod === "upi_qr" && upiSettings && (

@@ -30,7 +30,10 @@ description: Anti-tarnish jewellery e-commerce — storefront, admin panel, What
 
 ## VPS Deploy — CRITICAL RULES
 - Deploy script: `bash /var/www/sriswastudio/scripts/vps-deploy.sh`
-- **NEVER add `--update-env` to `pm2 restart`** — this strips env vars (PORT, DATABASE_URL, etc.) from the running process, causing PM2 crash-loop and all pages to hang
+- **Deploy script now uses `pm2 delete sriswa-api && pm2 start REPO_DIR/artifacts/api-server/dist/index.mjs --name sriswa-api`** — NOT `pm2 restart`. This is required to pick up new env vars (RAZORPAY keys, etc.)
+- **To manually restart with env vars:** `set -a && source /var/www/sriswastudio/.env && set +a && pm2 delete sriswa-api && cd /var/www/sriswastudio && pm2 start artifacts/api-server/dist/index.mjs --name sriswa-api && pm2 save`
+- **NEVER use plain `pm2 restart sriswa-api` after adding new .env vars** — it reuses stored env from first start, ignoring new vars
+- **PM2 must be started from `/var/www/sriswastudio` (repo root)** — uploads served at `process.cwd()/uploads/`. If started from `artifacts/api-server`, uploads are not found (logo/images break)
 - Plain `pm2 restart sriswa-api` keeps the existing env vars the process was started with
 - VPS .env has `VITE_CLERK_PUBLISHABLE_KEY` (not `CLERK_PUBLISHABLE_KEY`) — app.ts must check both
 - **The orval-generated client serializes `null` query params as the literal string "null"** (`?dateFrom=null`) — never pass `x || null` into generated-client query params; use `x || undefined` so the param is omitted. Server-side, validate parsed dates with `isNaN(d.getTime())` before passing to Drizzle (an Invalid Date in gte/lte throws → 500). Regression-locked in orders-list.test.ts.

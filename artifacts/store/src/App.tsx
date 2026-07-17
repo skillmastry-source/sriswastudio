@@ -5,52 +5,52 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { CartProvider } from "@/hooks/use-cart-context";
 import { ClerkProvider, SignIn, SignUp, useAuth } from "@clerk/react";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { useSiteSettings } from "@/hooks/use-site-settings";
 
-// Pages
+// Critical pages — loaded immediately (needed on first visit)
 import Home from "@/pages/home";
 import Shop from "@/pages/shop";
 import ProductDetail from "@/pages/shop/product";
-import Cart from "@/pages/cart";
-import Checkout from "@/pages/checkout";
-import OrderConfirmation from "@/pages/order-confirmation";
-import TrackOrder from "@/pages/track-order";
-import Account from "@/pages/account";
 
-// Admin Pages
-import AdminDashboard from "@/pages/admin/dashboard";
-import AdminProducts from "@/pages/admin/products";
-import AdminProductForm from "@/pages/admin/products/form";
-import AdminCategories from "@/pages/admin/categories";
-import AdminOrders from "@/pages/admin/orders";
-import AdminOrderDetail from "@/pages/admin/orders/detail";
-import AdminInventory from "@/pages/admin/inventory";
-import AdminSettings from "@/pages/admin/settings";
-import AdminDesign from "@/pages/admin/design";
-import AdminCMS from "@/pages/admin/cms";
-import AdminCmsForm from "@/pages/admin/cms/form";
-import AdminCustomers from "@/pages/admin/customers";
-import AdminCustomerDetail from "@/pages/admin/customers/detail";
-import AdminCoupons from "@/pages/admin/marketing/coupons";
-import AdminMedia from "@/pages/admin/media";
-import AdminBuilder from "@/pages/admin/builder";
-import AdminAnalytics from "@/pages/admin/analytics";
-import AdminAnnouncements from "@/pages/admin/marketing/announcements";
-import AdminBroadcasts from "@/pages/admin/marketing/broadcasts";
-import AdminFlashSale from "@/pages/admin/marketing/flash-sale";
-import AdminReferrals from "@/pages/admin/marketing/referrals";
-import AdminEmailSettings from "@/pages/admin/marketing/email-settings";
-import AdminInstagram from "@/pages/admin/marketing/instagram";
+// Non-critical store pages — lazy loaded
+const Cart = lazy(() => import("@/pages/cart"));
+const Checkout = lazy(() => import("@/pages/checkout"));
+const OrderConfirmation = lazy(() => import("@/pages/order-confirmation"));
+const TrackOrder = lazy(() => import("@/pages/track-order"));
+const Account = lazy(() => import("@/pages/account"));
+const BlogList = lazy(() => import("@/pages/blog"));
+const BlogPost = lazy(() => import("@/pages/blog/post"));
+const FAQ = lazy(() => import("@/pages/faq"));
+const PolicyPage = lazy(() => import("@/pages/policy"));
+const LandingPage = lazy(() => import("@/pages/landing-page"));
+
+// Admin pages — all lazy loaded (never needed by regular customers)
+const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
+const AdminProducts = lazy(() => import("@/pages/admin/products"));
+const AdminProductForm = lazy(() => import("@/pages/admin/products/form"));
+const AdminCategories = lazy(() => import("@/pages/admin/categories"));
+const AdminOrders = lazy(() => import("@/pages/admin/orders"));
+const AdminOrderDetail = lazy(() => import("@/pages/admin/orders/detail"));
+const AdminInventory = lazy(() => import("@/pages/admin/inventory"));
+const AdminSettings = lazy(() => import("@/pages/admin/settings"));
+const AdminDesign = lazy(() => import("@/pages/admin/design"));
+const AdminCMS = lazy(() => import("@/pages/admin/cms"));
+const AdminCmsForm = lazy(() => import("@/pages/admin/cms/form"));
+const AdminCustomers = lazy(() => import("@/pages/admin/customers"));
+const AdminCustomerDetail = lazy(() => import("@/pages/admin/customers/detail"));
+const AdminCoupons = lazy(() => import("@/pages/admin/marketing/coupons"));
+const AdminMedia = lazy(() => import("@/pages/admin/media"));
+const AdminBuilder = lazy(() => import("@/pages/admin/builder"));
+const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
+const AdminAnnouncements = lazy(() => import("@/pages/admin/marketing/announcements"));
+const AdminBroadcasts = lazy(() => import("@/pages/admin/marketing/broadcasts"));
+const AdminFlashSale = lazy(() => import("@/pages/admin/marketing/flash-sale"));
+const AdminReferrals = lazy(() => import("@/pages/admin/marketing/referrals"));
+const AdminEmailSettings = lazy(() => import("@/pages/admin/marketing/email-settings"));
+const AdminInstagram = lazy(() => import("@/pages/admin/marketing/instagram"));
 import { AdminLayout } from "@/components/layout/admin-layout";
-
-// Storefront CMS pages
-import BlogList from "@/pages/blog";
-import BlogPost from "@/pages/blog/post";
-import FAQ from "@/pages/faq";
-import PolicyPage from "@/pages/policy";
-import LandingPage from "@/pages/landing-page";
 
 const queryClient = new QueryClient();
 
@@ -83,7 +83,7 @@ function FaviconUpdater() {
   return null;
 }
 
-function AdminRoute({ component: Component }: { component: any }) {
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   return (
     <AdminLayout>
       <Component />
@@ -91,126 +91,136 @@ function AdminRoute({ component: Component }: { component: any }) {
   );
 }
 
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-[#9B0F5F] border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/shop" component={Shop} />
-      <Route path="/shop/:slug" component={ProductDetail} />
-      <Route path="/cart" component={Cart} />
-      <Route path="/checkout" component={Checkout} />
-      <Route path="/order-confirmation" component={OrderConfirmation} />
-      <Route path="/track-order" component={TrackOrder} />
-      <Route path="/account" component={Account} />
+    <Suspense fallback={<PageFallback />}>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/shop" component={Shop} />
+        <Route path="/shop/:slug" component={ProductDetail} />
+        <Route path="/cart" component={Cart} />
+        <Route path="/checkout" component={Checkout} />
+        <Route path="/order-confirmation" component={OrderConfirmation} />
+        <Route path="/track-order" component={TrackOrder} />
+        <Route path="/account" component={Account} />
 
-      {/* CMS / Content routes */}
-      <Route path="/blog" component={BlogList} />
-      <Route path="/blog/:slug" component={BlogPost} />
-      <Route path="/faq" component={FAQ} />
-      <Route path="/pages/:slug" component={PolicyPage} />
-      <Route path="/p/:slug" component={LandingPage} />
+        {/* CMS / Content routes */}
+        <Route path="/blog" component={BlogList} />
+        <Route path="/blog/:slug" component={BlogPost} />
+        <Route path="/faq" component={FAQ} />
+        <Route path="/pages/:slug" component={PolicyPage} />
+        <Route path="/p/:slug" component={LandingPage} />
 
-      {/* Clerk auth routes */}
-      <Route path="/sign-in/*?">
-        {() => {
-          const params = new URLSearchParams(window.location.search);
-          const redirectUrl = params.get("redirect_url") ?? "/";
-          return (
+        {/* Clerk auth routes */}
+        <Route path="/sign-in/*?">
+          {() => {
+            const params = new URLSearchParams(window.location.search);
+            const redirectUrl = params.get("redirect_url") ?? "/";
+            return (
+              <div className="min-h-screen flex items-center justify-center bg-background">
+                <SignIn routing="path" path={`${basePath}/sign-in`} fallbackRedirectUrl={redirectUrl} />
+              </div>
+            );
+          }}
+        </Route>
+        <Route path="/sign-up/*?">
+          {() => (
             <div className="min-h-screen flex items-center justify-center bg-background">
-              <SignIn routing="path" path={`${basePath}/sign-in`} fallbackRedirectUrl={redirectUrl} />
+              <SignUp routing="path" path={`${basePath}/sign-up`} />
             </div>
-          );
-        }}
-      </Route>
-      <Route path="/sign-up/*?">
-        {() => (
-          <div className="min-h-screen flex items-center justify-center bg-background">
-            <SignUp routing="path" path={`${basePath}/sign-up`} />
-          </div>
-        )}
-      </Route>
+          )}
+        </Route>
 
-      {/* Admin Routes */}
-      <Route path="/admin">
-        {() => <AdminRoute component={AdminDashboard} />}
-      </Route>
-      <Route path="/admin/products">
-        {() => <AdminRoute component={AdminProducts} />}
-      </Route>
-      <Route path="/admin/products/:id/edit">
-        {() => <AdminRoute component={AdminProductForm} />}
-      </Route>
-      <Route path="/admin/products/new">
-        {() => <AdminRoute component={AdminProductForm} />}
-      </Route>
-      <Route path="/admin/categories">
-        {() => <AdminRoute component={AdminCategories} />}
-      </Route>
-      <Route path="/admin/orders">
-        {() => <AdminRoute component={AdminOrders} />}
-      </Route>
-      <Route path="/admin/orders/:id">
-        {() => <AdminRoute component={AdminOrderDetail} />}
-      </Route>
-      <Route path="/admin/inventory">
-        {() => <AdminRoute component={AdminInventory} />}
-      </Route>
-      <Route path="/admin/settings">
-        {() => <AdminRoute component={AdminSettings} />}
-      </Route>
-      <Route path="/admin/design">
-        {() => <AdminRoute component={AdminDesign} />}
-      </Route>
-      <Route path="/admin/cms">
-        {() => <AdminRoute component={AdminCMS} />}
-      </Route>
-      <Route path="/admin/cms/new">
-        {() => <AdminRoute component={AdminCmsForm} />}
-      </Route>
-      <Route path="/admin/cms/:id/edit">
-        {() => <AdminRoute component={AdminCmsForm} />}
-      </Route>
-      <Route path="/admin/customers">
-        {() => <AdminRoute component={AdminCustomers} />}
-      </Route>
-      <Route path="/admin/customers/:email">
-        {() => <AdminRoute component={AdminCustomerDetail} />}
-      </Route>
-      <Route path="/admin/marketing/coupons">
-        {() => <AdminRoute component={AdminCoupons} />}
-      </Route>
-      <Route path="/admin/analytics">
-        {() => <AdminRoute component={AdminAnalytics} />}
-      </Route>
-      <Route path="/admin/marketing/announcements">
-        {() => <AdminRoute component={AdminAnnouncements} />}
-      </Route>
-      <Route path="/admin/marketing/broadcasts">
-        {() => <AdminRoute component={AdminBroadcasts} />}
-      </Route>
-      <Route path="/admin/marketing/flash-sale">
-        {() => <AdminRoute component={AdminFlashSale} />}
-      </Route>
-      <Route path="/admin/marketing/referrals">
-        {() => <AdminRoute component={AdminReferrals} />}
-      </Route>
-      <Route path="/admin/marketing/email-settings">
-        {() => <AdminRoute component={AdminEmailSettings} />}
-      </Route>
-      <Route path="/admin/marketing/instagram">
-        {() => <AdminRoute component={AdminInstagram} />}
-      </Route>
+        {/* Admin Routes */}
+        <Route path="/admin">
+          {() => <AdminRoute component={AdminDashboard} />}
+        </Route>
+        <Route path="/admin/products">
+          {() => <AdminRoute component={AdminProducts} />}
+        </Route>
+        <Route path="/admin/products/:id/edit">
+          {() => <AdminRoute component={AdminProductForm} />}
+        </Route>
+        <Route path="/admin/products/new">
+          {() => <AdminRoute component={AdminProductForm} />}
+        </Route>
+        <Route path="/admin/categories">
+          {() => <AdminRoute component={AdminCategories} />}
+        </Route>
+        <Route path="/admin/orders">
+          {() => <AdminRoute component={AdminOrders} />}
+        </Route>
+        <Route path="/admin/orders/:id">
+          {() => <AdminRoute component={AdminOrderDetail} />}
+        </Route>
+        <Route path="/admin/inventory">
+          {() => <AdminRoute component={AdminInventory} />}
+        </Route>
+        <Route path="/admin/settings">
+          {() => <AdminRoute component={AdminSettings} />}
+        </Route>
+        <Route path="/admin/design">
+          {() => <AdminRoute component={AdminDesign} />}
+        </Route>
+        <Route path="/admin/cms">
+          {() => <AdminRoute component={AdminCMS} />}
+        </Route>
+        <Route path="/admin/cms/new">
+          {() => <AdminRoute component={AdminCmsForm} />}
+        </Route>
+        <Route path="/admin/cms/:id/edit">
+          {() => <AdminRoute component={AdminCmsForm} />}
+        </Route>
+        <Route path="/admin/customers">
+          {() => <AdminRoute component={AdminCustomers} />}
+        </Route>
+        <Route path="/admin/customers/:email">
+          {() => <AdminRoute component={AdminCustomerDetail} />}
+        </Route>
+        <Route path="/admin/marketing/coupons">
+          {() => <AdminRoute component={AdminCoupons} />}
+        </Route>
+        <Route path="/admin/analytics">
+          {() => <AdminRoute component={AdminAnalytics} />}
+        </Route>
+        <Route path="/admin/marketing/announcements">
+          {() => <AdminRoute component={AdminAnnouncements} />}
+        </Route>
+        <Route path="/admin/marketing/broadcasts">
+          {() => <AdminRoute component={AdminBroadcasts} />}
+        </Route>
+        <Route path="/admin/marketing/flash-sale">
+          {() => <AdminRoute component={AdminFlashSale} />}
+        </Route>
+        <Route path="/admin/marketing/referrals">
+          {() => <AdminRoute component={AdminReferrals} />}
+        </Route>
+        <Route path="/admin/marketing/email-settings">
+          {() => <AdminRoute component={AdminEmailSettings} />}
+        </Route>
+        <Route path="/admin/marketing/instagram">
+          {() => <AdminRoute component={AdminInstagram} />}
+        </Route>
 
-      <Route path="/admin/media">
-        {() => <AdminRoute component={AdminMedia} />}
-      </Route>
+        <Route path="/admin/media">
+          {() => <AdminRoute component={AdminMedia} />}
+        </Route>
 
-      <Route path="/admin/builder">
-        {() => <AdminRoute component={AdminBuilder} />}
-      </Route>
+        <Route path="/admin/builder">
+          {() => <AdminRoute component={AdminBuilder} />}
+        </Route>
 
-      <Route component={NotFound} />
-    </Switch>
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

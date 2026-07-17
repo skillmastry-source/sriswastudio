@@ -26,8 +26,8 @@ async function ensurePaymentMethodsColumn() {
 ensurePaymentMethodsColumn();
 
 async function getPaymentMethodsEnabled(): Promise<PaymentMethodsEnabled> {
-  const [settings] = await db.select().from(storeSettingsTable);
-  const stored = (settings as unknown as Record<string, unknown>)?.payment_methods_enabled as Partial<PaymentMethodsEnabled> | null ?? {};
+  const result = await db.execute(sql`SELECT payment_methods_enabled FROM store_settings LIMIT 1`);
+  const stored = (result.rows[0]?.payment_methods_enabled ?? {}) as Partial<PaymentMethodsEnabled>;
   return {
     razorpay: stored.razorpay ?? DEFAULT_ENABLED.razorpay,
     phonepe: stored.phonepe ?? DEFAULT_ENABLED.phonepe,

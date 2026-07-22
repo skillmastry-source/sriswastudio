@@ -101,10 +101,38 @@ router.get("/products/featured", async (req, res) => {
 });
 
 router.get("/admin/products", requireEditor, async (req, res) => {
-  const { search: rawSearch, limit = 100, offset = 0 } = req.query;
+  const {
+    search: rawSearch,
+    limit = 20,
+    offset = 0,
+    categoryId: rawCategoryId,
+    status,
+    stock,
+  } = req.query;
+
   const search = qval(rawSearch);
-  const conditions = search ? [ilike(productsTable.name, `%${search}%`)] : [];
+  const categoryId = qval(rawCategoryId);
+
+  const conditions: ReturnType<typeof eq>[] = [];
+  if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
+  if (categoryId && !isNaN(Number(categoryId)))
+    conditions.push(eq(productsTable.categoryId, Number(categoryId)));
+  if (status === "active") conditions.push(eq(productsTable.isActive, true));
+  if (status === "draft") conditions.push(eq(productsTable.isActive, false));
+  if (stock === "out")
+    conditions.push(sql`${productsTable.stockQuantity} = 0`);
+  if (stock === "low")
+    conditions.push(
+      sql`${productsTable.stockQuantity} > 0 AND ${productsTable.stockQuantity} <= ${productsTable.lowStockThreshold}`
+    );
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(productsTable)
+    .where(whereClause);
+
   const products = await db
     .select()
     .from(productsTable)
@@ -112,10 +140,7 @@ router.get("/admin/products", requireEditor, async (req, res) => {
     .orderBy(desc(productsTable.createdAt))
     .limit(Number(limit))
     .offset(Number(offset));
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(productsTable)
-    .where(whereClause);
+
   const full = await Promise.all(products.map(buildProductResponse));
   return res.json({ products: full, total: count });
 });

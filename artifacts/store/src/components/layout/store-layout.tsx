@@ -107,8 +107,6 @@ export function Navbar() {
     { href: "/shop?category=earrings", label: "Earrings" },
     { href: "/shop?category=mangalsutra", label: "Mangalsutra" },
     { href: "/shop?category=chain-sets", label: "Chain Sets" },
-    { href: "/blog", label: "Blog" },
-    { href: "/faq", label: "FAQ" },
   ];
 
   const navLinks = [

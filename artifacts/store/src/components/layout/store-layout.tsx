@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { ShoppingBag, Menu, X, User, Search, Instagram, Facebook } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -92,6 +92,7 @@ export function AnnouncementBar() {
 
 export function Navbar() {
   const [location] = useLocation();
+  const search = useSearch();
   const { itemCount, openCart } = useCartContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const settings = useSiteSettings();
@@ -118,7 +119,10 @@ export function Navbar() {
   const isLinkActive = (href: string) => {
     const [hrefPath, hrefQuery] = href.split("?");
     if (hrefQuery) {
-      return location === hrefPath && window.location.search === `?${hrefQuery}`;
+      return location === hrefPath && search === `?${hrefQuery}`;
+    }
+    if (hrefPath === "/shop") {
+      return location === "/shop" && !search;
     }
     return location === hrefPath;
   };
@@ -173,17 +177,17 @@ export function Navbar() {
         </Link>
 
         {/* Center — Category nav */}
+        <style>{`
+          .nav-link { color: #4b5563; transition: color 0.15s; }
+          .nav-link:hover { color: ${colors.brand}; }
+          .nav-link.nav-link--active { color: ${colors.brand}; font-weight: 700; }
+        `}</style>
         <nav className="flex items-center gap-5 text-[11.5px] font-medium tracking-[0.08em] uppercase">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="whitespace-nowrap transition-colors"
-              style={{
-                color: isLinkActive(link.href) ? colors.brand : "#4b5563",
-                borderBottom: isLinkActive(link.href) ? `2px solid ${colors.brand}` : "2px solid transparent",
-                paddingBottom: "2px",
-              }}
+              className={`nav-link whitespace-nowrap${isLinkActive(link.href) ? " nav-link--active" : ""}`}
             >
               {link.label}
             </Link>

@@ -179,8 +179,10 @@ export function Navbar() {
         {/* Center — Category nav */}
         <style>{`
           .nav-link { color: #4b5563; transition: color 0.15s; }
-          .nav-link:hover { color: ${colors.brand}; }
-          .nav-link.nav-link--active { color: ${colors.brand}; font-weight: 700; }
+          .nav-link:hover,
+          .nav-link:active,
+          .nav-link.nav-link--active { color: ${colors.brand}; }
+          .nav-link.nav-link--active { font-weight: 700; }
         `}</style>
         <nav className="flex items-center gap-5 text-[11.5px] font-medium tracking-[0.08em] uppercase">
           {navLinks.map((link) => (

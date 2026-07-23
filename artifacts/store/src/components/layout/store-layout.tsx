@@ -106,10 +106,13 @@ export function Navbar() {
   const staticNavLinks = [
     { href: "/shop?category=watches", label: "Watches" },
     { href: "/shop?category=kadas", label: "Kadas" },
-    { href: "/shop?category=chain-sets", label: "Chain Sets" },
     { href: "/shop?category=mangalsutra", label: "Mangalsutra" },
     { href: "/shop?category=bracelets", label: "Bracelets" },
     { href: "/shop?category=earrings", label: "Earrings" },
+    { href: "/shop?category=bangles", label: "Bangles" },
+    { href: "/shop?category=rings", label: "Rings" },
+    { href: "/shop?category=chain", label: "Chain" },
+    { href: "/shop?category=chain-sets", label: "Chain Sets" },
     { href: "/shop", label: "New Arrivals" },
   ];
 
@@ -376,13 +379,16 @@ export function Footer() {
             <h4 className="text-xs tracking-[0.25em] uppercase mb-4 md:mb-5 font-medium" style={{ color: colors.gold }}>Shop by Category</h4>
             <ul className="flex flex-col gap-3 text-sm text-white/60">
               {[
-                ["/shop", "New Arrivals"],
                 ["/shop?category=watches", "Watches"],
-                ["/shop?category=bracelets", "Bracelets"],
-                ["/shop?category=rings", "Rings"],
-                ["/shop?category=earrings", "Earrings"],
+                ["/shop?category=kadas", "Kadas"],
                 ["/shop?category=mangalsutra", "Mangalsutra"],
+                ["/shop?category=bracelets", "Bracelets"],
+                ["/shop?category=earrings", "Earrings"],
+                ["/shop?category=bangles", "Bangles"],
+                ["/shop?category=rings", "Rings"],
+                ["/shop?category=chain", "Chain"],
                 ["/shop?category=chain-sets", "Chain Sets"],
+                ["/shop", "New Arrivals"],
               ].map(([href, label]) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-white transition-colors">{label}</Link>

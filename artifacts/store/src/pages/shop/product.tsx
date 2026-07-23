@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ShieldCheck, Droplets, Sparkles, ChevronRight } from "lucide-react";
+
+const BRAND = "#9B0F5F";
+
+interface SimilarProduct {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  compareAtPrice: number | null;
+  images: { url: string }[];
+}
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,6 +59,18 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
+
+  const { data: similarData } = useQuery<{ products: SimilarProduct[] }>({
+    queryKey: ["similar-products", product?.categoryId, product?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/products?categoryId=${product!.categoryId}&limit=7`);
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: !!product?.categoryId,
+  });
+
+  const similarProducts = (similarData?.products ?? []).filter((p) => p.id !== product?.id).slice(0, 6);
 
   const { data: product, isLoading, isError } = useQuery<Product>({
     queryKey: ["product-by-slug", slug],
@@ -296,6 +319,56 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Similar Products */}
+      {similarProducts.length > 0 && (
+        <div className="border-t mt-4 py-12 bg-[#fdf6f9]">
+          <div className="container mx-auto px-[30px]">
+            <p className="text-xs tracking-[0.25em] uppercase text-center mb-1" style={{ color: BRAND }}>You May Also Like</p>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-center text-[#1a0a0f] mb-8">Similar Products</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+              {similarProducts.map((p) => (
+                <Link key={p.id} href={`/shop/${p.slug}`} className="group block">
+                  <div className="relative overflow-hidden mb-3 rounded-sm" style={{ aspectRatio: "3/4", background: "#fff" }}>
+                    {p.images?.[0] ? (
+                      <img
+                        src={p.images[0].url}
+                        alt={p.name}
+                        loading="lazy"
+                        decoding="async"
+                        width={400}
+                        height={533}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Sparkles className="h-8 w-8 opacity-20" style={{ color: BRAND }} />
+                      </div>
+                    )}
+                    {p.compareAtPrice && (
+                      <span className="absolute top-2 left-2 text-white text-[9px] font-bold px-2 py-0.5 tracking-widest uppercase rounded-sm" style={{ background: BRAND }}>
+                        Sale
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center py-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `${BRAND}ee` }}>
+                      <span className="text-white text-[10px] tracking-[0.2em] uppercase font-medium">View Details</span>
+                    </div>
+                  </div>
+                  <h3 className="font-serif text-xs md:text-sm font-semibold leading-snug mb-1 text-[#1a0a0f] line-clamp-2 group-hover:text-[#9B0F5F] transition-colors">
+                    {p.name}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs md:text-sm" style={{ color: BRAND }}>₹{p.price}</span>
+                    {p.compareAtPrice && (
+                      <span className="text-gray-400 line-through text-xs">₹{p.compareAtPrice}</span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </StoreLayout>
   );
 }

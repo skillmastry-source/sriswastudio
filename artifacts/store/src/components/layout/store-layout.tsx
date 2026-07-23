@@ -104,13 +104,13 @@ export function Navbar() {
   const { data: navPages = [] } = useNavLandingPages();
 
   const staticNavLinks = [
-    { href: "/shop", label: "New Arrivals" },
     { href: "/shop?category=watches", label: "Watches" },
-    { href: "/shop?category=bracelets", label: "Bracelets" },
-    { href: "/shop?category=rings", label: "Rings" },
-    { href: "/shop?category=earrings", label: "Earrings" },
-    { href: "/shop?category=mangalsutra", label: "Mangalsutra" },
+    { href: "/shop?category=kadas", label: "Kadas" },
     { href: "/shop?category=chain-sets", label: "Chain Sets" },
+    { href: "/shop?category=mangalsutra", label: "Mangalsutra" },
+    { href: "/shop?category=bracelets", label: "Bracelets" },
+    { href: "/shop?category=earrings", label: "Earrings" },
+    { href: "/shop", label: "New Arrivals" },
   ];
 
   const navLinks = [
@@ -171,14 +171,14 @@ export function Navbar() {
       <style>{`.navbar-logo { height: 40px; } @media (min-width: 768px) { .navbar-logo { height: ${header.logoSize}px; } }`}</style>
 
       {/* ── Desktop: single row — logo | nav | icons ── */}
-      <div className="hidden md:grid container mx-auto px-6" style={{ gridTemplateColumns: "1fr auto 1fr", height: 72, alignItems: "center" }}>
+      <div className="hidden md:grid container mx-auto px-6" style={{ gridTemplateColumns: "auto 1fr auto", height: 72, alignItems: "center", gap: "16px" }}>
 
         {/* Left — Logo */}
-        <Link href="/" className="flex items-center justify-self-start">
+        <Link href="/" className="flex items-center">
           {logoImg}
         </Link>
 
-        {/* Center — Category nav */}
+        {/* Center — Category nav (centered within 1fr column) */}
         <style>{`
           .nav-link { color: #4b5563; transition: color 0.15s; }
           .nav-link:hover,
@@ -186,7 +186,7 @@ export function Navbar() {
           .nav-link.nav-link--active { color: ${colors.brand}; }
           .nav-link.nav-link--active { font-weight: 700; }
         `}</style>
-        <nav className="flex items-center gap-5 text-[11.5px] font-medium tracking-[0.08em] uppercase">
+        <nav className="flex items-center justify-center gap-4 text-[11px] font-medium tracking-[0.07em] uppercase overflow-hidden">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -199,13 +199,17 @@ export function Navbar() {
         </nav>
 
         {/* Right — Search, Account, Cart */}
-        <div className="flex items-center gap-0.5 justify-self-end">
-          <Button variant="ghost" size="icon" className={iconStyle} onClick={() => {
-            setSearchOpen(true);
-            setTimeout(() => searchInputRef.current?.focus(), 50);
-          }}>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center h-9 w-9 rounded-md ${iconStyle} hover:bg-accent`}
+            onClick={() => {
+              setSearchOpen(true);
+              setTimeout(() => searchInputRef.current?.focus(), 80);
+            }}
+          >
             <Search className="h-[18px] w-[18px]" />
-          </Button>
+          </button>
           <Button variant="ghost" size="icon" className={iconStyle} asChild>
             <Link href="/account">
               <User className="h-[18px] w-[18px]" />
@@ -215,41 +219,53 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* ── Search overlay ── */}
+      {/* ── Search overlay (fixed so it always sits above everything) ── */}
       {searchOpen && (
-        <div className="absolute inset-x-0 top-full z-50 bg-white border-b shadow-lg">
-          <form
-            className="container mx-auto px-6 py-4 flex items-center gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const q = searchQuery.trim();
-              setSearchOpen(false);
-              setSearchQuery("");
-              if (q) navigate(`/shop?search=${encodeURIComponent(q)}`);
-            }}
-          >
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products…"
-              className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[99] bg-black/20"
+            onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+          />
+          {/* Panel */}
+          <div className="fixed inset-x-0 top-0 z-[100] bg-white shadow-xl">
+            <form
+              className="container mx-auto px-4 md:px-6 py-4 flex items-center gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = searchQuery.trim();
+                setSearchOpen(false);
+                setSearchQuery("");
+                if (q) navigate(`/shop?search=${encodeURIComponent(q)}`);
               }}
-            />
-            <Button type="submit" size="sm" style={{ background: colors.brand, color: "#fff" }}>
-              Search
-            </Button>
-            <Button variant="ghost" size="icon" type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
-              <X className="h-4 w-4" />
-            </Button>
-          </form>
-        </div>
+            >
+              <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+              <Input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products…"
+                className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+                }}
+              />
+              <Button type="submit" size="sm" style={{ background: colors.brand, color: "#fff" }}>
+                Search
+              </Button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-md text-gray-500 hover:bg-accent"
+                onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        </>
       )}
 
-      {/* ── Mobile: hamburger | logo | cart ── */}
+      {/* ── Mobile: hamburger | logo | search + cart ── */}
       <div className="flex md:hidden items-center justify-between px-4" style={{ height: 60 }}>
         <button className="p-2 -ml-2 text-gray-700" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -261,7 +277,19 @@ export function Navbar() {
             className="navbar-logo w-auto block"
           />
         </Link>
-        {cartIcon}
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center h-9 w-9 rounded-md ${iconStyle}`}
+            onClick={() => {
+              setSearchOpen(true);
+              setTimeout(() => searchInputRef.current?.focus(), 80);
+            }}
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </button>
+          {cartIcon}
+        </div>
       </div>
 
       {/* Mobile drawer */}

@@ -205,7 +205,16 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
   const subtitle = (config.subtitle as string | undefined) ?? "Browse";
 
   const { data: categoriesData, isLoading: catsLoading } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
-  const categories = categoriesData ?? [];
+
+  const CATEGORY_ORDER = ["watches", "kadas", "chain-sets", "mangalsutra", "bracelets", "earrings"];
+  const categories = [...(categoriesData ?? [])].sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(a.slug);
+    const bi = CATEGORY_ORDER.indexOf(b.slug);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
   const [activeTab, setActiveTab] = useState<string>(() => categories[0]?.slug ?? "");
 

@@ -1,7 +1,8 @@
 import { Link, useLocation, useSearch } from "wouter";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { ShoppingBag, Menu, X, User, Search, Instagram, Facebook } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useSiteSettings } from "@/hooks/use-site-settings";
@@ -91,10 +92,13 @@ export function AnnouncementBar() {
 }
 
 export function Navbar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const search = useSearch();
   const { itemCount, openCart } = useCartContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const settings = useSiteSettings();
   const { header, colors } = settings;
   const { data: navPages = [] } = useNavLandingPages();
@@ -196,7 +200,10 @@ export function Navbar() {
 
         {/* Right — Search, Account, Cart */}
         <div className="flex items-center gap-0.5 justify-self-end">
-          <Button variant="ghost" size="icon" className={iconStyle}>
+          <Button variant="ghost" size="icon" className={iconStyle} onClick={() => {
+            setSearchOpen(true);
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+          }}>
             <Search className="h-[18px] w-[18px]" />
           </Button>
           <Button variant="ghost" size="icon" className={iconStyle} asChild>
@@ -207,6 +214,40 @@ export function Navbar() {
           {cartIcon}
         </div>
       </div>
+
+      {/* ── Search overlay ── */}
+      {searchOpen && (
+        <div className="absolute inset-x-0 top-full z-50 bg-white border-b shadow-lg">
+          <form
+            className="container mx-auto px-6 py-4 flex items-center gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              setSearchOpen(false);
+              setSearchQuery("");
+              if (q) navigate(`/shop?search=${encodeURIComponent(q)}`);
+            }}
+          >
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products…"
+              className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+              }}
+            />
+            <Button type="submit" size="sm" style={{ background: colors.brand, color: "#fff" }}>
+              Search
+            </Button>
+            <Button variant="ghost" size="icon" type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
+              <X className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      )}
 
       {/* ── Mobile: hamburger | logo | cart ── */}
       <div className="flex md:hidden items-center justify-between px-4" style={{ height: 60 }}>

@@ -17,7 +17,7 @@ export default function Shop() {
   const searchParams = new URLSearchParams(searchStr);
   const categoryParam = searchParams.get("category");
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [sortBy, setSortBy] = useState<"newest" | "price_asc" | "price_desc" | "name">("newest");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");

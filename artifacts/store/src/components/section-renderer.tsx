@@ -206,7 +206,7 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
 
   const { data: categoriesData, isLoading: catsLoading } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
 
-  const CATEGORY_ORDER = ["watches", "kadas", "mangalsutra", "bracelets", "earrings", "bangles", "rings", "chain", "chain-sets"];
+  const CATEGORY_ORDER = ["watches", "kadas", "mangalsutra", "chain", "bracelets", "bangles", "rings", "earrings", "chain-sets"];
   const categories = [...(categoriesData ?? [])].sort((a, b) => {
     const ai = CATEGORY_ORDER.indexOf(a.slug);
     const bi = CATEGORY_ORDER.indexOf(b.slug);

@@ -346,7 +346,7 @@ export function Footer() {
             <img
               src={footer.logoUrl || "/brand/logo-white.png"}
               alt="Sriswa Studio"
-              className="footer-logo w-auto block"
+              className="footer-logo w-auto block object-contain"
               style={{
                 paddingLeft: footer.logoPaddingX,
                 paddingRight: footer.logoPaddingX,

@@ -4,8 +4,20 @@ set -e
 REPO_DIR="/var/www/sriswastudio"
 WEB_ROOT="/var/www/sriswastudio/html"
 ENV_FILE="$REPO_DIR/.env"
+GITHUB_REPO="https://github.com/skillmastry-source/sriswastudio.git"
 
 trap 'echo ""; echo "❌❌❌ DEPLOY FAILED — the website is STILL RUNNING THE OLD CODE. Read the error above, fix it, and run this script again. ❌❌❌"' ERR
+
+# ── First-time setup: clone if the directory doesn't exist ──────────────────
+if [ ! -d "$REPO_DIR" ]; then
+  echo "📂 $REPO_DIR not found — cloning repo for the first time..."
+  mkdir -p "$(dirname "$REPO_DIR")"
+  git clone "$GITHUB_REPO" "$REPO_DIR"
+  echo "✅ Repo cloned to $REPO_DIR"
+fi
+
+# ── Create web root if it doesn't exist ─────────────────────────────────────
+mkdir -p "$WEB_ROOT"
 
 cd "$REPO_DIR"
 

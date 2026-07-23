@@ -106,6 +106,7 @@ export default function AdminProductForm() {
             await syncImagesAndVariants(created.id);
             queryClient.invalidateQueries({ queryKey: getGetProductQueryKey(Number(id)) });
             queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+            queryClient.invalidateQueries({ queryKey: ["admin-products"] });
             toast({ title: "Product updated" });
             setLocation("/admin/products");
           },
@@ -119,6 +120,7 @@ export default function AdminProductForm() {
           onSuccess: async (created) => {
             await syncImagesAndVariants(created.id);
             queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+            queryClient.invalidateQueries({ queryKey: ["admin-products"] });
             toast({ title: "Product created" });
             setLocation("/admin/products");
           },

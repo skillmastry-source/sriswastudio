@@ -3,7 +3,7 @@ import { useAddToCart } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ShieldCheck, Droplets, Sparkles, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const { data: product, isLoading, isError } = useQuery<Product>({
     queryKey: ["product-by-slug", slug],
@@ -144,7 +145,7 @@ export default function ProductDetail() {
             </>
           )}
           <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground">{product.name}</span>
+          <span className="text-foreground truncate max-w-[140px] sm:max-w-[260px]" title={product.name}>{product.name}</span>
         </div>
       </div>
 
@@ -190,7 +191,17 @@ export default function ProductDetail() {
               )}
             </div>
 
-            <p className="text-foreground/80 mb-8 leading-relaxed">{product.description}</p>
+            <div className="mb-8">
+              <p className={`text-foreground/80 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
+                {product.description}
+              </p>
+              <button
+                onClick={() => setDescExpanded(!descExpanded)}
+                className="mt-1 text-sm font-medium text-[#9B0F5F] hover:underline"
+              >
+                {descExpanded ? "Read less" : "Read more"}
+              </button>
+            </div>
 
             {/* Variant selection */}
             {Object.entries(variantsByName).map(([variantName, options]) => (

@@ -73,7 +73,7 @@ export default function ProductDetail() {
   const { data: similarData } = useQuery<{ products: SimilarProduct[] }>({
     queryKey: ["similar-products", product?.categoryId, product?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/products?categoryId=${product!.categoryId}&limit=7`);
+      const res = await fetch(`/api/products?categoryId=${product!.categoryId}&limit=20`);
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },

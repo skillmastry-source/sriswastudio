@@ -115,7 +115,7 @@ const SECTION_TYPES: SectionTypeMeta[] = [
     defaultConfig: {
       title: "Join Our WhatsApp Community",
       subtitle: "Get exclusive offers, new launch alerts & care tips directly on WhatsApp.",
-      waNumber: "919618535437",
+      communityLink: "https://chat.whatsapp.com/KJmFZ8AG90z3EbHR2Z4KNg",
       bgColor: BRAND,
     },
   },
@@ -397,8 +397,8 @@ function SectionEditor({
           <Field label="Subtitle">
             <Textarea value={(cfg.subtitle as string) ?? ""} onChange={(e) => set("subtitle", e.target.value)} className="h-20 text-sm resize-none" />
           </Field>
-          <Field label="WhatsApp Number (with country code)">
-            <Input value={(cfg.waNumber as string) ?? ""} onChange={(e) => set("waNumber", e.target.value)} className="h-8 text-sm font-mono" placeholder="919618535437" />
+          <Field label="Community Invite Link">
+            <Input value={(cfg.communityLink as string) ?? ""} onChange={(e) => set("communityLink", e.target.value)} className="h-8 text-sm font-mono" placeholder="https://chat.whatsapp.com/..." />
           </Field>
           <Field label="Background Color">
             <div className="flex items-center gap-2">

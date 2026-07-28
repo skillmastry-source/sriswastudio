@@ -503,10 +503,8 @@ function WhatsAppCTASection({ config, colors }: { config: Record<string, unknown
   const { brand, gold } = colors;
   const title = (config.title as string | undefined) ?? "Join Our WhatsApp Community";
   const subtitle = (config.subtitle as string | undefined) ?? "Get exclusive offers, new launch alerts & jewellery care tips directly on WhatsApp.";
-  const waNumber = (config.waNumber as string | undefined) ?? "919618535437";
   const bgColor = (config.bgColor as string | undefined) ?? brand;
-  const communityMsg = encodeURIComponent("Hi, I want to join your WhatsApp community!");
-  const waLink = `https://wa.me/${waNumber}?text=${communityMsg}`;
+  const waLink = (config.communityLink as string | undefined) ?? "https://chat.whatsapp.com/KJmFZ8AG90z3EbHR2Z4KNg";
 
   return (
     <section className="py-16" style={{ background: bgColor }}>

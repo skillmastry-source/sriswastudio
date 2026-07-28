@@ -97,7 +97,7 @@ export const DEFAULT_HOMEPAGE_SECTIONS: HomepageSection[] = [
     config: {
       title: "Join Our WhatsApp Community",
       subtitle: "Get exclusive offers, new launch alerts & jewellery care tips directly on WhatsApp. Be the first to know!",
-      waNumber: "919618535437",
+      communityLink: "https://chat.whatsapp.com/KJmFZ8AG90z3EbHR2Z4KNg",
       bgColor: "#9B0F5F",
     },
   },

@@ -14,6 +14,7 @@ import customersRouter from "./customers";
 import couponsRouter from "./coupons";
 import mediaRouter from "./media";
 import landingPagesRouter from "./landing-pages";
+import whatsappWebhookRouter from "./whatsapp-webhook";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,7 @@ router.use(cmsRouter);
 // MUST be before customersRouter — customersRouter has a global router.use(requireAdmin)
 // that intercepts all unauthenticated requests before they reach later routers.
 router.use(landingPagesRouter);
+router.use(whatsappWebhookRouter);
 // customers router has its own requireAdmin guards per-router
 router.use(customersRouter);
 // coupons: public /coupons/validate + admin CRUD (guards inside router)

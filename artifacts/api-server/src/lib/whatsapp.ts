@@ -1,4 +1,14 @@
 import twilio from "twilio";
+import { sendMetaText, isMetaConfigured } from "./whatsapp-meta";
+
+/**
+ * Unified customer WhatsApp sender.
+ * Uses Meta Cloud API when configured (free tier), falls back to Twilio.
+ */
+export async function sendCustomerWhatsApp(to: string, message: string): Promise<boolean> {
+  if (isMetaConfigured()) return sendMetaText(to, message);
+  return sendWhatsApp(to, message);
+}
 
 function getTwilioClient() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;

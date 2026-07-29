@@ -6,7 +6,7 @@ import {
   couponsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, ilike } from "drizzle-orm";
-import { sendWhatsApp, sendAdminWhatsApp, renderTemplate } from "../lib/whatsapp";
+import { sendCustomerWhatsApp, sendAdminWhatsApp, renderTemplate } from "../lib/whatsapp";
 import { sendTransactionalEmail, orderConfirmationHtml, newOrderAdminAlertHtml, getStoreEmail } from "../lib/email";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { clerkClient, getAuth } from "@clerk/express";
@@ -212,7 +212,7 @@ router.post("/orders", async (req, res) => {
     const msg = renderTemplate(customerTemplate, {
       customerName, orderNumber, total: total.toFixed(2),
     });
-    sendWhatsApp(customerPhone, msg).catch(() => {});
+    sendCustomerWhatsApp(customerPhone, msg).catch(() => {});
   }
 
   // 3. Send confirmation email to customer
@@ -368,7 +368,7 @@ router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
       orderNumber: order.orderNumber,
       status,
     });
-    await sendWhatsApp(order.customerPhone, msg);
+    await sendCustomerWhatsApp(order.customerPhone, msg);
   }
 
   return res.json(await buildOrderResponse(order));

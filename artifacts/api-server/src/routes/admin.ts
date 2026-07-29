@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, productsTable, storeSettingsTable } from "@workspace/db";
 import { eq, gte, sql, lte, and, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
-import { sendWhatsApp } from "../lib/whatsapp";
+import { sendCustomerWhatsApp } from "../lib/whatsapp";
 import nodemailer from "nodemailer";
 
 const router = Router();
@@ -261,7 +261,7 @@ router.post("/admin/marketing/broadcast/whatsapp", async (req, res) => {
   let sent = 0, failed = 0;
   for (const { phone } of rows) {
     if (!phone) continue;
-    const ok = await sendWhatsApp(phone, message);
+    const ok = await sendCustomerWhatsApp(phone, message);
     if (ok) sent++; else failed++;
   }
 

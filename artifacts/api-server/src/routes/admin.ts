@@ -275,20 +275,45 @@ router.post("/admin/email/test", async (req, res) => {
   const [settings] = await db.select().from(storeSettingsTable);
   const smtp = (settings?.siteDesign as Record<string, unknown> | null)?.smtpConfig as Record<string, unknown> | undefined;
 
-  if (!smtp?.host || !smtp?.user || !smtp?.pass) {
-    return res.status(400).json({ error: "SMTP not configured yet. Fill in the settings and save first." });
+  if (!smtp?.host || !smtp?.user) {
+    return res.status(400).json({ error: "SMTP not configured yet. Fill in Host, Email and Password in Email Settings and save first." });
+  }
+  if (!smtp?.pass) {
+    return res.status(400).json({ error: "SMTP password is missing. Re-enter your email password in Email Settings and save." });
   }
 
   const storeName = settings?.storeName ?? "Sriswa Studio";
   const fromAddr = smtp.from ? String(smtp.from) : `${storeName} <${smtp.user}>`;
+  const host = String(smtp.host);
+  const port = Number(smtp.port ?? 587);
+  const secure = port === 465;
 
+  console.info(`[email/test] host=${host} port=${port} secure=${secure} user=${smtp.user} to=${to}`);
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user: String(smtp.user), pass: String(smtp.pass) },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
+  });
+
+  // Step 1 — verify connection before trying to send
   try {
-    const transporter = nodemailer.createTransport({
-      host: String(smtp.host),
-      port: Number(smtp.port ?? 587),
-      secure: Boolean(smtp.secure ?? false),
-      auth: { user: String(smtp.user), pass: String(smtp.pass) },
+    await transporter.verify();
+    console.info("[email/test] SMTP connection verified OK");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[email/test] SMTP verify failed: ${msg}`);
+    return res.status(500).json({
+      error: `Cannot connect to ${host}:${port}. ${msg}. Try port 465 if you are using port 587, or check your password.`,
     });
+  }
+
+  // Step 2 — send
+  try {
     await transporter.sendMail({
       from: fromAddr,
       to: String(to),
@@ -296,13 +321,15 @@ router.post("/admin/email/test", async (req, res) => {
       html: `<div style="font-family:Georgia,serif;max-width:500px;margin:32px auto;padding:32px;background:#fff;border:1px solid #f0e0eb;border-radius:8px;">
         <h2 style="color:#9B0F5F;margin-top:0;">${storeName}</h2>
         <p style="color:#333;">Your email settings are working correctly! 🎉</p>
-        <p style="color:#555;font-size:14px;">Order confirmation emails will be sent from this address whenever a customer places an order.</p>
-        <p style="color:#aaa;font-size:12px;margin-top:24px;">Sent via ${smtp.host}</p>
+        <p style="color:#555;font-size:14px;">Order confirmation emails will now be sent from this address whenever a customer places an order.</p>
+        <p style="color:#aaa;font-size:12px;margin-top:24px;">Sent via ${host}:${port}</p>
       </div>`,
     });
+    console.info(`[email/test] sent OK to=${to}`);
     return res.json({ ok: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[email/test] send failed: ${msg}`);
     return res.status(500).json({ error: msg });
   }
 });

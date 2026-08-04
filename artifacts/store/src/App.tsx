@@ -70,7 +70,19 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 function AuthTokenSync() {
   const { getToken } = useAuth();
   useEffect(() => {
-    setAuthTokenGetter(() => getToken());
+    // Never let auth block public API calls: if Clerk is slow, unreachable,
+    // or errors (flaky mobile networks, blocked clerk.* domain), fall back to
+    // no token after a short timeout so the storefront still loads.
+    setAuthTokenGetter(async () => {
+      try {
+        return await Promise.race<string | null>([
+          getToken().catch(() => null),
+          new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        ]);
+      } catch {
+        return null;
+      }
+    });
     return () => { setAuthTokenGetter(null); };
   }, [getToken]);
   return null;

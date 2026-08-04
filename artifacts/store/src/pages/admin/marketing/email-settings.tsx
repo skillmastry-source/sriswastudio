@@ -83,7 +83,7 @@ export default function AdminEmailSettings() {
     },
     onSuccess: (data) => toast({
       title: "Test email sent! ✅",
-      description: `Sent via port ${data?.port ?? port}. Check ${adminEmail || "your inbox"} (and spam folder).`,
+      description: `Server said: "${data?.serverResponse ?? "accepted"}" (port ${data?.port ?? port}). Check ${adminEmail || "your inbox"} and the spam folder.`,
     }),
     onError: (e) => toast({ title: "Failed to send", description: String(e instanceof Error ? e.message : e), variant: "destructive" }),
   });

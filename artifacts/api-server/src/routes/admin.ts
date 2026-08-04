@@ -318,7 +318,7 @@ router.post("/admin/email/test", async (req, res) => {
       await transporter.verify();
       console.info(`[email/test] SMTP verified on port ${port}`);
 
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: fromAddr,
         to: String(to),
         subject: `✅ Test email from ${storeName}`,
@@ -330,7 +330,7 @@ router.post("/admin/email/test", async (req, res) => {
         </div>`,
       });
 
-      console.info(`[email/test] sent OK to=${to} via port ${port}`);
+      console.info(`[email/test] sent OK to=${to} via port ${port} response="${info.response}" accepted=${JSON.stringify(info.accepted)} rejected=${JSON.stringify(info.rejected)}`);
 
       // If a different port worked, update the saved config so future emails use it
       if (port !== requestedPort) {
@@ -347,7 +347,14 @@ router.post("/admin/email/test", async (req, res) => {
         } catch { /* non-critical */ }
       }
 
-      return res.json({ ok: true, port });
+      return res.json({
+        ok: true,
+        port,
+        serverResponse: info.response,
+        accepted: info.accepted,
+        rejected: info.rejected,
+        messageId: info.messageId,
+      });
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
       console.error(`[email/test] port ${port} failed: ${lastError}`);

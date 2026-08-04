@@ -1,0 +1,43 @@
+name: Deploy to VPS
+
+# Manual fallback deploy; auto-deploy runs via cron on the VPS.
+# Failure alerts: GitHub emails whoever triggers the run when it fails.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to sriswastudio.com
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VPS and run deploy script
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 20m
+          script: |
+            cd /var/www/sriswastudio && git pull && bash scripts/vps-deploy.sh
+
+      - name: Push phone notification if deploy failed (optional)
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "${NTFY_TOPIC}" ]; then
+            curl -s -o /dev/null --max-time 20 \
+              -H "Title: Sriswa Studio deploy FAILED" \
+              -H "Priority: urgent" \
+              -H "Tags: warning" \
+              -d "Deploy FAILED. Live site still on previous version - customers unaffected. Details: ${RUN_URL}" \
+              "https://ntfy.sh/${NTFY_TOPIC}" \
+              && echo "Push alert sent via ntfy." || echo "ntfy push failed."
+          else
+            echo "NTFY_TOPIC not set - relying on GitHub's built-in failure email."
+          fi

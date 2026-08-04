@@ -33,7 +33,7 @@ interface ProductCardProps {
  * drawer stay in sync without a page refresh.
  */
 export function ProductCard({ product, sessionId: sessionIdProp, brand = DEFAULT_BRAND, dark = DEFAULT_DARK }: ProductCardProps) {
-  const { sessionId: ctxSessionId, openCart } = useCartContext();
+  const { sessionId: ctxSessionId } = useCartContext();
   const sessionId = sessionIdProp ?? ctxSessionId;
   const addToCart = useAddToCart();
   const { toast } = useToast();
@@ -51,8 +51,7 @@ export function ProductCard({ product, sessionId: sessionIdProp, brand = DEFAULT
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-          toast({ title: "Added to cart!", description: `${product.name} added.` });
-          openCart();
+          toast({ title: "Added to cart ✓", description: `${product.name} added.` });
         },
         onError: () =>
           toast({ title: "Error", description: "Could not add to cart.", variant: "destructive" }),

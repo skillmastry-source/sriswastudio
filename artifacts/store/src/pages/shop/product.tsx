@@ -53,7 +53,7 @@ interface SimilarProduct {
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const { sessionId, openCart } = useCartContext();
+  const { sessionId } = useCartContext();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -118,8 +118,7 @@ export default function ProductDetail() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-          openCart();
-          toast({ title: "Added to cart", description: `${quantity}× ${product.name} added to your cart.` });
+          toast({ title: "Added to cart ✓", description: `${quantity}× ${product.name} added to your cart.` });
         },
         onError: () => {
           toast({ title: "Error", description: "Could not add item to cart.", variant: "destructive" });

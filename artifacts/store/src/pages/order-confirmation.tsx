@@ -3,7 +3,8 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { BASE } from "@/lib/api";
+
+const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 const PAYMENT_LABELS: Record<string, string> = {
   RAZORPAY:        "Razorpay (Online)",

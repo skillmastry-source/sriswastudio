@@ -22,6 +22,9 @@ export default function Shop() {
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 24;
 
   const { data: categories } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() },
@@ -36,6 +39,8 @@ export default function Shop() {
   const minPriceNum = minPrice !== "" ? Number(minPrice) : null;
   const maxPriceNum = maxPrice !== "" ? Number(maxPrice) : null;
 
+  const offset = (page - 1) * PAGE_SIZE;
+
   const { data: productData, isLoading } = useListProducts(
     {
       categoryId,
@@ -43,11 +48,12 @@ export default function Shop() {
       sortBy: sortBy as "newest" | "price_asc" | "price_desc" | "name",
       minPrice: minPriceNum,
       maxPrice: maxPriceNum,
-      limit: 50,
+      limit: PAGE_SIZE,
+      offset,
     },
     {
       query: {
-        queryKey: getListProductsQueryKey({ categoryId, search, sortBy, minPrice: minPriceNum, maxPrice: maxPriceNum, limit: 50 }),
+        queryKey: getListProductsQueryKey({ categoryId, search, sortBy, minPrice: minPriceNum, maxPrice: maxPriceNum, limit: PAGE_SIZE, offset }),
       },
     }
   );
@@ -55,12 +61,22 @@ export default function Shop() {
   const activeCategory = categories?.find((c) => c.slug === categoryParam);
   const hasFilters = search || minPrice || maxPrice || categoryParam;
 
+  // Reset to page 1 whenever filters change
+  const setSearchReset = (v: string) => { setSearch(v); setPage(1); };
+  const setSortByReset = (v: "newest" | "price_asc" | "price_desc" | "name") => { setSortBy(v); setPage(1); };
+  const setMinPriceReset = (v: string) => { setMinPrice(v); setPage(1); };
+  const setMaxPriceReset = (v: string) => { setMaxPrice(v); setPage(1); };
+
   const clearAllFilters = () => {
     setSearch("");
     setMinPrice("");
     setMaxPrice("");
+    setPage(1);
     navigate("/shop");
   };
+
+  const totalProducts = productData?.total ?? 0;
+  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
 
   const filterPanel = (
     <div className="space-y-7">
@@ -70,7 +86,7 @@ export default function Shop() {
         <Input
           placeholder="Search products..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearchReset(e.target.value)}
           className="rounded-none border-gray-200 focus-visible:ring-0 focus-visible:border-[#9B0F5F] text-sm"
         />
       </div>
@@ -83,7 +99,7 @@ export default function Shop() {
             type="number"
             placeholder="Min"
             value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
+            onChange={(e) => setMinPriceReset(e.target.value)}
             className="rounded-none border-gray-200 focus-visible:ring-0 focus-visible:border-[#9B0F5F] text-sm"
             min={0}
           />
@@ -92,7 +108,7 @@ export default function Shop() {
             type="number"
             placeholder="Max"
             value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
+            onChange={(e) => setMaxPriceReset(e.target.value)}
             className="rounded-none border-gray-200 focus-visible:ring-0 focus-visible:border-[#9B0F5F] text-sm"
             min={0}
           />
@@ -177,7 +193,7 @@ export default function Shop() {
         <div className="flex-1" />
 
         <span className="text-[11px] text-gray-500 uppercase tracking-wide">Sort</span>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as "newest" | "price_asc" | "price_desc" | "name")}>
+        <Select value={sortBy} onValueChange={(v) => setSortByReset(v as "newest" | "price_asc" | "price_desc" | "name")}>
           <SelectTrigger className="h-8 w-36 rounded-full border-gray-300 text-xs focus:ring-0">
             <SelectValue />
           </SelectTrigger>
@@ -222,11 +238,11 @@ export default function Shop() {
             {/* Toolbar (desktop only sort) */}
             <div className="hidden md:flex justify-between items-center mb-8 pb-5 gap-4" style={{ borderBottom: "1px solid #f0e6ec" }}>
               <p className="text-sm text-gray-500">
-                Showing <span className="font-semibold text-gray-800">{productData?.products?.length ?? 0}</span> products
+                Showing <span className="font-semibold text-gray-800">{offset + 1}–{Math.min(offset + PAGE_SIZE, totalProducts)}</span> of <span className="font-semibold text-gray-800">{totalProducts}</span> products
               </p>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] tracking-[0.15em] uppercase text-gray-500">Sort</span>
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as "newest" | "price_asc" | "price_desc" | "name")}>
+                <Select value={sortBy} onValueChange={(v) => setSortByReset(v as "newest" | "price_asc" | "price_desc" | "name")}>
                   <SelectTrigger className="w-44 rounded-none border-gray-200 text-sm h-9 focus:ring-0 focus:border-[#9B0F5F]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -329,6 +345,54 @@ export default function Shop() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+
+            {/* ── Pagination ── */}
+            {!isLoading && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 mt-12 pt-8" style={{ borderTop: "1px solid #f0e6ec" }}>
+                <button
+                  onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === 1}
+                  className="h-9 px-4 text-xs font-semibold tracking-widest uppercase border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ borderColor: `${BRAND}40`, color: BRAND }}
+                >
+                  ← Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === "…" ? (
+                      <span key={`ellipsis-${i}`} className="px-1 text-gray-400 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => { setPage(p as number); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        className="h-9 w-9 text-xs font-bold border transition-colors"
+                        style={page === p
+                          ? { background: BRAND, color: "white", borderColor: BRAND }
+                          : { borderColor: `${BRAND}40`, color: BRAND }
+                        }
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                <button
+                  onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === totalPages}
+                  className="h-9 px-4 text-xs font-semibold tracking-widest uppercase border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ borderColor: `${BRAND}40`, color: BRAND }}
+                >
+                  Next →
+                </button>
               </div>
             )}
           </main>

@@ -227,10 +227,17 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
     if (!activeTab && categories.length > 0) setActiveTab(categories[0].slug);
   }, [categories.length]);
 
+  const [tabPage, setTabPage] = useState(1);
+  const TAB_PAGE_SIZE = 8;
+  const tabOffset = (tabPage - 1) * TAB_PAGE_SIZE;
+
   const { data: tabProductData, isLoading: tabLoading } = useListProducts(
-    { categoryId: activeCategoryId, sortBy: "newest" as const, limit: 12 },
-    { query: { enabled: !!activeCategoryId, queryKey: getListProductsQueryKey({ categoryId: activeCategoryId, sortBy: "newest", limit: 12 }) } }
+    { categoryId: activeCategoryId, sortBy: "newest" as const, limit: TAB_PAGE_SIZE, offset: tabOffset },
+    { query: { enabled: !!activeCategoryId, queryKey: getListProductsQueryKey({ categoryId: activeCategoryId, sortBy: "newest", limit: TAB_PAGE_SIZE, offset: tabOffset }) } }
   );
+
+  // Reset page when switching tabs
+  useEffect(() => { setTabPage(1); }, [activeTab]);
 
   const { sessionId } = useCartContext();
 
@@ -298,7 +305,7 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
         {/* Products grid */}
         {tabLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: TAB_PAGE_SIZE }).map((_, i) => (
               <div key={i} className="animate-pulse rounded-sm" style={{ aspectRatio: "3/4", background: "#f3e8f0" }} />
             ))}
           </div>
@@ -313,6 +320,59 @@ function CategoryGridSection({ config, colors }: { config: Record<string, unknow
                 sessionId={sessionId} brand={brand} dark={dark}
               />
             ))}
+          </div>
+        )}
+
+        {/* Pagination + View All */}
+        {!tabLoading && (tabProductData?.total ?? 0) > TAB_PAGE_SIZE && (
+          <div className="mt-8 flex flex-col items-center gap-4">
+            {/* Page controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setTabPage((p) => Math.max(1, p - 1))}
+                disabled={tabPage === 1}
+                className="h-8 px-3 text-[11px] font-bold tracking-widest uppercase border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ borderColor: `${brand}40`, color: brand }}
+              >← Prev</button>
+              {Array.from({ length: Math.ceil((tabProductData?.total ?? 0) / TAB_PAGE_SIZE) }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setTabPage(p)}
+                  className="h-8 w-8 text-[11px] font-bold border transition-colors"
+                  style={tabPage === p
+                    ? { background: brand, color: "white", borderColor: brand }
+                    : { borderColor: `${brand}40`, color: brand }
+                  }
+                >{p}</button>
+              ))}
+              <button
+                onClick={() => setTabPage((p) => Math.min(Math.ceil((tabProductData?.total ?? 0) / TAB_PAGE_SIZE), p + 1))}
+                disabled={tabPage === Math.ceil((tabProductData?.total ?? 0) / TAB_PAGE_SIZE)}
+                className="h-8 px-3 text-[11px] font-bold tracking-widest uppercase border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ borderColor: `${brand}40`, color: brand }}
+              >Next →</button>
+            </div>
+            {/* View All link */}
+            <Link
+              href={`/shop?category=${activeTab}`}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.2em] uppercase border-b pb-0.5 transition-opacity hover:opacity-70"
+              style={{ color: brand, borderColor: brand }}
+            >
+              View All {categories.find((c) => c.slug === activeTab)?.name ?? "Products"} →
+            </Link>
+          </div>
+        )}
+
+        {/* View All link even when only 1 page */}
+        {!tabLoading && (tabProductData?.total ?? 0) > 0 && (tabProductData?.total ?? 0) <= TAB_PAGE_SIZE && (
+          <div className="mt-8 text-center">
+            <Link
+              href={`/shop?category=${activeTab}`}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.2em] uppercase border-b pb-0.5 transition-opacity hover:opacity-70"
+              style={{ color: brand, borderColor: brand }}
+            >
+              View All {categories.find((c) => c.slug === activeTab)?.name ?? "Products"} →
+            </Link>
           </div>
         )}
 

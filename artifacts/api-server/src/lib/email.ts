@@ -41,24 +41,34 @@ export async function sendTransactionalEmail({
   const smtp = getSmtpConfig(siteDesign);
   if (!smtp) return false;
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: smtp.host,
-      port: smtp.port ?? 587,
-      secure: smtp.secure ?? false,
-      auth: { user: smtp.user, pass: smtp.pass },
-    });
+  const from = smtp.from ?? `${storeName} <${smtp.user}>`;
+  const primaryPort = smtp.port ?? 587;
+  const ports: { port: number; secure: boolean }[] = [
+    { port: primaryPort, secure: primaryPort === 465 },
+    primaryPort === 587 ? { port: 465, secure: true } : { port: 587, secure: false },
+  ];
 
-    const from = smtp.from ?? `${storeName} <${smtp.user}>`;
-    console.info(`[email] sending to=${to} subject="${subject}" via ${smtp.host}:${smtp.port ?? 587} from=${from}`);
-    await transporter.sendMail({ from, to, subject, html, text });
-    console.info(`[email] sent OK to=${to}`);
-    return true;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email] FAILED to=${to} host=${smtp.host} user=${smtp.user} error=${msg}`);
-    return false;
+  for (const { port, secure } of ports) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtp.host,
+        port,
+        secure,
+        auth: { user: smtp.user, pass: smtp.pass },
+        connectionTimeout: 15_000,
+        greetingTimeout: 15_000,
+        socketTimeout: 15_000,
+      });
+      console.info(`[email] sending to=${to} via ${smtp.host}:${port}`);
+      await transporter.sendMail({ from, to, subject, html, text });
+      console.info(`[email] sent OK to=${to} via port ${port}`);
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[email] port ${port} failed for to=${to}: ${msg}`);
+    }
   }
+  return false;
 }
 
 export function getStoreEmail(siteDesign: unknown): string | null {

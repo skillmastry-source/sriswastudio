@@ -285,53 +285,75 @@ router.post("/admin/email/test", async (req, res) => {
   const storeName = settings?.storeName ?? "Sriswa Studio";
   const fromAddr = smtp.from ? String(smtp.from) : `${storeName} <${smtp.user}>`;
   const host = String(smtp.host);
-  const port = Number(smtp.port ?? 587);
-  const secure = port === 465;
+  const requestedPort = Number(smtp.port ?? 587);
 
-  console.info(`[email/test] host=${host} port=${port} secure=${secure} user=${smtp.user} to=${to}`);
+  // Try the configured port first, then auto-fallback to the other one
+  const attempts: { port: number; secure: boolean }[] = [
+    { port: requestedPort, secure: requestedPort === 465 },
+    // fallback: if 587 fails try 465, if 465 fails try 587
+    requestedPort === 587
+      ? { port: 465, secure: true }
+      : { port: 587, secure: false },
+  ];
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user: String(smtp.user), pass: String(smtp.pass) },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 10_000,
+  let lastError = "";
+  for (const attempt of attempts) {
+    const { port, secure } = attempt;
+    console.info(`[email/test] trying host=${host} port=${port} secure=${secure} user=${smtp.user}`);
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user: String(smtp.user), pass: String(smtp.pass) },
+      connectionTimeout: 15_000,
+      greetingTimeout: 15_000,
+      socketTimeout: 15_000,
+    });
+
+    try {
+      await transporter.verify();
+      console.info(`[email/test] SMTP verified on port ${port}`);
+
+      await transporter.sendMail({
+        from: fromAddr,
+        to: String(to),
+        subject: `✅ Test email from ${storeName}`,
+        html: `<div style="font-family:Georgia,serif;max-width:500px;margin:32px auto;padding:32px;background:#fff;border:1px solid #f0e0eb;border-radius:8px;">
+          <h2 style="color:#9B0F5F;margin-top:0;">${storeName}</h2>
+          <p style="color:#333;">Your email settings are working correctly! 🎉</p>
+          <p style="color:#555;font-size:14px;">Order confirmation emails will now be sent from <strong>${smtp.user}</strong> whenever a customer places an order.</p>
+          <p style="color:#aaa;font-size:12px;margin-top:24px;">Sent via ${host}:${port}</p>
+        </div>`,
+      });
+
+      console.info(`[email/test] sent OK to=${to} via port ${port}`);
+
+      // If a different port worked, update the saved config so future emails use it
+      if (port !== requestedPort) {
+        console.info(`[email/test] auto-updating saved port from ${requestedPort} to ${port}`);
+        try {
+          const [s] = await db.select().from(storeSettingsTable);
+          if (s) {
+            const existing = (s.siteDesign ?? {}) as Record<string, unknown>;
+            const updatedSmtp = { ...(existing.smtpConfig as Record<string, unknown> ?? {}), port };
+            await db.update(storeSettingsTable)
+              .set({ siteDesign: { ...existing, smtpConfig: updatedSmtp } })
+              .where(eq(storeSettingsTable.id, s.id));
+          }
+        } catch { /* non-critical */ }
+      }
+
+      return res.json({ ok: true, port });
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.error(`[email/test] port ${port} failed: ${lastError}`);
+    }
+  }
+
+  return res.status(500).json({
+    error: `Could not connect to ${host} on ports 587 or 465. Last error: ${lastError}. Please check your email password and that your server allows outbound SMTP.`,
   });
-
-  // Step 1 — verify connection before trying to send
-  try {
-    await transporter.verify();
-    console.info("[email/test] SMTP connection verified OK");
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email/test] SMTP verify failed: ${msg}`);
-    return res.status(500).json({
-      error: `Cannot connect to ${host}:${port}. ${msg}. Try port 465 if you are using port 587, or check your password.`,
-    });
-  }
-
-  // Step 2 — send
-  try {
-    await transporter.sendMail({
-      from: fromAddr,
-      to: String(to),
-      subject: `✅ Test email from ${storeName}`,
-      html: `<div style="font-family:Georgia,serif;max-width:500px;margin:32px auto;padding:32px;background:#fff;border:1px solid #f0e0eb;border-radius:8px;">
-        <h2 style="color:#9B0F5F;margin-top:0;">${storeName}</h2>
-        <p style="color:#333;">Your email settings are working correctly! 🎉</p>
-        <p style="color:#555;font-size:14px;">Order confirmation emails will now be sent from this address whenever a customer places an order.</p>
-        <p style="color:#aaa;font-size:12px;margin-top:24px;">Sent via ${host}:${port}</p>
-      </div>`,
-    });
-    console.info(`[email/test] sent OK to=${to}`);
-    return res.json({ ok: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email/test] send failed: ${msg}`);
-    return res.status(500).json({ error: msg });
-  }
 });
 
 router.post("/admin/marketing/broadcast/email", async (req, res) => {

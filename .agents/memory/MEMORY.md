@@ -1,2 +1,3 @@
 - [Sriswa Studio Store](sriswa-studio.md) — full e-commerce build: storefront + admin + WhatsApp/Twilio + Clerk v6 + PostgreSQL
+- [Clerk token blocking fetches](clerk-token-blocking.md) — auth-token getter must fail open (timeout→null) or flaky Clerk makes the whole storefront show skeletons
 - [Page Builder Architecture](page-builder.md) — homepageSections JSONB array in site_design; SectionRenderer + 8 types; builder at /admin/builder

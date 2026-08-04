@@ -248,9 +248,13 @@ export default function AdminProductForm() {
                 <FormField control={form.control} name="categoryId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select value={field.value ? String(field.value) : undefined} onValueChange={(val) => field.onChange(val ? Number(val) : null)}>
+                    <Select
+                      value={field.value != null ? String(field.value) : "__none__"}
+                      onValueChange={(val) => field.onChange(val === "__none__" ? null : Number(val))}
+                    >
                       <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
                       <SelectContent>
+                        <SelectItem value="__none__">— No category —</SelectItem>
                         {categories?.map((cat) => <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>)}
                       </SelectContent>
                     </Select>

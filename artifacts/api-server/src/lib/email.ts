@@ -50,10 +50,13 @@ export async function sendTransactionalEmail({
     });
 
     const from = smtp.from ?? `${storeName} <${smtp.user}>`;
+    console.info(`[email] sending to=${to} subject="${subject}" via ${smtp.host}:${smtp.port ?? 587} from=${from}`);
     await transporter.sendMail({ from, to, subject, html, text });
+    console.info(`[email] sent OK to=${to}`);
     return true;
   } catch (err) {
-    console.error("Transactional email failed:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[email] FAILED to=${to} host=${smtp.host} user=${smtp.user} error=${msg}`);
     return false;
   }
 }

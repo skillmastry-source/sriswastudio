@@ -239,7 +239,7 @@ router.post("/orders", async (req, res) => {
       to: customerEmail,
       subject: `Order Confirmed: ${orderNumber} — ${settings?.storeName ?? "Sriswa Studio"}`,
       html,
-    }).catch(() => {});
+    }).catch((err) => console.error("[email] customer confirmation failed:", err));
   }
 
   // 4. New-order alert email — use explicit adminEmail if set, else fall back to SMTP user
@@ -269,7 +269,7 @@ router.post("/orders", async (req, res) => {
       to: storeEmail,
       subject: `🛍️ New Order ${orderNumber} — ₹${total.toFixed(2)} from ${customerName}`,
       html: alertHtml,
-    }).catch(() => {});
+    }).catch((err) => console.error("[email] admin alert failed:", err));
   }
 
   return res.status(201).json(await buildOrderResponse(order));

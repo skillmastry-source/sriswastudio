@@ -269,17 +269,20 @@ router.post("/admin/marketing/broadcast/whatsapp", async (req, res) => {
 });
 
 router.post("/admin/email/test", async (req, res) => {
-  const { to } = req.body;
+  const { to, smtp: inlineSmtp } = req.body as { to?: string; smtp?: Record<string, unknown> };
   if (!to) return res.status(400).json({ error: "Recipient email required" });
 
   const [settings] = await db.select().from(storeSettingsTable);
-  const smtp = (settings?.siteDesign as Record<string, unknown> | null)?.smtpConfig as Record<string, unknown> | undefined;
+  // Prefer inline credentials passed directly from the form (so test works before saving)
+  const smtp = (inlineSmtp?.host && inlineSmtp?.user && inlineSmtp?.pass)
+    ? inlineSmtp
+    : (settings?.siteDesign as Record<string, unknown> | null)?.smtpConfig as Record<string, unknown> | undefined;
 
   if (!smtp?.host || !smtp?.user) {
-    return res.status(400).json({ error: "SMTP not configured yet. Fill in Host, Email and Password in Email Settings and save first." });
+    return res.status(400).json({ error: "Fill in Host and Email Address in the form first." });
   }
   if (!smtp?.pass) {
-    return res.status(400).json({ error: "SMTP password is missing. Re-enter your email password in Email Settings and save." });
+    return res.status(400).json({ error: "Password is missing — enter your email password in the form." });
   }
 
   const storeName = settings?.storeName ?? "Sriswa Studio";

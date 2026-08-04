@@ -63,6 +63,8 @@ export default function AdminEmailSettings() {
   }, [design]);
 
   const isConfigured = !!(design?.smtpConfig?.host && design?.smtpConfig?.user);
+  // Can attempt a test if form has host + user + pass filled in (even before saving)
+  const canTest = !!(host && user && pass);
 
   const testEmail = useMutation({
     mutationFn: async () => {
@@ -70,12 +72,19 @@ export default function AdminEmailSettings() {
       const res = await fetch("/api/admin/email/test", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ to: adminEmail || "sravani.srivani@gmail.com" }),
+        body: JSON.stringify({
+          to: adminEmail || "sravani.srivani@gmail.com",
+          // Pass current form values so test works before saving
+          smtp: { host, port: Number(port), user, pass, from: from || user },
+        }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error ?? "Failed"); }
       return res.json();
     },
-    onSuccess: () => toast({ title: "Test email sent!", description: `Check ${adminEmail || "your inbox"}.` }),
+    onSuccess: (data) => toast({
+      title: "Test email sent! ✅",
+      description: `Sent via port ${data?.port ?? port}. Check ${adminEmail || "your inbox"} (and spam folder).`,
+    }),
     onError: (e) => toast({ title: "Failed to send", description: String(e instanceof Error ? e.message : e), variant: "destructive" }),
   });
 
@@ -105,12 +114,10 @@ export default function AdminEmailSettings() {
           <p className="text-sm text-muted-foreground mt-0.5">Configure your SMTP provider to send broadcast emails</p>
         </div>
         <div className="flex gap-2">
-          {isConfigured && (
-            <Button variant="outline" onClick={() => testEmail.mutate()} disabled={testEmail.isPending} className="gap-2">
-              <Send className="h-4 w-4" />
-              {testEmail.isPending ? "Sending…" : "Send Test Email"}
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => testEmail.mutate()} disabled={testEmail.isPending || !canTest} className="gap-2" title={!canTest ? "Fill in Host, Email and Password first" : ""}>
+            <Send className="h-4 w-4" />
+            {testEmail.isPending ? "Sending…" : "Send Test Email"}
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending} style={{ background: BRAND }} className="text-white gap-2">
             <Save className="h-4 w-4" />
             {save.isPending ? "Saving…" : "Save"}

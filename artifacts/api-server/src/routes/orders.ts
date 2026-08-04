@@ -74,6 +74,7 @@ router.post("/orders", async (req, res) => {
         price: String(unitPrice),
         imageUrl: img?.url ?? null,
         variantLabel,
+        variantId: ci.variantId ?? null,
       };
     })
   );
@@ -305,12 +306,10 @@ router.get("/orders/track", async (req, res) => {
   const [order] = await db
     .select()
     .from(ordersTable)
-    .where(
-      and(
-        eq(ordersTable.orderNumber, String(orderNumber)),
-        ilike(ordersTable.customerEmail, String(email))
-      )
-    );
+    .where(and(
+      eq(ordersTable.orderNumber, String(orderNumber)),
+      ilike(ordersTable.customerEmail, String(email)),
+    ));
   if (!order) return res.status(404).json({ error: "Order not found" });
   return res.json(await buildOrderResponse(order));
 });
@@ -345,7 +344,10 @@ router.get("/orders", requireAdmin, async (req, res) => {
 
 router.get("/orders/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, id));
   if (!order) return res.status(404).json({ error: "Not found" });
   return res.json(await buildOrderResponse(order));
 });

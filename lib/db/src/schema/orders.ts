@@ -35,6 +35,7 @@ export const orderItemsTable = pgTable("order_items", {
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   imageUrl: text("image_url"),
   variantLabel: text("variant_label"),
+  variantId: integer("variant_id"),
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });

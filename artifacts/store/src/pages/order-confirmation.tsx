@@ -31,6 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
 interface OrderItem {
   id: number;
   productId: number | null;
+  variantId: number | null;
   productName: string | null;
   quantity: number;
   price: number;
@@ -102,7 +103,7 @@ export default function OrderConfirmation() {
       try {
         await new Promise<void>((resolve, reject) => {
           addToCartMutation.mutate(
-            { data: { sessionId, productId: item.productId!, quantity: item.quantity } },
+            { data: { sessionId, productId: item.productId!, quantity: item.quantity, variantId: item.variantId ?? undefined } },
             { onSuccess: () => resolve(), onError: () => reject() },
           );
         });

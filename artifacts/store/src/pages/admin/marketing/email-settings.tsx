@@ -47,7 +47,7 @@ export default function AdminEmailSettings() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [from, setFrom] = useState("");
-  const [adminEmail, setAdminEmail] = useState("sravani.srivani@gmail.com");
+  const [adminEmail, setAdminEmail] = useState("");
 
   useEffect(() => {
     if (!design) return;
@@ -151,7 +151,7 @@ export default function AdminEmailSettings() {
         </CardHeader>
         <CardContent>
           <Label>Receive alerts at</Label>
-          <Input type="email" className="mt-1" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="sravani.srivani@gmail.com" />
+          <Input type="email" className="mt-1" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@yourdomain.com" />
         </CardContent>
       </Card>
 

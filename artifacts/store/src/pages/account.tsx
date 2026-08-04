@@ -2,12 +2,18 @@ import { StoreLayout } from "@/components/layout/store-layout";
 import { SignedIn, SignedOut, SignIn, SignUp, useUser, useClerk } from "@/lib/clerk-stub";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Package, User, ChevronDown, ChevronUp, MapPin, Receipt } from "lucide-react";
+import { LogOut, Package, User, ChevronDown, ChevronUp, MapPin, Receipt, Loader2, ShoppingCart } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
+import { useCartContext } from "@/hooks/use-cart-context";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrderItem {
   id: number;
+  productId: number | null;
+  variantId: number | null;
   productName: string | null;
   quantity: number;
   price: number;
@@ -50,6 +56,59 @@ function fmt(n: number) {
 
 function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+
+  const { sessionId, openCart } = useCartContext();
+  const addToCartMutation = useAddToCart();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleReorder = async () => {
+    if (!order.items?.length || !sessionId) return;
+    setIsReordering(true);
+
+    const activeItems = order.items.filter((item) => item.productId !== null);
+    let added = 0;
+    let skipped = 0;
+
+    for (const item of activeItems) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          addToCartMutation.mutate(
+            { data: { sessionId, productId: item.productId!, quantity: item.quantity, variantId: item.variantId ?? undefined } },
+            { onSuccess: () => resolve(), onError: () => reject() },
+          );
+        });
+        added++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    // Also count items with no productId as skipped (deleted products)
+    skipped += order.items.length - activeItems.length;
+
+    await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+    broadcastCartUpdate(sessionId);
+
+    if (added > 0) {
+      openCart();
+      toast({
+        title: "Items added to cart",
+        description: skipped > 0
+          ? `${added} item${added !== 1 ? "s" : ""} added. ${skipped} unavailable item${skipped !== 1 ? "s" : ""} skipped.`
+          : `${added} item${added !== 1 ? "s" : ""} added to your cart.`,
+      });
+    } else {
+      toast({
+        title: "Nothing to re-order",
+        description: "All items from this order are currently unavailable.",
+        variant: "destructive",
+      });
+    }
+
+    setIsReordering(false);
+  };
 
   const statusColor: Record<string, string> = {
     pending:    "bg-amber-100 text-amber-700",
@@ -225,6 +284,25 @@ function OrderCard({ order }: { order: Order }) {
                   <p>{order.shippingAddress}</p>
                   <p>{order.city}, {order.state} – {order.pincode}</p>
                 </address>
+              </div>
+            )}
+
+            {/* Re-order button */}
+            {order.items.length > 0 && (
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReorder}
+                  disabled={isReordering}
+                >
+                  {isReordering ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                  )}
+                  Re-order
+                </Button>
               </div>
             )}
           </div>

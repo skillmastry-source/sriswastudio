@@ -1,8 +1,12 @@
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2, Package, MapPin, Receipt } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Loader2, Package, MapPin, Receipt, ShoppingCart } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
+import { useCartContext } from "@/hooks/use-cart-context";
+import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -25,6 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 interface OrderItem {
   id: number;
+  productId: number | null;
   productName: string | null;
   quantity: number;
   price: number;
@@ -54,6 +59,12 @@ export default function OrderConfirmation() {
   const orderNumber = searchParams.get("orderNumber");
   const email = searchParams.get("email") ?? "";
 
+  const { sessionId, openCart } = useCartContext();
+  const addToCartMutation = useAddToCart();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isReordering, setIsReordering] = useState(false);
+
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: ["order-confirmation", orderNumber],
     enabled: !!orderNumber,
@@ -77,6 +88,52 @@ export default function OrderConfirmation() {
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
+
+  const handleReorder = async () => {
+    if (!order?.items?.length || !sessionId) return;
+    setIsReordering(true);
+
+    const activeItems = order.items.filter((item) => item.productId !== null);
+    let added = 0;
+    let skipped = 0;
+
+    for (const item of activeItems) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          addToCartMutation.mutate(
+            { data: { sessionId, productId: item.productId!, quantity: item.quantity } },
+            { onSuccess: () => resolve(), onError: () => reject() },
+          );
+        });
+        added++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    // Also count items with no productId as skipped (deleted products)
+    skipped += order.items.length - activeItems.length;
+
+    await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+
+    if (added > 0) {
+      openCart();
+      toast({
+        title: "Items added to cart",
+        description: skipped > 0
+          ? `${added} item${added !== 1 ? "s" : ""} added. ${skipped} unavailable item${skipped !== 1 ? "s" : ""} skipped.`
+          : `${added} item${added !== 1 ? "s" : ""} added to your cart.`,
+      });
+    } else {
+      toast({
+        title: "Nothing to re-order",
+        description: "All items from this order are currently unavailable.",
+        variant: "destructive",
+      });
+    }
+
+    setIsReordering(false);
+  };
 
   return (
     <StoreLayout>
@@ -223,6 +280,21 @@ export default function OrderConfirmation() {
           <Button asChild variant="outline" size="lg">
             <Link href="/track-order">Track Order</Link>
           </Button>
+          {order?.items?.length ? (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleReorder}
+              disabled={isReordering}
+            >
+              {isReordering ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <ShoppingCart className="h-4 w-4 mr-2" />
+              )}
+              Re-order
+            </Button>
+          ) : null}
           <Button asChild size="lg">
             <Link href="/shop">Continue Shopping</Link>
           </Button>

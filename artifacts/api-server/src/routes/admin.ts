@@ -268,6 +268,45 @@ router.post("/admin/marketing/broadcast/whatsapp", async (req, res) => {
   return res.json({ sent, failed, total: rows.length });
 });
 
+router.post("/admin/email/test", async (req, res) => {
+  const { to } = req.body;
+  if (!to) return res.status(400).json({ error: "Recipient email required" });
+
+  const [settings] = await db.select().from(storeSettingsTable);
+  const smtp = (settings?.siteDesign as Record<string, unknown> | null)?.smtpConfig as Record<string, unknown> | undefined;
+
+  if (!smtp?.host || !smtp?.user || !smtp?.pass) {
+    return res.status(400).json({ error: "SMTP not configured yet. Fill in the settings and save first." });
+  }
+
+  const storeName = settings?.storeName ?? "Sriswa Studio";
+  const fromAddr = smtp.from ? String(smtp.from) : `${storeName} <${smtp.user}>`;
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: String(smtp.host),
+      port: Number(smtp.port ?? 587),
+      secure: Boolean(smtp.secure ?? false),
+      auth: { user: String(smtp.user), pass: String(smtp.pass) },
+    });
+    await transporter.sendMail({
+      from: fromAddr,
+      to: String(to),
+      subject: `✅ Test email from ${storeName}`,
+      html: `<div style="font-family:Georgia,serif;max-width:500px;margin:32px auto;padding:32px;background:#fff;border:1px solid #f0e0eb;border-radius:8px;">
+        <h2 style="color:#9B0F5F;margin-top:0;">${storeName}</h2>
+        <p style="color:#333;">Your email settings are working correctly! 🎉</p>
+        <p style="color:#555;font-size:14px;">Order confirmation emails will be sent from this address whenever a customer places an order.</p>
+        <p style="color:#aaa;font-size:12px;margin-top:24px;">Sent via ${smtp.host}</p>
+      </div>`,
+    });
+    return res.json({ ok: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: msg });
+  }
+});
+
 router.post("/admin/marketing/broadcast/email", async (req, res) => {
   const { subject, html } = req.body;
   if (!subject?.trim() || !html?.trim()) return res.status(400).json({ error: "Subject and body are required" });

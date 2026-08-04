@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, Save, CheckCircle2, AlertCircle, Send } from "lucide-react";
 
 const BRAND = "#9B0F5F";
 
@@ -64,6 +64,21 @@ export default function AdminEmailSettings() {
 
   const isConfigured = !!(design?.smtpConfig?.host && design?.smtpConfig?.user);
 
+  const testEmail = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      const res = await fetch("/api/admin/email/test", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ to: adminEmail || "sravani.srivani@gmail.com" }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error ?? "Failed"); }
+      return res.json();
+    },
+    onSuccess: () => toast({ title: "Test email sent!", description: `Check ${adminEmail || "your inbox"}.` }),
+    onError: (e) => toast({ title: "Failed to send", description: String(e instanceof Error ? e.message : e), variant: "destructive" }),
+  });
+
   const save = useMutation({
     mutationFn: async () => patchSiteDesign({
       smtpConfig: { host, port: Number(port), user, pass: pass || undefined, from: from || user },
@@ -89,10 +104,18 @@ export default function AdminEmailSettings() {
           <h1 className="text-3xl font-serif font-bold">Email Settings</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Configure your SMTP provider to send broadcast emails</p>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending} style={{ background: BRAND }} className="text-white gap-2">
-          <Save className="h-4 w-4" />
-          {save.isPending ? "Saving…" : "Save"}
-        </Button>
+        <div className="flex gap-2">
+          {isConfigured && (
+            <Button variant="outline" onClick={() => testEmail.mutate()} disabled={testEmail.isPending} className="gap-2">
+              <Send className="h-4 w-4" />
+              {testEmail.isPending ? "Sending…" : "Send Test Email"}
+            </Button>
+          )}
+          <Button onClick={() => save.mutate()} disabled={save.isPending} style={{ background: BRAND }} className="text-white gap-2">
+            <Save className="h-4 w-4" />
+            {save.isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
 
       {isConfigured ? (

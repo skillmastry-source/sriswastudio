@@ -241,8 +241,11 @@ router.post("/orders", async (req, res) => {
     }).catch(() => {});
   }
 
-  // 4. New-order alert email to the store's own inbox
-  const storeEmail = getStoreEmail(settings?.siteDesign);
+  // 4. New-order alert email — use explicit adminEmail if set, else fall back to SMTP user
+  const adminAlertEmail =
+    (settings?.siteDesign as Record<string, unknown> | null)?.adminEmail as string | undefined
+    ?? getStoreEmail(settings?.siteDesign);
+  const storeEmail = adminAlertEmail;
   if (storeEmail) {
     const fullOrder = await buildOrderResponse(order);
     const alertItems = fullOrder.items.map((i) => ({

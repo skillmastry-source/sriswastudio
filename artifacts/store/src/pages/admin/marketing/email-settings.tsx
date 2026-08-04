@@ -18,7 +18,7 @@ interface SmtpConfig {
   from?: string;
 }
 
-interface SiteDesign { smtpConfig?: SmtpConfig }
+interface SiteDesign { smtpConfig?: SmtpConfig; adminEmail?: string }
 
 async function getSiteDesign(): Promise<SiteDesign> {
   const res = await fetch("/api/site-design", { credentials: "include" });
@@ -47,15 +47,19 @@ export default function AdminEmailSettings() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [from, setFrom] = useState("");
+  const [adminEmail, setAdminEmail] = useState("sravani.srivani@gmail.com");
 
   useEffect(() => {
-    if (!design?.smtpConfig) return;
-    const s = design.smtpConfig;
-    setHost(s.host ?? "smtp.gmail.com");
-    setPort(String(s.port ?? 587));
-    setUser(s.user ?? "");
-    setPass(s.pass ?? "");
-    setFrom(s.from ?? "");
+    if (!design) return;
+    if (design.smtpConfig) {
+      const s = design.smtpConfig;
+      setHost(s.host ?? "smtp.gmail.com");
+      setPort(String(s.port ?? 587));
+      setUser(s.user ?? "");
+      setPass(s.pass ?? "");
+      setFrom(s.from ?? "");
+    }
+    if (design.adminEmail) setAdminEmail(design.adminEmail);
   }, [design]);
 
   const isConfigured = !!(design?.smtpConfig?.host && design?.smtpConfig?.user);
@@ -63,6 +67,7 @@ export default function AdminEmailSettings() {
   const save = useMutation({
     mutationFn: async () => patchSiteDesign({
       smtpConfig: { host, port: Number(port), user, pass: pass || undefined, from: from || user },
+      adminEmail: adminEmail || undefined,
     }, await getToken()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/site-design"] });
@@ -139,13 +144,25 @@ export default function AdminEmailSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Admin Notification Email</CardTitle>
+          <CardDescription>New order alerts are sent to this address. Can be different from your sending email.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label>Receive alerts at</Label>
+          <Input type="email" className="mt-1" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="sravani.srivani@gmail.com" />
+        </CardContent>
+      </Card>
+
       <Card className="border-dashed">
         <CardContent className="py-4 space-y-2">
           <p className="text-xs font-semibold text-gray-700">Quick setup guides:</p>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• <strong>Gmail:</strong> Host: smtp.gmail.com, Port: 587. Enable 2FA → create an App Password at myaccount.google.com/apppasswords</li>
-            <li>• <strong>Zoho:</strong> Host: smtp.zoho.in, Port: 587</li>
-            <li>• <strong>SendGrid:</strong> Host: smtp.sendgrid.net, Port: 587, User: apikey, Pass: your API key</li>
+            <li>• <strong>Hostinger custom email</strong> (hello@sriswastudio.com): Host: <code>smtp.hostinger.com</code>, Port: <code>587</code>, User: your full email, Pass: your email password</li>
+            <li>• <strong>Zoho Mail</strong>: Host: <code>smtp.zoho.in</code>, Port: <code>587</code>, User: your Zoho email, Pass: your Zoho password. Enable SMTP at zoho.com → Settings → Mail Accounts → SMTP</li>
+            <li>• <strong>Gmail</strong>: Host: <code>smtp.gmail.com</code>, Port: <code>587</code>. Enable 2FA → create App Password at myaccount.google.com/apppasswords</li>
+            <li>• <strong>SendGrid</strong>: Host: <code>smtp.sendgrid.net</code>, Port: <code>587</code>, User: <code>apikey</code>, Pass: your API key</li>
           </ul>
         </CardContent>
       </Card>

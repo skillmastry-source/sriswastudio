@@ -203,8 +203,20 @@ export default function Checkout() {
         const email = encodeURIComponent(data.customerEmail ?? "");
         setLocation(`/order-confirmation?orderNumber=${order.orderNumber}&email=${email}`);
       },
-      onError: () => {
-        setError("Failed to create order. Please try again.");
+      onError: (err: unknown) => {
+        const apiData = (err as { data?: { error?: string } }).data;
+        const apiMsg = apiData?.error;
+        if (apiMsg) {
+          // Surface stock errors with a friendlier prefix
+          if (apiMsg.startsWith("Insufficient stock for:")) {
+            const productName = apiMsg.replace("Insufficient stock for:", "").trim();
+            setError(`Sorry, "${productName}" is now out of stock. Please remove it from your cart and try again.`);
+          } else {
+            setError(apiMsg);
+          }
+        } else {
+          setError("Failed to create order. Please try again.");
+        }
         setProcessing(false);
       },
     });

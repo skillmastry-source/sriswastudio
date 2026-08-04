@@ -5,11 +5,14 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(
+const apiRequire = createRequire(
   fileURLToPath(new URL("../artifacts/api-server/package.json", import.meta.url)),
 );
-const nodemailer = require("nodemailer");
-const { Client } = require("pg");
+const dbRequire = createRequire(
+  fileURLToPath(new URL("../lib/db/package.json", import.meta.url)),
+);
+const nodemailer = apiRequire("nodemailer");
+const { Client } = dbRequire("pg");
 
 const to = process.env.ALERT_EMAIL_TO;
 if (!to) {

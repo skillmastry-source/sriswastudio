@@ -104,22 +104,27 @@ export default function Cart() {
                   </div>
                   
                   <div className="col-span-1 sm:col-span-3 flex sm:justify-center">
-                    <div className="flex items-center border rounded-md bg-card">
-                      <button 
-                        className="p-2 hover:bg-muted transition-colors disabled:opacity-50"
-                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                        disabled={item.quantity <= 1 || updateItem.isPending}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="w-10 text-center text-sm font-medium">{item.quantity}</span>
-                      <button 
-                        className="p-2 hover:bg-muted transition-colors disabled:opacity-50"
-                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                        disabled={updateItem.isPending}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center border rounded-md bg-card">
+                        <button 
+                          className="p-2 hover:bg-muted transition-colors disabled:opacity-50"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= 1 || updateItem.isPending}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-10 text-center text-sm font-medium">{item.quantity}</span>
+                        <button 
+                          className="p-2 hover:bg-muted transition-colors disabled:opacity-50"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          disabled={updateItem.isPending || item.quantity >= item.maxQuantity}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {item.quantity >= item.maxQuantity && (
+                        <p className="text-xs text-amber-600">Max {item.maxQuantity} available</p>
+                      )}
                     </div>
                   </div>
                   

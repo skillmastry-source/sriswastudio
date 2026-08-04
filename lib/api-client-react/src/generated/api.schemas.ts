@@ -150,6 +150,10 @@ export interface CartItem {
   productName: string;
   price: number;
   quantity: number;
+  /** Total stock units available for this product */
+  stockQuantity: number;
+  /** Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart */
+  maxQuantity: number;
   /** @nullable */
   imageUrl: string | null;
   /** @nullable */
@@ -219,9 +223,6 @@ export interface Order {
   shippingCost?: number;
   total: number;
   paymentMethod?: string;
-  /** @nullable */
-  couponCode?: string | null;
-  discountAmount?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -243,8 +244,6 @@ export interface OrderInput {
   /** @nullable */
   notes?: string | null;
   paymentMethod?: string;
-  /** @nullable */
-  couponCode?: string | null;
 }
 
 export type OrderStatusUpdateStatus = typeof OrderStatusUpdateStatus[keyof typeof OrderStatusUpdateStatus];

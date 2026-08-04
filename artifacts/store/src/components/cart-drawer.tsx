@@ -103,26 +103,32 @@ export function CartDrawer() {
                     <p className="text-xs text-muted-foreground mt-0.5">{item.variantLabel}</p>
                   )}
                   <p className="font-semibold text-sm mt-1 text-[#9B0F5F]">₹{item.price}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <button
-                      onClick={() => handleQuantity(item.id, item.quantity - 1)}
-                      className="h-7 w-7 rounded border flex items-center justify-center hover:bg-muted transition-colors"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => handleQuantity(item.id, item.quantity + 1)}
-                      className="h-7 w-7 rounded border flex items-center justify-center hover:bg-muted transition-colors"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => handleRemove(item.id)}
-                      className="ml-auto h-7 w-7 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  <div className="flex flex-col gap-1 mt-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleQuantity(item.id, item.quantity - 1)}
+                        className="h-7 w-7 rounded border flex items-center justify-center hover:bg-muted transition-colors"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => handleQuantity(item.id, item.quantity + 1)}
+                        disabled={item.quantity >= item.maxQuantity}
+                        className="h-7 w-7 rounded border flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(item.id)}
+                        className="ml-auto h-7 w-7 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {item.quantity >= item.maxQuantity && (
+                      <p className="text-xs text-amber-600">Max {item.maxQuantity} available</p>
+                    )}
                   </div>
                 </div>
               </div>

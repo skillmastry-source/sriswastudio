@@ -34,6 +34,7 @@ async function buildCart(sessionId: string) {
         variantId: item.variantId ?? null,
         variantLabel,
         quantity: item.quantity,
+        stockQuantity: product.stockQuantity,
         price: Number(product.price) + priceModifier,
         productName: product.name,
         slug: product.slug,
@@ -43,9 +44,23 @@ async function buildCart(sessionId: string) {
   );
 
   const cartItems = enriched.filter(Boolean) as NonNullable<typeof enriched[0]>[];
-  const total = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const itemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-  return { sessionId, items: cartItems, total, itemCount };
+
+  // Build a map of total quantity per productId so we can derive per-line maxQuantity
+  const totalPerProduct = new Map<number, number>();
+  for (const item of cartItems) {
+    totalPerProduct.set(item.productId, (totalPerProduct.get(item.productId) ?? 0) + item.quantity);
+  }
+
+  const itemsWithMax = cartItems.map((item) => {
+    const totalForProduct = totalPerProduct.get(item.productId) ?? item.quantity;
+    const otherVariantQty = totalForProduct - item.quantity;
+    const maxQuantity = Math.max(1, item.stockQuantity - otherVariantQty);
+    return { ...item, maxQuantity };
+  });
+
+  const total = itemsWithMax.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const itemCount = itemsWithMax.reduce((sum, i) => sum + i.quantity, 0);
+  return { sessionId, items: itemsWithMax, total, itemCount };
 }
 
 router.get("/cart", async (req, res) => {
@@ -122,10 +137,34 @@ router.patch("/cart/items/:itemId", async (req, res) => {
   if (quantity <= 0) {
     await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
   } else {
-    // Cap quantity at current stock to prevent oversell
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
-    const maxQty = product ? product.stockQuantity : quantity;
-    const safeQty = Math.min(quantity, maxQty);
+    // Aggregate-aware stock cap: lock product row, sum ALL other variant lines for
+    // this session+product, then cap the updated line at stock - otherVariantTotal.
+    const safeQty = await db.transaction(async (tx) => {
+      const [lockedProduct] = await tx
+        .select({ stockQuantity: productsTable.stockQuantity })
+        .from(productsTable)
+        .where(eq(productsTable.id, item.productId))
+        .for("update");
+      if (!lockedProduct) return 0;
+
+      // Sum quantities of every OTHER line for this product in this session
+      const otherLines = await tx
+        .select({ qty: cartItemsTable.quantity })
+        .from(cartItemsTable)
+        .where(
+          and(
+            eq(cartItemsTable.sessionId, sessionId),
+            eq(cartItemsTable.productId, item.productId),
+          )
+        );
+      const otherVariantTotal = otherLines
+        .filter((l) => l !== null)
+        .reduce((s, r) => s + r.qty, 0) - item.quantity; // subtract current line's qty
+
+      const maxForThisLine = Math.max(0, lockedProduct.stockQuantity - otherVariantTotal);
+      return Math.min(quantity, maxForThisLine);
+    });
+
     if (safeQty <= 0) {
       return res.status(400).json({ error: "Product is out of stock" });
     }

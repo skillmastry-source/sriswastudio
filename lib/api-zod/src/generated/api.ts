@@ -410,6 +410,8 @@ export const GetCartResponse = zod.object({
   "productName": zod.string(),
   "price": zod.number(),
   "quantity": zod.number(),
+  "stockQuantity": zod.number().describe('Total stock units available for this product'),
+  "maxQuantity": zod.number().describe('Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart'),
   "imageUrl": zod.string().nullable(),
   "variantId": zod.number().nullish(),
   "variantLabel": zod.string().nullish()
@@ -438,6 +440,8 @@ export const AddToCartResponse = zod.object({
   "productName": zod.string(),
   "price": zod.number(),
   "quantity": zod.number(),
+  "stockQuantity": zod.number().describe('Total stock units available for this product'),
+  "maxQuantity": zod.number().describe('Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart'),
   "imageUrl": zod.string().nullable(),
   "variantId": zod.number().nullish(),
   "variantLabel": zod.string().nullish()
@@ -467,6 +471,8 @@ export const UpdateCartItemResponse = zod.object({
   "productName": zod.string(),
   "price": zod.number(),
   "quantity": zod.number(),
+  "stockQuantity": zod.number().describe('Total stock units available for this product'),
+  "maxQuantity": zod.number().describe('Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart'),
   "imageUrl": zod.string().nullable(),
   "variantId": zod.number().nullish(),
   "variantLabel": zod.string().nullish()
@@ -492,6 +498,8 @@ export const RemoveCartItemResponse = zod.object({
   "productName": zod.string(),
   "price": zod.number(),
   "quantity": zod.number(),
+  "stockQuantity": zod.number().describe('Total stock units available for this product'),
+  "maxQuantity": zod.number().describe('Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart'),
   "imageUrl": zod.string().nullable(),
   "variantId": zod.number().nullish(),
   "variantLabel": zod.string().nullish()

@@ -897,7 +897,7 @@ components:
     # ── CART ──────────────────────────────────────────────────────────────────
     CartItem:
       type: object
-      required: [id, sessionId, productId, productName, price, quantity, imageUrl]
+      required: [id, sessionId, productId, productName, price, quantity, stockQuantity, maxQuantity, imageUrl]
       properties:
         id:
           type: integer
@@ -911,6 +911,12 @@ components:
           type: number
         quantity:
           type: integer
+        stockQuantity:
+          type: integer
+          description: Total stock units available for this product
+        maxQuantity:
+          type: integer
+          description: Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart
         imageUrl:
           type: ["string", "null"]
         variantId:

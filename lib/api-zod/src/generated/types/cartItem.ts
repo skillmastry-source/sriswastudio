@@ -13,6 +13,10 @@ export interface CartItem {
   productName: string;
   price: number;
   quantity: number;
+  /** Total stock units available for this product */
+  stockQuantity: number;
+  /** Maximum quantity allowed for this specific cart line, accounting for other variant lines of the same product already in the cart */
+  maxQuantity: number;
   /** @nullable */
   imageUrl: string | null;
   /** @nullable */

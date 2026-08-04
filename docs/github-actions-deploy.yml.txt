@@ -1,0 +1,78 @@
+name: Deploy to VPS
+
+# NOTE: Auto-deploy is currently handled by a cron poller on the VPS
+# (/usr/local/bin/sriswa-auto-deploy.sh, runs every 2 minutes and pulls main).
+# This GitHub Actions path is kept as a manual fallback; it requires repo
+# secrets HOST, USER, SSH_PRIVATE_KEY to be configured before use.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to sriswastudio.com
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VPS and run deploy script
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 20m
+          script: |
+            cd /var/www/sriswastudio && git pull && bash scripts/vps-deploy.sh
+
+      - name: Notify owner on WhatsApp if deploy failed
+        if: failure()
+        env:
+          CALLMEBOT_API_KEY: ${{ secrets.CALLMEBOT_API_KEY }}
+          ALERT_WHATSAPP_TO: ${{ secrets.ALERT_WHATSAPP_TO }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          export MESSAGE="⚠️ Sriswa Studio: the website update FAILED. The live site is still running the previous version — nothing is broken for customers, but your latest changes did not go live. Details: ${RUN_URL}"
+
+          # Normalize phone to digits with country code (assume India +91 for 10-digit numbers)
+          DIGITS=$(echo "${ALERT_WHATSAPP_TO}" | tr -cd '0-9')
+          if [ "${#DIGITS}" = "10" ]; then DIGITS="91${DIGITS}"; fi
+
+          SENT=0
+
+          # 1) CallMeBot (free, same channel as admin new-order alerts)
+          if [ -n "${CALLMEBOT_API_KEY}" ] && [ -n "${DIGITS}" ]; then
+            ENCODED=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["MESSAGE"]))')
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+              "https://api.callmebot.com/whatsapp.php?phone=%2B${DIGITS}&text=${ENCODED}&apikey=${CALLMEBOT_API_KEY}") || STATUS=0
+            if [ "${STATUS}" = "200" ]; then
+              echo "Alert sent via CallMeBot."
+              SENT=1
+            else
+              echo "CallMeBot failed (HTTP ${STATUS}), trying Twilio..."
+            fi
+          fi
+
+          # 2) Twilio WhatsApp fallback
+          if [ "${SENT}" = "0" ] && [ -n "${TWILIO_ACCOUNT_SID}" ] && [ -n "${TWILIO_AUTH_TOKEN}" ] && [ -n "${TWILIO_WHATSAPP_FROM}" ] && [ -n "${DIGITS}" ]; then
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+              -X POST "https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json" \
+              -u "${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}" \
+              --data-urlencode "From=whatsapp:${TWILIO_WHATSAPP_FROM}" \
+              --data-urlencode "To=whatsapp:+${DIGITS}" \
+              --data-urlencode "Body=${MESSAGE}") || STATUS=0
+            if [ "${STATUS}" = "201" ]; then
+              echo "Alert sent via Twilio WhatsApp."
+              SENT=1
+            else
+              echo "Twilio send failed (HTTP ${STATUS})."
+            fi
+          fi
+
+          if [ "${SENT}" = "0" ]; then
+            echo "::warning::Deploy failed but no WhatsApp alert was sent. Configure repo secrets ALERT_WHATSAPP_TO plus CALLMEBOT_API_KEY (or TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM)."
+          fi

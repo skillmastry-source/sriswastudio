@@ -43,3 +43,12 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Deploy failure alerts
+
+`.github/workflows/deploy.yml` sends a WhatsApp alert to the owner when a VPS deploy fails (silent on success). Requires GitHub repo secrets (Settings → Secrets and variables → Actions):
+- `ALERT_WHATSAPP_TO` — owner's WhatsApp number (10-digit Indian number or full with country code)
+- `CALLMEBOT_API_KEY` — preferred free channel (same key as admin order alerts)
+- Optional Twilio fallback: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`
+
+If none are set, the step logs a warning instead of failing the run.

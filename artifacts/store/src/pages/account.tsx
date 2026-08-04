@@ -67,18 +67,59 @@ function OrderCard({ order }: { order: Order }) {
     if (!order.items?.length || !sessionId) return;
     setIsReordering(true);
 
+    // Fetch current cart — required to accurately cap quantities against available stock
+    const productCartQty = new Map<number, number>();
+    const cartRes = await fetch(`/api/cart?sessionId=${encodeURIComponent(sessionId)}`);
+    if (!cartRes.ok) {
+      setIsReordering(false);
+      toast({
+        title: "Re-order failed",
+        description: "Could not verify cart contents. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const cartData = await cartRes.json() as { items: Array<{ productId: number; quantity: number }> };
+    for (const ci of cartData.items) {
+      productCartQty.set(ci.productId, (productCartQty.get(ci.productId) ?? 0) + ci.quantity);
+    }
+
     const activeItems = order.items.filter((item) => item.productId !== null);
     let added = 0;
     let skipped = 0;
+    let reduced = 0;
 
     for (const item of activeItems) {
       try {
+        // Check current stock before adding
+        const stockRes = await fetch(`/api/products/${item.productId}`);
+        if (!stockRes.ok) { skipped++; continue; }
+        const product = await stockRes.json() as { stockQuantity: number; isActive: boolean };
+
+        if (!product.isActive || product.stockQuantity <= 0) {
+          skipped++;
+          continue;
+        }
+
+        // Account for quantity already in the cart (including items added earlier in this loop)
+        const alreadyInCart = productCartQty.get(item.productId!) ?? 0;
+        const canAdd = Math.max(0, product.stockQuantity - alreadyInCart);
+        if (canAdd <= 0) {
+          skipped++;
+          continue;
+        }
+
+        const addQty = Math.min(item.quantity, canAdd);
+        if (addQty < item.quantity) reduced++;
+
         await new Promise<void>((resolve, reject) => {
           addToCartMutation.mutate(
-            { data: { sessionId, productId: item.productId!, quantity: item.quantity, variantId: item.variantId ?? undefined } },
+            { data: { sessionId, productId: item.productId!, quantity: addQty, variantId: item.variantId ?? undefined } },
             { onSuccess: () => resolve(), onError: () => reject() },
           );
         });
+        // Update local tally so subsequent lines for the same product see the right remaining capacity
+        productCartQty.set(item.productId!, alreadyInCart + addQty);
         added++;
       } catch {
         skipped++;
@@ -93,11 +134,12 @@ function OrderCard({ order }: { order: Order }) {
 
     if (added > 0) {
       openCart();
+      const parts: string[] = [`${added} item${added !== 1 ? "s" : ""} added to your cart.`];
+      if (reduced > 0) parts.push(`${reduced} item${reduced !== 1 ? "s" : ""} had quantities reduced due to limited stock.`);
+      if (skipped > 0) parts.push(`${skipped} unavailable item${skipped !== 1 ? "s" : ""} skipped.`);
       toast({
         title: "Items added to cart",
-        description: skipped > 0
-          ? `${added} item${added !== 1 ? "s" : ""} added. ${skipped} unavailable item${skipped !== 1 ? "s" : ""} skipped.`
-          : `${added} item${added !== 1 ? "s" : ""} added to your cart.`,
+        description: parts.join(" "),
       });
     } else {
       toast({

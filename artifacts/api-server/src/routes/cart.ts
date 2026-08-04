@@ -62,27 +62,49 @@ router.post("/cart/items", async (req, res) => {
   if (!product || !product.isActive) return res.status(400).json({ error: "Product is not available" });
   if (product.stockQuantity <= 0) return res.status(400).json({ error: "Product is out of stock" });
 
-  const matchCondition = variantId != null
-    ? and(
-        eq(cartItemsTable.sessionId, sessionId),
-        eq(cartItemsTable.productId, productId),
-        eq(cartItemsTable.variantId, variantId)
-      )
-    : and(
-        eq(cartItemsTable.sessionId, sessionId),
-        eq(cartItemsTable.productId, productId),
-        isNull(cartItemsTable.variantId)
-      );
+  // Enforce stock atomically, summing ALL variants of this product already in the session's cart.
+  // SELECT ... FOR UPDATE on the product row serializes concurrent adds: the second transaction
+  // waits for the first to commit before reading cart state, preventing both from seeing the
+  // same total and independently exceeding stock.
+  const accepted = await db.transaction(async (tx) => {
+    // Lock the product row — concurrent adds for the same product queue here
+    const [lockedProduct] = await tx
+      .select({ stockQuantity: productsTable.stockQuantity })
+      .from(productsTable)
+      .where(eq(productsTable.id, productId))
+      .for("update");
+    if (!lockedProduct) return 0;
 
-  const [existing] = await db.select().from(cartItemsTable).where(matchCondition);
+    // Sum all existing cart lines across every variant for this session + product
+    const allLines = await tx
+      .select({ qty: cartItemsTable.quantity })
+      .from(cartItemsTable)
+      .where(and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId)));
+    const totalInCart = allLines.reduce((s, r) => s + r.qty, 0);
 
-  if (existing) {
-    await db
-      .update(cartItemsTable)
-      .set({ quantity: existing.quantity + quantity, updatedAt: new Date() })
-      .where(eq(cartItemsTable.id, existing.id));
-  } else {
-    await db.insert(cartItemsTable).values({ sessionId, productId, quantity, variantId: variantId ?? null });
+    const canAdd = Math.max(0, lockedProduct.stockQuantity - totalInCart);
+    if (canAdd <= 0) return 0;
+
+    const safeQty = Math.min(quantity, canAdd);
+
+    const matchCondition = variantId != null
+      ? and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId), eq(cartItemsTable.variantId, variantId))
+      : and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId), isNull(cartItemsTable.variantId));
+
+    const [existing] = await tx.select().from(cartItemsTable).where(matchCondition);
+
+    if (existing) {
+      await tx.update(cartItemsTable)
+        .set({ quantity: existing.quantity + safeQty, updatedAt: new Date() })
+        .where(eq(cartItemsTable.id, existing.id));
+    } else {
+      await tx.insert(cartItemsTable).values({ sessionId, productId, quantity: safeQty, variantId: variantId ?? null });
+    }
+    return safeQty;
+  });
+
+  if (accepted === 0) {
+    return res.status(400).json({ error: "Product is out of stock" });
   }
 
   return res.json(await buildCart(sessionId));

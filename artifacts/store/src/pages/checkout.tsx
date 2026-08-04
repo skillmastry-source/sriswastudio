@@ -198,7 +198,8 @@ export default function Checkout() {
     }, {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-        setLocation(`/order-confirmation?orderNumber=${order.orderNumber}`);
+        const email = encodeURIComponent(data.customerEmail ?? "");
+        setLocation(`/order-confirmation?orderNumber=${order.orderNumber}&email=${email}`);
       },
       onError: () => {
         setError("Failed to create order. Please try again.");

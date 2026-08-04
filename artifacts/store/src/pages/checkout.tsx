@@ -1,6 +1,7 @@
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useGetCart, getGetCartQueryKey, useCreateOrder } from "@workspace/api-client-react";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -198,6 +199,7 @@ export default function Checkout() {
     }, {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+        broadcastCartUpdate(sessionId);
         const email = encodeURIComponent(data.customerEmail ?? "");
         setLocation(`/order-confirmation?orderNumber=${order.orderNumber}&email=${email}`);
       },

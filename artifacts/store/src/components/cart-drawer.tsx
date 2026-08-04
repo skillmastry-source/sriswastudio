@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useGetCart, getGetCartQueryKey, useUpdateCartItem } from "@workspace/api-client-react";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -22,7 +23,12 @@ export function CartDrawer() {
     if (newQty < 1) return;
     updateItem.mutate(
       { itemId, data: { quantity: newQty, sessionId } as { quantity: number; sessionId: string } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          broadcastCartUpdate(sessionId);
+        },
+      }
     );
   };
 
@@ -30,6 +36,7 @@ export function CartDrawer() {
     await fetch(`/api/cart/items/${itemId}?sessionId=${encodeURIComponent(sessionId)}`, { method: "DELETE" });
     queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
     queryClient.invalidateQueries({ queryKey: ["cart", sessionId] });
+    broadcastCartUpdate(sessionId);
   };
 
   useEffect(() => {

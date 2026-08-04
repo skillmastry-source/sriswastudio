@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -115,6 +116,7 @@ export default function OrderConfirmation() {
     skipped += order.items.length - activeItems.length;
 
     await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+    broadcastCartUpdate(sessionId);
 
     if (added > 0) {
       openCart();

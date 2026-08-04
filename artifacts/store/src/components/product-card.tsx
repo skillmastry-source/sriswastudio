@@ -4,6 +4,7 @@ import { ShoppingBag, Sparkles } from "lucide-react";
 import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCartContext } from "@/hooks/use-cart-context";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_BRAND = "#9B0F5F";
@@ -51,6 +52,8 @@ export function ProductCard({ product, sessionId: sessionIdProp, brand = DEFAULT
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          // Notify other tabs so their cart counts update without a refresh.
+          broadcastCartUpdate(sessionId);
           toast({ title: "Added to cart ✓", description: `${product.name} added.` });
         },
         onError: () =>

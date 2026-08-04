@@ -3,6 +3,7 @@ import { useParams, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { useToast } from "@/hooks/use-toast";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,7 @@ export default function ProductDetail() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          broadcastCartUpdate(sessionId);
           toast({ title: "Added to cart ✓", description: `${quantity}× ${product.name} added to your cart.` });
         },
         onError: () => {

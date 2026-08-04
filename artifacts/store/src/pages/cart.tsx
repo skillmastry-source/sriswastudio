@@ -1,6 +1,7 @@
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useGetCart, getGetCartQueryKey, useUpdateCartItem } from "@workspace/api-client-react";
+import { broadcastCartUpdate } from "@/lib/cart-broadcast";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ArrowRight } from "lucide-react";
@@ -22,13 +23,19 @@ export default function Cart() {
     if (newQuantity < 1) return;
     updateItem.mutate(
       { itemId, data: { quantity: newQuantity, sessionId } as { quantity: number; sessionId: string } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) }) }
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          broadcastCartUpdate(sessionId);
+        },
+      }
     );
   };
 
   const handleRemove = async (itemId: number) => {
     await fetch(`/api/cart/items/${itemId}?sessionId=${encodeURIComponent(sessionId)}`, { method: "DELETE" });
     queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+    broadcastCartUpdate(sessionId);
   };
 
   if (isLoading) {

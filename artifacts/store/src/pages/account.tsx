@@ -2,17 +2,17 @@ import { StoreLayout } from "@/components/layout/store-layout";
 import { SignedIn, SignedOut, SignIn, SignUp, useUser, useClerk } from "@/lib/clerk-stub";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LogOut, Package, User } from "lucide-react";
+import { LogOut, Package, User, ChevronDown, ChevronUp, MapPin, Receipt } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 interface OrderItem {
   id: number;
-  productName: string;
+  productName: string | null;
   quantity: number;
   price: number;
   imageUrl: string | null;
+  variantLabel: string | null;
 }
 
 interface Order {
@@ -20,8 +20,218 @@ interface Order {
   orderNumber: string;
   status: string;
   total: number;
+  subtotal: number;
+  shippingCost: number;
+  discountAmount: number;
+  couponCode: string | null;
+  paymentMethod: string;
+  customerName: string;
+  shippingAddress: string;
+  city: string;
+  state: string;
+  pincode: string;
   createdAt: string;
   items: OrderItem[];
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  RAZORPAY: "Razorpay (Online)",
+  UPI_QR:   "UPI / QR Code",
+  PHONEPE:  "PhonePe",
+  cod:      "Cash on Delivery",
+  COD:      "Cash on Delivery",
+};
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency", currency: "INR", maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function OrderCard({ order }: { order: Order }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const statusColor: Record<string, string> = {
+    pending:    "bg-amber-100 text-amber-700",
+    processing: "bg-blue-100 text-blue-700",
+    shipped:    "bg-purple-100 text-purple-700",
+    delivered:  "bg-green-100 text-green-700",
+    cancelled:  "bg-red-100 text-red-700",
+  };
+
+  const paymentLabel = PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod;
+
+  return (
+    <Card>
+      {/* ── Header row – always visible ── */}
+      <CardContent className="p-5">
+        <button
+          type="button"
+          className="w-full text-left"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-mono font-semibold text-sm">{order.orderNumber}</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                  year: "numeric", month: "short", day: "numeric",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded capitalize ${
+                  statusColor[order.status] ?? "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {order.status}
+              </span>
+              <span className="font-bold text-[#9B0F5F]">{fmt(order.total)}</span>
+              {expanded
+                ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+            </div>
+          </div>
+
+          {/* Compact item thumbnails when collapsed */}
+          {!expanded && order.items.length > 0 && (
+            <div className="flex gap-2 flex-wrap mt-3">
+              {order.items.map((item) => (
+                <div key={item.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {item.imageUrl && (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.productName ?? "Product"}
+                      loading="lazy"
+                      decoding="async"
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 rounded object-cover bg-muted"
+                    />
+                  )}
+                  <span>{item.productName} ×{item.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </button>
+
+        {/* ── Expanded detail ── */}
+        {expanded && (
+          <div className="mt-5 space-y-5 border-t pt-5">
+
+            {/* Order details row */}
+            <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex items-center gap-2 mb-3 text-base font-medium">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                Order Details
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order Number</span>
+                <span className="font-mono font-bold">{order.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment</span>
+                <span className="font-medium">{paymentLabel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span
+                  className={`font-semibold px-2 py-0.5 rounded text-xs uppercase tracking-wider ${
+                    statusColor[order.status] ?? "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {order.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Items */}
+            {order.items.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Items Ordered</span>
+                </div>
+                <div className="divide-y border rounded-lg overflow-hidden">
+                  {order.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-4 p-3">
+                      {item.imageUrl && (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.productName ?? "Product"}
+                          className="h-14 w-14 object-cover rounded border flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{item.productName ?? "Item"}</p>
+                        {item.variantLabel && (
+                          <p className="text-xs text-muted-foreground">{item.variantLabel}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-medium">{fmt(item.price * item.quantity)}</p>
+                        {item.quantity > 1 && (
+                          <p className="text-xs text-muted-foreground">{fmt(item.price)} each</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Totals */}
+                <div className="mt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{fmt(order.subtotal)}</span>
+                  </div>
+                  {order.discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>
+                        Discount
+                        {order.couponCode && (
+                          <span className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-mono">
+                            {order.couponCode}
+                          </span>
+                        )}
+                      </span>
+                      <span>−{fmt(order.discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span>{order.shippingCost === 0 ? "Free" : fmt(order.shippingCost)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold border-t pt-2">
+                    <span>Total</span>
+                    <span>{fmt(order.total)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Shipping address */}
+            {order.shippingAddress && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Shipping Address</span>
+                </div>
+                <address className="not-italic text-sm leading-relaxed text-foreground bg-muted/40 rounded-lg p-4">
+                  <p className="font-medium">{order.customerName}</p>
+                  <p>{order.shippingAddress}</p>
+                  <p>{order.city}, {order.state} – {order.pincode}</p>
+                </address>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function AccountDashboard() {
@@ -40,14 +250,6 @@ function AccountDashboard() {
     },
     enabled: !!user,
   });
-
-  const statusColor: Record<string, string> = {
-    pending: "bg-amber-100 text-amber-700",
-    processing: "bg-blue-100 text-blue-700",
-    shipped: "bg-purple-100 text-purple-700",
-    delivered: "bg-green-100 text-green-700",
-    cancelled: "bg-red-100 text-red-700",
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -129,42 +331,7 @@ function AccountDashboard() {
               </Card>
             ) : (
               orderData.orders.map((order) => (
-                <Card key={order.id}>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-mono font-semibold text-sm">{order.orderNumber}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleDateString("en-IN", {
-                            year: "numeric", month: "short", day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded capitalize ${
-                            statusColor[order.status] ?? "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
-                        <span className="font-bold text-[#9B0F5F]">₹{order.total}</span>
-                      </div>
-                    </div>
-                    {order.items.length > 0 && (
-                      <div className="flex gap-2 flex-wrap">
-                        {order.items.map((item) => (
-                          <div key={item.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {item.imageUrl && (
-                              <img src={item.imageUrl} alt={item.productName} loading="lazy" decoding="async" width={32} height={32} className="h-8 w-8 rounded object-cover bg-muted" />
-                            )}
-                            <span>{item.productName} ×{item.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <OrderCard key={order.id} order={order} />
               ))
             )}
           </div>

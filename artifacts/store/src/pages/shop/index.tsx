@@ -294,7 +294,7 @@ export default function Shop() {
                 {productData?.products?.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={{ ...product, stockQuantity: (product as { stockQuantity?: number }).stockQuantity ?? 1 }}
+                    product={product}
                     sessionId={sessionId}
                   />
                 ))}

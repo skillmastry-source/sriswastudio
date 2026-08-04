@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
 import { Sparkles, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProductCard } from "@/components/product-card";
+import { useCartContext } from "@/hooks/use-cart-context";
 
 const BRAND = "#9B0F5F";
 const GOLD = "#D4AF37";
 
 export default function Shop() {
+  const { sessionId } = useCartContext();
   const [, navigate] = useLocation();
   const searchStr = useSearch();
   const searchParams = new URLSearchParams(searchStr);
@@ -289,61 +292,11 @@ export default function Shop() {
             {!isLoading && (productData?.products?.length ?? 0) > 0 && (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-7">
                 {productData?.products?.map((product) => (
-                  <Link key={product.id} href={`/shop/${product.slug}`} className="group block">
-                    <div className="relative overflow-hidden mb-3 md:mb-4 rounded-sm" style={{ aspectRatio: "3/4", background: "#fdf6f9" }}>
-                      {product.images?.[0] ? (
-                        <img
-                          src={product.images[0].url}
-                          alt={product.name}
-                          loading="lazy"
-                          decoding="async"
-                          width={600}
-                          height={800}
-                          className="w-full h-full object-cover"
-                          style={{ transition: "transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)" }}
-                          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}
-                          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Sparkles className="h-10 w-10" style={{ color: BRAND, opacity: 0.2 }} />
-                        </div>
-                      )}
-                      {product.compareAtPrice && (
-                        <span
-                          className="absolute top-3 left-3 text-white text-[9px] font-bold px-2.5 py-1 tracking-widest uppercase"
-                          style={{ background: BRAND, borderRadius: "2px" }}
-                        >
-                          Sale
-                        </span>
-                      )}
-                      <div
-                        className="absolute inset-x-0 bottom-0 flex items-center justify-center py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                        style={{ background: `${BRAND}ee` }}
-                      >
-                        <span className="text-white text-[11px] tracking-[0.2em] uppercase font-medium">
-                          View Details
-                        </span>
-                      </div>
-                    </div>
-
-                    <h3
-                      className="font-serif font-semibold text-sm md:text-base leading-snug mb-1 md:mb-1.5 transition-colors"
-                      style={{ color: "#1a0a0f" }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = BRAND)}
-                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "#1a0a0f")}
-                    >
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm md:text-base" style={{ color: BRAND }}>
-                        ₹{product.price}
-                      </span>
-                      {product.compareAtPrice && (
-                        <span className="text-gray-400 line-through text-xs">₹{product.compareAtPrice}</span>
-                      )}
-                    </div>
-                  </Link>
+                  <ProductCard
+                    key={product.id}
+                    product={{ ...product, stockQuantity: (product as { stockQuantity?: number }).stockQuantity ?? 1 }}
+                    sessionId={sessionId}
+                  />
                 ))}
               </div>
             )}

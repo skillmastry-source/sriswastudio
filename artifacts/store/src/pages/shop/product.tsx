@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useAddToCart } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useCartContext } from "@/hooks/use-cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { StoreLayout } from "@/components/layout/store-layout";
@@ -53,7 +53,7 @@ interface SimilarProduct {
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const { sessionId } = useCartContext();
+  const { sessionId, openCart } = useCartContext();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -85,6 +85,7 @@ export default function ProductDetail() {
     .slice(0, 6);
 
   const addToCartMutation = useAddToCart();
+  const queryClient = useQueryClient();
 
   const selectedVariant = product?.variants.find((v) => v.id === selectedVariantId) ?? null;
   const effectivePrice = product ? product.price + (selectedVariant?.priceModifier ?? 0) : 0;
@@ -116,6 +117,8 @@ export default function ProductDetail() {
       },
       {
         onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          openCart();
           toast({ title: "Added to cart", description: `${quantity}× ${product.name} added to your cart.` });
         },
         onError: () => {
